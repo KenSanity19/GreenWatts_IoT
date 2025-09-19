@@ -1,0 +1,67 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GreenWatts Admin Login</title>
+    <link rel="stylesheet" href="{% static 'adminCss/adminLogin.css' %}" />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <div class="left-section">
+      <h1>GreenWatts</h1>
+      <p>Monitor. Reduce. Sustain</p>
+    </div>
+
+    <div class="right-section">
+      <div class="login-box">
+        <a href="{% url 'users:index' %}" class="back-btn">
+          <span class="material-icons">arrow_back</span>
+        </a>
+
+        <h2>Login to your account</h2>
+        <p class="subtitle">Administrative Page</p>
+
+        <!-- Updated Form -->
+        <form method="POST" action="{% url 'adminpanel:admin_login'  %}">
+          {% csrf_token %}
+          <div class="input-box">
+            <span class="material-icons input-icon">person</span>
+            <span class="input-label-text">Username</span>
+            <input type="text" name="username" required />
+          </div>
+          <div class="input-box">
+            <span class="material-icons input-icon">lock</span>
+            <span class="input-label-text">Password</span>
+            <input type="password" name="password" required />
+          </div>
+          <div class="remember-me">
+            <label><input type="checkbox" /> Remember Me</label>
+          </div>
+          <button type="submit">Login</button>
+        </form>
+
+        <!-- Error messages -->
+        {% if messages %}
+        <div class="messages">
+          {% for message in messages %}
+          <p class="error">{{ message }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <p class="lower-text">
+          <strong class="forgot-pass">Forgot Your Password?</strong><br /><br />
+          no worries, <a class="reset-link" href="#">please click here</a> to
+          reset your password
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

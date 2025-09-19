@@ -1,0 +1,115 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #d3d3d3;
+    display: flex;
+    height: 100vh;
+}
+
+.left-section {
+    width: 50%;
+    background: linear-gradient(135deg, #16163f 0%, #16163f 52%, #f1c40f 88%, #f1c40f 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    color: white;
+    padding: 40px;
+}
+
+.left-section h1 {
+    font-size: 90px;
+    margin-bottom: 10px;
+    margin-top: 0;
+}
+
+.left-section p{
+    font-size:  24px;
+}
+
+.right-section {
+    width: 50%;
+    background: url(/static/citc.jpg) no-repeat center center /cover;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-box{
+    background: rgb(255, 255, 255, 0.8);
+    padding: 30px;
+    border-radius: 10px;
+    width: 355px;
+
+}
+
+.login-box h2{
+    margin-bottom: 15px;
+    font-size: 27px;
+    font-weight: 600;
+    margin-top: 0px;
+}
+
+.input-box {
+    display: flex;
+    align-items: center;
+    border: 2px solid #000000;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px 0;
+    background: white;
+}
+
+.input-icon {
+    color: #5f5e5e;
+    margin-right: 10px;
+    font-size: 24px;
+}
+
+.input-label-text {
+    color: #666;
+    margin-right: 10px;
+    font-size: 16px;
+    user-select: none;
+}
+
+.input-box input[type="text"],
+.input-box input[type="password"] {
+    border: none;
+    outline: none;
+    flex-grow: 1;
+    font-size: 16px;
+    background: transparent;
+}
+
+.login-box button{
+    width: 100%;
+    padding: 10px;
+    background: #2c2c6c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.login-box button:hover{
+    background: #1b1b50;
+}
+
+.login-box a{
+    color: red;
+    text-decoration: none;
+}
+
+p.lower-text {
+    margin-top: 40px;
+}
+
+a.admin-login {
+    justify-content: center;
+    align-items: center;
+    display: flex;
+    margin-top: 30px;
+    color: #201c41;
+}
