@@ -5,12 +5,133 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard - GreenWatts</title>
-    <link rel="stylesheet" href="adminSetting.css" />
+    <title>GreenWatts Admin Dashboard</title>
+    <!-- correct relative path -->
+    <link rel="stylesheet" href="{% static 'adminCss/adminDashboard.css' %}" />
   </head>
+
   <body>
-    <a class="admin-setting" href="{% url 'adminpanel:admin_setting' %}">
-      Settings</a
-    >
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2 class="logo">GreenWaTts</h2>
+      <div class="admin-section">
+        <div class="admin-icon">⚙️</div>
+        <p>ADMIN</p>
+      </div>
+
+      <nav>
+        <a href="{% url 'adminpanel:admin_dashboard' %}" class="active"
+          >📊 Dashboard</a
+        >
+        <a href="officeUsage.html">🏢 Office Usage</a>
+        <a href="reports.html">📑 Reports</a>
+        <a href="energyCost.html">💸 Energy Cost</a>
+        <a href="co2Emission.html">🌍 CO2 Emission</a>
+        <a href="{% url 'adminpanel:admin_setting' %}">⚙️ Admin Setting</a>
+        <!-- logout goes to login page -->
+        <a href="adminLogin.html">🚪 Log Out</a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <header>
+        <h1>Dashboard</h1>
+        <p class="note">
+          <span class="red-text">Noted!</span> The data will be captured every
+          12:00am midnight
+        </p>
+        <div class="date-time">📅 July 20, 2025 21:57 PM</div>
+      </header>
+
+      <!-- Filters -->
+      <div class="filters">
+        <select>
+          <option>Day</option>
+        </select>
+        <select>
+          <option>Month</option>
+        </select>
+        <select>
+          <option>Year</option>
+        </select>
+      </div>
+
+      <!-- Top Cards -->
+      <div class="cards">
+        <div class="card green">
+          <p>Energy Usage</p>
+          <h2>143 kWh</h2>
+        </div>
+        <div class="card dark">
+          <p>Cost Predicted</p>
+          <h2>₱120.50</h2>
+        </div>
+        <div class="card red">
+          <p>CO2 Emissions</p>
+          <h2>32 kg</h2>
+        </div>
+      </div>
+
+      <!-- Bottom Section -->
+      <div class="bottom-section">
+        <!-- Active Alerts -->
+        <div class="active-alerts">
+          <h3>Active Alerts</h3>
+          <table>
+            <tr>
+              <th>Office Name</th>
+              <th>Energy Usage</th>
+              <th>Status</th>
+            </tr>
+            <tr class="high">
+              <td>IT</td>
+              <td>21.2 kWh</td>
+              <td>High</td>
+            </tr>
+            <tr class="moderate">
+              <td>TCM</td>
+              <td>15.7 kWh</td>
+              <td>Moderate</td>
+            </tr>
+            <tr class="efficient">
+              <td>DS</td>
+              <td>11.8 kWh</td>
+              <td>Efficient</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Change in Cost -->
+        <div class="change-cost">
+          <h3>CHANGE IN COST</h3>
+          <div class="chart">
+            <div class="bar" style="height: 80%">July 11</div>
+            <div class="bar" style="height: 50%">July 12</div>
+          </div>
+          <div class="percentage">
+            <span class="green-text">▼ 20.18%</span>
+            <p>DECREASE IN COST</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Carbon Footprint -->
+      <div class="carbon-footprint">
+        <h3>Carbon Footprint</h3>
+        <p><strong>Emission</strong> Till Date (as of July 12, 2025)</p>
+        <p><b>5.8kg</b> of CO2</p>
+        <p>Predicted (by July 19, 2025): <b>57.6kg</b> of CO2</p>
+      </div>
+
+      <!-- Energy Tip -->
+      <div class="energy-tip">
+        <p>
+          <span class="green-text">Energy Tip:</span> On warm days, setting a
+          programmable thermostat to a higher setting when you are not at home
+          can help reduce your energy costs by approximately 10 percent.
+        </p>
+      </div>
+    </div>
   </body>
 </html>

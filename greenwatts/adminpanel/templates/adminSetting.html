@@ -11,22 +11,26 @@
   <body>
     <div class="container">
       <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="logo">
-          <h2>GreenWatts</h2>
+      <div class="sidebar">
+        <h2 class="logo">GreenWaTts</h2>
+        <div class="admin-section">
+          <div class="admin-icon">⚙️</div>
+          <p>ADMIN</p>
         </div>
+
         <nav>
-          <ul>
-            <li><a href="#">Dashboard</a></li>
-            <li><a href="#">Office Usage</a></li>
-            <li><a href="#">Reports</a></li>
-            <li><a href="#">Energy Cost</a></li>
-            <li><a href="#">CO2 Emission</a></li>
-            <li class="active"><a href="#">Admin Setting</a></li>
-            <li><a href="#">Log Out</a></li>
-          </ul>
+          <a href="{% url 'adminpanel:admin_dashboard' %}" class="active"
+            >📊 Dashboard</a
+          >
+          <a href="officeUsage.html">🏢 Office Usage</a>
+          <a href="reports.html">📑 Reports</a>
+          <a href="energyCost.html">💸 Energy Cost</a>
+          <a href="co2Emission.html">🌍 CO2 Emission</a>
+          <a href="{% url 'adminpanel:admin_setting' %}">⚙️ Admin Setting</a>
+          <!-- logout goes to login page -->
+          <a href="adminLogin.html">🚪 Log Out</a>
         </nav>
-      </aside>
+      </div>
 
       <!-- Main Content -->
       <main class="main-content">

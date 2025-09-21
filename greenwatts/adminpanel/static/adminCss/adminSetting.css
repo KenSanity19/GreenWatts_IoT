@@ -17,37 +17,41 @@ body {
 
 /* Sidebar */
 .sidebar {
-  width: 230px;
-  background: #1e1f47;
-  color: #fff;
-  min-height: 100vh;
-  padding: 20px 0;
+  width: 220px;
+  background: #0b1444; /* deep navy blue */
+  color: white;
+  height: 100vh;
+  padding: 20px 15px;
 }
 
-.sidebar .logo {
+.logo {
+  font-size: 22px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.admin-section {
   text-align: center;
   margin-bottom: 30px;
 }
 
-.sidebar nav ul {
-  list-style: none;
+.admin-icon {
+  font-size: 30px;
 }
 
-.sidebar nav ul li {
-  margin: 12px 0;
-}
-
-.sidebar nav ul li a {
+.sidebar nav a {
   display: block;
-  color: #fff;
-  padding: 10px 20px;
+  padding: 12px;
+  margin: 8px 0;
   text-decoration: none;
+  color: white;
+  border-radius: 5px;
 }
 
-.sidebar nav ul li.active,
-.sidebar nav ul li a:hover {
-  background: #d5a623;
-  border-radius: 6px;
+.sidebar nav a.active {
+  background: #f4b400;
+  color: black;
+  font-weight: bold;
 }
 
 /* Main Content */

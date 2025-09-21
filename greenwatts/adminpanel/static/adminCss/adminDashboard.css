@@ -1,0 +1,215 @@
+/* General Layout */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  display: flex;
+  background: #fdfaf6; /* beige background like screenshot */
+  color: #333;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  background: #0b1444; /* deep navy blue */
+  color: white;
+  height: 100vh;
+  padding: 20px 15px;
+}
+
+.logo {
+  font-size: 22px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.admin-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.admin-icon {
+  font-size: 30px;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 12px;
+  margin: 8px 0;
+  text-decoration: none;
+  color: white;
+  border-radius: 5px;
+}
+
+.sidebar nav a.active {
+  background: #f4b400;
+  color: black;
+  font-weight: bold;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 20px 30px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.note {
+  font-size: 14px;
+  margin: 5px 0;
+}
+
+.red-text {
+  color: red;
+  font-weight: bold;
+}
+
+.date-time {
+  font-size: 14px;
+  color: #111;
+  font-weight: bold;
+  text-align: right;
+}
+
+/* Filters */
+.filters {
+  margin: 15px 0;
+}
+
+.filters select {
+  padding: 5px 15px;
+  margin-right: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-weight: bold;
+}
+
+/* Cards */
+.cards {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.card {
+  flex: 1;
+  padding: 15px;
+  border-radius: 6px;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+}
+
+.card.green {
+  background: #2e7d32;
+}
+
+.card.dark {
+  background: #424242;
+}
+
+.card.red {
+  background: #c62828;
+}
+
+/* Bottom Section */
+.bottom-section {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* Active Alerts */
+.active-alerts {
+  flex: 1;
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 8px;
+  border: 2px solid #0b1444;
+}
+
+.active-alerts table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.active-alerts th,
+.active-alerts td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+.active-alerts .high td {
+  background: #ef5350;
+  color: white;
+}
+
+.active-alerts .moderate td {
+  background: #fdd835;
+  color: black;
+}
+
+.active-alerts .efficient td {
+  background: #66bb6a;
+  color: black;
+}
+
+/* Change in Cost */
+.change-cost {
+  flex: 1;
+  background: #0b1444; /* dark blue box */
+  color: white;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.chart {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 10px 0;
+}
+
+.bar {
+  width: 40px;
+  background: #2196f3;
+  text-align: center;
+  font-size: 12px;
+  color: white;
+}
+
+/* Percentage */
+.percentage {
+  margin-top: 10px;
+}
+
+.green-text {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+/* Carbon Footprint */
+.carbon-footprint {
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 2px solid #0b1444;
+}
+
+/* Energy Tip */
+.energy-tip {
+  background: #0b1444;
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+}
+
+
