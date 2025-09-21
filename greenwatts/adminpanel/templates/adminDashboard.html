@@ -24,12 +24,12 @@
           >📊 Dashboard</a
         >
         <a href="{% url 'adminpanel:office_usage' %}">🏢 Office Usage</a>
-        <a href="reports.html">📑 Reports</a>
-        <a href="energyCost.html">💸 Energy Cost</a>
-        <a href="co2Emission.html">🌍 CO2 Emission</a>
+        <a href="{% url 'adminpanel:admin_reports' %}">📑 Admin Reports</a>
+        <a href="{% url 'adminpanel:admin_costs' %}">💸 Energy Costs</a>
+        <a href="{% url 'adminpanel:carbon_emission' %}">🌍 Co2 Emission</a>
         <a href="{% url 'adminpanel:admin_setting' %}">⚙️ Admin Setting</a>
         <!-- logout goes to login page -->
-        <a href="adminLogin.html">🚪 Log Out</a>
+        <a href="{% url 'users:index' %}">🚪 Log Out</a>
       </nav>
     </div>
 

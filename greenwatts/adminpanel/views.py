@@ -32,3 +32,12 @@ def admin_setting(request):
 
 def office_usage(request):
     return render(request, 'officeUsage.html')
+
+def admin_reports(request):
+    return render(request, 'adminReports.html')
+
+def admin_costs(request):
+    return render(request, 'adminCosts.html')
+
+def carbon_emission(request):
+    return render(request, 'carbonEmission.html')
