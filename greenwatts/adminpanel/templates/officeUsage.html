@@ -1,0 +1,223 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GreenWatts - Office Usage</title>
+    <link rel="stylesheet" href="{% static 'adminCss/officeUsage.css' %}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+
+  <body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2 class="logo">GreenWaTts</h2>
+      <div class="admin-section">
+        <div class="admin-icon">⚙️</div>
+        <p>ADMIN</p>
+      </div>
+
+      <nav>
+        <a href="{% url 'adminpanel:admin_dashboard' %}" class="active"
+          >📊 Dashboard</a
+        >
+        <a href="{% url 'adminpanel:office_usage' %}">🏢 Office Usage</a>
+        <a href="reports.html">📑 Reports</a>
+        <a href="energyCost.html">💸 Energy Cost</a>
+        <a href="co2Emission.html">🌍 CO2 Emission</a>
+        <a href="{% url 'adminpanel:admin_setting' %}">⚙️ Admin Setting</a>
+        <!-- logout goes to login page -->
+        <a href="adminLogin.html">🚪 Log Out</a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <header>
+        <h1>Office Usage</h1>
+        <p class="note">
+          <span class="red-text">Noted!</span> The data will be captured every
+          12:00am midnight
+        </p>
+        <div class="date-time">📅 July 20, 2025 21:57 PM</div>
+      </header>
+
+      <!-- Filters -->
+      <div class="filters">
+        <select>
+          <option>Day</option>
+        </select>
+        <select>
+          <option>Month</option>
+        </select>
+        <select>
+          <option>Year</option>
+        </select>
+      </div>
+
+      <!-- Office Table -->
+      <div class="office-usage">
+        <div class="table-header">
+          <input type="text" placeholder="Search Office" />
+          <select>
+            <option>Sort by Status</option>
+            <option>Efficient</option>
+            <option>Moderate</option>
+            <option>High</option>
+          </select>
+        </div>
+
+        <table>
+          <tr>
+            <th>Office</th>
+            <th>Energy Usage</th>
+            <th>Cost Estimate</th>
+            <th>CO₂ Emissions</th>
+            <th>Status</th>
+          </tr>
+          <tr class="moderate">
+            <td>Dean’s Office</td>
+            <td>15.2 kWh (+5%)</td>
+            <td>₱76.00</td>
+            <td>12.3 kg</td>
+            <td>MODERATE</td>
+          </tr>
+          <tr class="efficient">
+            <td>CS Office</td>
+            <td>9.3 kWh (-6%)</td>
+            <td>₱46.00</td>
+            <td>7.1 kg</td>
+            <td>EFFICIENT</td>
+          </tr>
+          <tr class="high">
+            <td>IT Office</td>
+            <td>21.2 kWh (+10%)</td>
+            <td>₱109.00</td>
+            <td>18.7 kg</td>
+            <td>HIGH</td>
+          </tr>
+          <tr class="efficient">
+            <td>TCM Office</td>
+            <td>11.2 kWh (-3%)</td>
+            <td>₱59.00</td>
+            <td>9.6 kg</td>
+            <td>EFFICIENT</td>
+          </tr>
+          <tr class="moderate">
+            <td>DS Office</td>
+            <td>13.5 kWh (-5%)</td>
+            <td>₱69.00</td>
+            <td>10.5 kg</td>
+            <td>MODERATE</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Charts Section -->
+      <div class="charts">
+        <div class="chart-box">
+          <h3>Office Share of Total Energy Usage</h3>
+          <canvas id="pieChart"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Energy Usage (kWh)</h3>
+          <select>
+            <option>Week</option>
+            <option>Month</option>
+            <option>Year</option>
+          </select>
+          <canvas id="lineChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Energy Tip -->
+      <div class="energy-tip">
+        <p>
+          <span class="green-text">Energy Tip:</span> On warm days, setting a
+          programmable thermostat to a higher setting when you are not at home
+          can help reduce your energy costs by approximately 10 percent.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      // Pie Chart
+      const ctxPie = document.getElementById("pieChart");
+      new Chart(ctxPie, {
+        type: "pie",
+        data: {
+          labels: [
+            "IT Office",
+            "Dean’s Office",
+            "CS Office",
+            "TCM Office",
+            "DS Office",
+          ],
+          datasets: [
+            {
+              data: [30.11, 21.59, 13.21, 15.91, 19.18],
+              backgroundColor: [
+                "#3b82f6",
+                "#f97316",
+                "#8b5cf6",
+                "#22c55e",
+                "#ef4444",
+              ],
+            },
+          ],
+        },
+      });
+
+      // Line Chart
+      const ctxLine = document.getElementById("lineChart");
+      new Chart(ctxLine, {
+        type: "line",
+        data: {
+          labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+          datasets: [
+            {
+              label: "IT Office",
+              data: [10, 14, 13, 15, 17, 20, 23],
+              borderColor: "#3b82f6",
+              fill: false,
+            },
+            {
+              label: "Dean’s Office",
+              data: [9, 12, 11, 12, 14, 16, 18],
+              borderColor: "#f97316",
+              fill: false,
+            },
+            {
+              label: "CS Office",
+              data: [7, 10, 9, 8, 10, 12, 13],
+              borderColor: "#8b5cf6",
+              fill: false,
+            },
+            {
+              label: "TCM Office",
+              data: [6, 9, 7, 8, 9, 11, 12],
+              borderColor: "#22c55e",
+              fill: false,
+            },
+            {
+              label: "DS Office",
+              data: [8, 11, 10, 11, 12, 13, 14],
+              borderColor: "#ef4444",
+              fill: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: "bottom",
+            },
+          },
+        },
+      });
+    </script>
+  </body>
+</html>

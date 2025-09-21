@@ -7,16 +7,6 @@ def index(request):
     return HttpResponse("Hello from Admin app")
 
 def admin_login(request):
-    return render(request, 'adminLogin.html')
-
-def admin_dashboard(request):
-    return render(request, 'adminDashboard.html')
-
-def admin_setting(request):
-    return render(request, 'adminSetting.html')
-
-
-def admin_login(request):
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
@@ -32,3 +22,13 @@ def admin_login(request):
             messages.error(request, "User does not exist")
 
     return render(request, "adminLogin.html")
+
+
+def admin_dashboard(request):
+    return render(request, 'adminDashboard.html')
+
+def admin_setting(request):
+    return render(request, 'adminSetting.html')
+
+def office_usage(request):
+    return render(request, 'officeUsage.html')
