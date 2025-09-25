@@ -1,0 +1,120 @@
+/* Sidebar */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+  }
+  
+  .sidebar {
+    width: 220px;
+    background: #1d1f27;
+    color: #fff;
+    height: 100vh;
+    padding: 20px;
+  }
+  
+  .logo {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  
+  .admin-section {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  nav a {
+    display: block;
+    padding: 10px;
+    margin: 8px 0;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+  }
+  
+  nav a.active, nav a:hover {
+    background: #f0ad4e;
+    color: #000;
+  }
+  
+  /* Main Content */
+  .main-content {
+    flex: 1;
+    padding: 20px;
+    background: #f8f9fa;
+  }
+  
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .export-btn {
+    background: #1d1f27;
+    color: #fff;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  
+  /* Report Cards */
+  .report-cards {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin: 20px 0;
+  }
+  
+  .card {
+    flex: 1;
+    padding: 20px;
+    text-align: center;
+    border-radius: 10px;
+    font-weight: bold;
+    color: #fff; /* default white text */
+  }
+  
+  .card p {
+    margin: 0;
+    font-size: 14px;
+  }
+  
+  .card span {
+    display: block;
+    font-size: 22px;
+    margin-top: 8px;
+  }
+  
+  /* Colors for each card */
+  .total { background: #28a745; }     /* Green */
+  .highest { background: #dc3545; }   /* Red */
+  .inactive { background: #007bff; }  /* Blue */
+  .best { background: #ffc107; color: #000; } /* Yellow with black text */
+  
+  /* Chart Section */
+  .chart-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+  }
+  
+  .recommendation {
+    margin-top: 15px;
+    padding: 10px;
+    background: #eef5ff;
+    border-left: 4px solid #0275d8;
+  }
+  
+  /* Footer */
+  footer {
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  .energy-tip {
+    color: #28a745;
+    font-size: 14px;
+  }
+  
