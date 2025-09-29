@@ -1,0 +1,27 @@
+:root {
+  --font-family: Arial, sans-serif;
+  --bg-main: #fdfaf6;
+  --bg-sidebar: #0b1444;
+  --bg-light-gray: #d3d3d3;
+  --text-primary: #333;
+  --text-white: white;
+  --text-black: black;
+  --color-accent: #f4b400;
+  --color-red: #ef5350;
+  --color-green: #4caf50;
+  --color-orange: #fdd835;
+  --color-navy: #0b1444;
+  --color-dark-gray: #424242;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 22px;
+  --font-size-xl: 28px;
+  --font-size-xxl: 30px;
+  --font-size-xxxl: 90px;
+  --font-size-xxxxl: 36px;
+}
+
+.admin-icon {
+  font-size: var(--font-size-xxl);
+}

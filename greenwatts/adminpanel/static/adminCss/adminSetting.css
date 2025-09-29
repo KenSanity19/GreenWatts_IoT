@@ -1,14 +1,17 @@
+@import url('common.css');
+
 /* Reset */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-family);
 }
 
 body {
-  background: #f2eee9;
-  color: #222;
+  display: flex;
+  background: var(--bg-main);
+  color: var(--text-primary);
 }
 
 .container {
@@ -17,17 +20,27 @@ body {
 
 /* Sidebar */
 .sidebar {
-  width: 220px;
-  background: #0b1444; /* deep navy blue */
-  color: white;
+  width: 248px;
+  background: var(--bg-sidebar); /* deep navy blue */
+  color: var(--text-white);
   height: 100vh;
   padding: 20px 15px;
 }
 
 .logo {
-  font-size: 22px;
+  margin-top: 20px;
+  font-size: var(--font-size-lg);
   text-align: center;
   margin-bottom: 20px;
+}
+
+p {
+    display: block;
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
+    unicode-bidi: isolate;
 }
 
 .admin-section {
@@ -35,9 +48,7 @@ body {
   margin-bottom: 30px;
 }
 
-.admin-icon {
-  font-size: 30px;
-}
+
 
 .sidebar nav a {
   display: block;
@@ -63,22 +74,36 @@ body {
 header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
 }
 
 header h1 {
-  font-size: 28px;
+  font-size: var(--font-size-xl);
+  margin: 0;
 }
 
-header .note {
-  color: red;
-  margin-top: 5px;
+.header-left {
+  display: flex;
+  flex-direction: column;
 }
 
-header .datetime {
-  font-size: 14px;
-  color: #444;
+.note {
+  font-size: var(--font-size-sm);
+  margin: 5px 0 0 0;
+}
+
+.red-text {
+  color: var(--color-red);
+  font-weight: bold;
+}
+
+.date-time {
+  font-size: var(--font-size-sm);
+  color: #111;
+  font-weight: bold;
+  text-align: right;
+  margin-left: auto;
 }
 
 /* Office Table */
@@ -138,8 +163,8 @@ table thead {
 }
 
 .deactivate-btn {
-  background: #d9534f;
-  color: #fff;
+  background: var(--color-red);
+  color: var(--text-white);
   border: none;
   padding: 6px 12px;
   border-radius: 6px;
@@ -149,7 +174,7 @@ table thead {
 /* Thresholds */
 .thresholds {
   background: #1e1f47;
-  color: #fff;
+  color: var(--text-white);
   padding: 20px;
   margin: 20px 0;
   border-radius: 8px;
@@ -190,8 +215,8 @@ table thead {
 }
 
 .save-btn {
-  background: #28a745;
-  color: #fff;
+  background: var(--color-green);
+  color: var(--text-white);
   border: none;
   padding: 6px 12px;
   margin-left: 6px;
@@ -201,27 +226,27 @@ table thead {
 
 /* Threshold Colors */
 .efficient {
-  color: green;
+  color: var(--color-green);
   font-weight: bold;
 } 
 
 .moderate {
-  color: orange;
+  color: var(--color-orange);
   font-weight: bold;
 }
 
 .high {
-  color: red;
+  color: var(--color-red);
   font-weight: bold;
 }
 
 /* Footer */
 footer {
   margin-top: 20px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 footer .tip span {
-  color: green;
+  color: var(--color-green);
   font-weight: bold;
 }

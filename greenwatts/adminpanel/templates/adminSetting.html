@@ -6,6 +6,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Setting - GreenWatts</title>
+    <link rel="stylesheet" href="{% static 'adminCss/common.css' %}" />
     <link rel="stylesheet" href="{% static 'adminCss/adminSetting.css' %}" />
     <link
       rel="stylesheet"
@@ -13,189 +14,190 @@
     />
   </head>
   <body>
-    <div class="container">
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <h2 class="logo">GreenWaTts</h2>
-        <div class="admin-section">
-          <div class="admin-icon">⚙️</div>
-          <p>ADMIN</p>
-        </div>
-
-        <nav>
-          <a
-            href="{% url 'adminpanel:admin_dashboard' %}"
-            class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"
-            ><i class="fas fa-tachometer-alt"></i> Dashboard</a
-          >
-          <a
-            href="{% url 'adminpanel:office_usage' %}"
-            class="{% if request.resolver_match.url_name == 'office_usage' %}active{% endif %}"
-            ><i class="fas fa-building"></i> Office Usage</a
-          >
-          <a
-            href="{% url 'adminpanel:admin_reports' %}"
-            class="{% if request.resolver_match.url_name == 'admin_reports' %}active{% endif %}"
-            ><i class="fas fa-chart-bar"></i> Admin Reports</a
-          >
-          <a
-            href="{% url 'adminpanel:admin_costs' %}"
-            class="{% if request.resolver_match.url_name == 'admin_costs' %}active{% endif %}"
-            ><i class="fas fa-dollar-sign"></i> Energy Costs</a
-          >
-          <a
-            href="{% url 'adminpanel:carbon_emission' %}"
-            class="{% if request.resolver_match.url_name == 'carbon_emission' %}active{% endif %}"
-            ><i class="fas fa-leaf"></i> Co2 Emission</a
-          >
-          <a
-            href="{% url 'adminpanel:admin_setting' %}"
-            class="{% if request.resolver_match.url_name == 'admin_setting' %}active{% endif %}"
-            ><i class="fas fa-cog"></i> Admin Setting</a
-          >
-          <!-- logout goes to login page -->
-          <a href="{% url 'users:index' %}"
-            ><i class="fas fa-sign-out-alt"></i> Log Out</a
-          >
-        </nav>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2 class="logo">GreenWaTts</h2>
+      <div class="admin-section">
+        <div class="admin-icon"><i class="fas fa-user-cog"></i></div>
+        <p>ADMIN</p>
       </div>
 
-      <!-- Main Content -->
-      <main class="main-content">
-        <header>
+      <nav>
+        <a
+          href="{% url 'adminpanel:admin_dashboard' %}"
+          class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"
+          ><i class="fas fa-tachometer-alt"></i> Dashboard</a
+        >
+        <a
+          href="{% url 'adminpanel:office_usage' %}"
+          class="{% if request.resolver_match.url_name == 'office_usage' %}active{% endif %}"
+          ><i class="fas fa-building"></i> Office Usage</a
+        >
+        <a
+          href="{% url 'adminpanel:admin_reports' %}"
+          class="{% if request.resolver_match.url_name == 'admin_reports' %}active{% endif %}"
+          ><i class="fas fa-chart-bar"></i> Admin Reports</a
+        >
+        <a
+          href="{% url 'adminpanel:admin_costs' %}"
+          class="{% if request.resolver_match.url_name == 'admin_costs' %}active{% endif %}"
+          ><i class="fas fa-dollar-sign"></i> Energy Costs</a
+        >
+        <a
+          href="{% url 'adminpanel:carbon_emission' %}"
+          class="{% if request.resolver_match.url_name == 'carbon_emission' %}active{% endif %}"
+          ><i class="fas fa-leaf"></i> Co2 Emission</a
+        >
+        <a
+          href="{% url 'adminpanel:admin_setting' %}"
+          class="{% if request.resolver_match.url_name == 'admin_setting' %}active{% endif %}"
+          ><i class="fas fa-cog"></i> Admin Setting</a
+        >
+        <!-- logout goes to login page -->
+        <a href="{% url 'users:index' %}"
+          ><i class="fas fa-sign-out-alt"></i> Log Out</a
+        >
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <header>
+        <div class="header-left">
           <h1>Admin Setting</h1>
           <p class="note">
-            Noted! The data will be captured every 12:00am midnight
+            <span class="red-text">Noted!</span> The data will be captured every
+            12:00am midnight
           </p>
-          <div class="datetime">📅 July 20, 2025 21:57 PM</div>
-        </header>
+        </div>
+        <div class="date-time">📅 July 20, 2025 21:57 PM</div>
+      </header>
 
-        <!-- Office Table -->
-        <section class="office-section">
-          <div class="office-header">
-            <input type="text" placeholder="Search Office" />
-            <button class="add-btn">+ Add Office</button>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Office</th>
-                <th>Department</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Dean’s Office</td>
-                <td><b>CITC</b></td>
-                <td>Building 9</td>
-                <td>Active</td>
-                <td>
-                  <button class="edit-btn">Edit</button
-                  ><button class="deactivate-btn">Deactivate</button>
-                </td>
-              </tr>
-              <tr>
-                <td>CS Office</td>
-                <td><b>CITC</b></td>
-                <td>Building 9</td>
-                <td>Active</td>
-                <td>
-                  <button class="edit-btn">Edit</button
-                  ><button class="deactivate-btn">Deactivate</button>
-                </td>
-              </tr>
-              <tr>
-                <td>IT Office</td>
-                <td><b>CITC</b></td>
-                <td>Building 9</td>
-                <td>Active</td>
-                <td>
-                  <button class="edit-btn">Edit</button
-                  ><button class="deactivate-btn">Deactivate</button>
-                </td>
-              </tr>
-              <tr>
-                <td>TCM Office</td>
-                <td><b>CITC</b></td>
-                <td>Building 9</td>
-                <td>Active</td>
-                <td>
-                  <button class="edit-btn">Edit</button
-                  ><button class="deactivate-btn">Deactivate</button>
-                </td>
-              </tr>
-              <tr>
-                <td>DS Office</td>
-                <td><b>CITC</b></td>
-                <td>Building 9</td>
-                <td>Active</td>
-                <td>
-                  <button class="edit-btn">Edit</button
-                  ><button class="deactivate-btn">Deactivate</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
+      <!-- Office Table -->
+      <section class="office-section">
+        <div class="office-header">
+          <input type="text" placeholder="Search Office" />
+          <button class="add-btn">+ Add Office</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Office</th>
+              <th>Department</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Dean’s Office</td>
+              <td><b>CITC</b></td>
+              <td>Building 9</td>
+              <td>Active</td>
+              <td>
+                <button class="edit-btn">Edit</button
+                ><button class="deactivate-btn">Deactivate</button>
+              </td>
+            </tr>
+            <tr>
+              <td>CS Office</td>
+              <td><b>CITC</b></td>
+              <td>Building 9</td>
+              <td>Active</td>
+              <td>
+                <button class="edit-btn">Edit</button
+                ><button class="deactivate-btn">Deactivate</button>
+              </td>
+            </tr>
+            <tr>
+              <td>IT Office</td>
+              <td><b>CITC</b></td>
+              <td>Building 9</td>
+              <td>Active</td>
+              <td>
+                <button class="edit-btn">Edit</button
+                ><button class="deactivate-btn">Deactivate</button>
+              </td>
+            </tr>
+            <tr>
+              <td>TCM Office</td>
+              <td><b>CITC</b></td>
+              <td>Building 9</td>
+              <td>Active</td>
+              <td>
+                <button class="edit-btn">Edit</button
+                ><button class="deactivate-btn">Deactivate</button>
+              </td>
+            </tr>
+            <tr>
+              <td>DS Office</td>
+              <td><b>CITC</b></td>
+              <td>Building 9</td>
+              <td>Active</td>
+              <td>
+                <button class="edit-btn">Edit</button
+                ><button class="deactivate-btn">Deactivate</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
 
-        <!-- Thresholds -->
-        <section class="thresholds">
-          <h2>SET THRESHOLDS</h2>
-          <div class="threshold-boxes">
-            <div class="threshold-card">
-              <h3>Energy Consumption Threshold</h3>
-              <p>
-                <span class="efficient">Efficient</span>: less than &lt;
-                <input type="text" value="10kWh" />
-              </p>
-              <p>
-                <span class="moderate">Moderate</span>: between &lt;=
-                <input type="text" value="15kWh" />
-              </p>
-              <p>
-                <span class="high">High</span>: greater than &gt;
-                <input type="text" value="15kWh" />
-              </p>
-              <div class="btn-group">
-                <button class="edit-btn">Edit</button>
-                <button class="save-btn">Save</button>
-              </div>
-            </div>
-
-            <div class="threshold-card">
-              <h3>Carbon Emission Threshold</h3>
-              <p>
-                <span class="efficient">Efficient</span>: less than &lt;
-                <input type="text" value="8kg" />
-              </p>
-              <p>
-                <span class="moderate">Moderate</span>: between &lt;=
-                <input type="text" value="13kg" />
-              </p>
-              <p>
-                <span class="high">High</span>: greater than &gt;
-                <input type="text" value="13kg" />
-              </p>
-              <div class="btn-group">
-                <button class="edit-btn">Edit</button>
-                <button class="save-btn">Save</button>
-              </div>
+      <!-- Thresholds -->
+      <section class="thresholds">
+        <h2>SET THRESHOLDS</h2>
+        <div class="threshold-boxes">
+          <div class="threshold-card">
+            <h3>Energy Consumption Threshold</h3>
+            <p>
+              <span class="efficient">Efficient</span>: less than &lt;
+              <input type="text" value="10kWh" />
+            </p>
+            <p>
+              <span class="moderate">Moderate</span>: between &lt;=
+              <input type="text" value="15kWh" />
+            </p>
+            <p>
+              <span class="high">High</span>: greater than &gt;
+              <input type="text" value="15kWh" />
+            </p>
+            <div class="btn-group">
+              <button class="edit-btn">Edit</button>
+              <button class="save-btn">Save</button>
             </div>
           </div>
-        </section>
 
-        <!-- Footer -->
-        <footer>
-          <p class="tip">
-            <span>Energy Tip:</span> On warm days, setting a programmable
-            thermostat to a higher setting when you are not at home can help
-            reduce your energy costs by approximately 10 percent.
-          </p>
-        </footer>
-      </main>
+          <div class="threshold-card">
+            <h3>Carbon Emission Threshold</h3>
+            <p>
+              <span class="efficient">Efficient</span>: less than &lt;
+              <input type="text" value="8kg" />
+            </p>
+            <p>
+              <span class="moderate">Moderate</span>: between &lt;=
+              <input type="text" value="13kg" />
+            </p>
+            <p>
+              <span class="high">High</span>: greater than &gt;
+              <input type="text" value="13kg" />
+            </p>
+            <div class="btn-group">
+              <button class="edit-btn">Edit</button>
+              <button class="save-btn">Save</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer>
+        <p class="tip">
+          <span>Energy Tip:</span> On warm days, setting a programmable
+          thermostat to a higher setting when you are not at home can help
+          reduce your energy costs by approximately 10 percent.
+        </p>
+      </footer>
     </div>
   </body>
 </html>

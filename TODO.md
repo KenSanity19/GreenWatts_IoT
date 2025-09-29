@@ -1,6 +1,0 @@
-- [x] Update adminDashboard.html to highlight Dashboard nav item
-- [x] Update adminSetting.html to highlight Admin Setting nav item
-- [x] Update carbonEmission.html to highlight Co2 Emission nav item
-- [x] Update adminCosts.html to highlight Energy Costs nav item
-- [x] Update adminReports.html to highlight Admin Reports nav item
-- [x] Update officeUsage.html to highlight Office Usage nav item

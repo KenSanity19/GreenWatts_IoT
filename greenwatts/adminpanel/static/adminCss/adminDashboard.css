@@ -1,23 +1,25 @@
+@import url('common.css');
+
 /* General Layout */
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-family);
   display: flex;
-  background: #fdfaf6; /* beige background like screenshot */
-  color: #333;
+  background: var(--bg-main); /* beige background like screenshot */
+  color: var(--text-primary);
 }
 
 /* Sidebar */
 .sidebar {
   width: 220px;
-  background: #0b1444; /* deep navy blue */
-  color: white;
+  background: var(--bg-sidebar); /* deep navy blue */
+  color: var(--text-white);
   height: 100vh;
   padding: 20px 15px;
 }
 
 .logo {
-  font-size: 22px;
+  font-size: var(--font-size-lg);
   text-align: center;
   margin-bottom: 20px;
 }
@@ -27,9 +29,7 @@ body {
   margin-bottom: 30px;
 }
 
-.admin-icon {
-  font-size: 30px;
-}
+
 
 .sidebar nav a {
   display: block;
@@ -54,21 +54,21 @@ body {
 
 header h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: var(--font-size-xl);
 }
 
 .note {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   margin: 5px 0;
 }
 
 .red-text {
-  color: red;
+  color: var(--color-red);
   font-weight: bold;
 }
 
 .date-time {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: #111;
   font-weight: bold;
   text-align: right;
@@ -104,15 +104,15 @@ header h1 {
 }
 
 .card.green {
-  background: #2e7d32;
+  background: var(--color-green);
 }
 
 .card.dark {
-  background: #424242;
+  background: var(--color-dark-gray);
 }
 
 .card.red {
-  background: #c62828;
+  background: var(--color-red);
 }
 
 /* Bottom Section */
@@ -125,10 +125,10 @@ header h1 {
 /* Active Alerts */
 .active-alerts {
   flex: 1;
-  background: #ffffff;
+  background: var(--text-white);
   padding: 15px;
   border-radius: 8px;
-  border: 2px solid #0b1444;
+  border: 2px solid var(--bg-sidebar);
 }
 
 .active-alerts table {
@@ -144,25 +144,25 @@ header h1 {
 }
 
 .active-alerts .high td {
-  background: #ef5350;
-  color: white;
+  background: var(--color-red);
+  color: var(--text-white);
 }
 
 .active-alerts .moderate td {
-  background: #fdd835;
+  background: var(--color-orange);
   color: black;
 }
 
 .active-alerts .efficient td {
-  background: #66bb6a;
+  background: var(--color-green);
   color: black;
 }
 
 /* Change in Cost */
 .change-cost {
   flex: 1;
-  background: #0b1444; /* dark blue box */
-  color: white;
+  background: var(--bg-sidebar); /* dark blue box */
+  color: var(--text-white);
   padding: 15px;
   border-radius: 8px;
   text-align: center;
@@ -180,7 +180,7 @@ header h1 {
   background: #2196f3;
   text-align: center;
   font-size: 12px;
-  color: white;
+  color: var(--text-white);
 }
 
 /* Percentage */
@@ -189,26 +189,26 @@ header h1 {
 }
 
 .green-text {
-  color: #4caf50;
+  color: var(--color-green);
   font-weight: bold;
 }
 
 /* Carbon Footprint */
 .carbon-footprint {
-  background: #ffffff;
+  background: var(--text-white);
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 20px;
-  border: 2px solid #0b1444;
+  border: 2px solid var(--bg-sidebar);
 }
 
 /* Energy Tip */
 .energy-tip {
-  background: #0b1444;
-  color: white;
+  background: var(--bg-sidebar);
+  color: var(--text-white);
   padding: 12px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 

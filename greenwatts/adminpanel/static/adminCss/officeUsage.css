@@ -1,23 +1,25 @@
+@import url('common.css');
+
 /* General Layout */
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-family);
   display: flex;
-  background: #fdfaf6;
-  color: #333;
+  background: var(--bg-main);
+  color: var(--text-primary);
 }
 
 /* Sidebar */
 .sidebar {
   width: 220px;
-  background: #0b1444;
-  color: white;
+  background: var(--bg-sidebar);
+  color: var(--text-white);
   height: 100vh;
   padding: 20px 15px;
 }
 
 .logo {
-  font-size: 22px;
+  font-size: var(--font-size-lg);
   text-align: center;
   margin-bottom: 20px;
 }
@@ -32,7 +34,7 @@ body {
   padding: 12px;
   margin: 8px 0;
   text-decoration: none;
-  color: white;
+  color: var(--text-white);
   border-radius: 5px;
 }
 

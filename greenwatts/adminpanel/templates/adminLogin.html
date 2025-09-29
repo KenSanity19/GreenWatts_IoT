@@ -6,6 +6,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GreenWatts Admin Login</title>
+    <link rel="stylesheet" href="{% static 'adminCss/common.css' %}" />
     <link rel="stylesheet" href="{% static 'adminCss/adminLogin.css' %}" />
     <link
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
@@ -29,22 +30,33 @@
         <p class="subtitle">Administrative Page</p>
 
         <!-- Updated Form -->
-          <form method="POST" action="{% url 'adminpanel:admin_login'  %}">
-            {% csrf_token %}
-            <div class="input-box"> <!--Login Input Box-->
-              <span class="material-icons input-icon">person</span>
-              <input type="text" name="username" placeholder="Username" required />
-            </div>
-            
-            <div class="input-box">
-              <span class="material-icons input-icon">lock</span>
-              <input type="password" name="password" placeholder="Password" required />
-            </div>
-            <div class="remember-me">
-              <label><input type="checkbox" /> Remember Me</label>
-            </div>
-            <button type="submit">Login</button>
-          </form>
+        <form method="POST" action="{% url 'adminpanel:admin_login'  %}">
+          {% csrf_token %}
+          <div class="input-box">
+            <!--Login Input Box-->
+            <span class="material-icons input-icon">person</span>
+            <input
+              type="text"
+              name="username"
+              placeholder="Username"
+              required
+            />
+          </div>
+
+          <div class="input-box">
+            <span class="material-icons input-icon">lock</span>
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              required
+            />
+          </div>
+          <div class="remember-me">
+            <label><input type="checkbox" /> Remember Me</label>
+          </div>
+          <button type="submit">Login</button>
+        </form>
 
         <!-- Error messages -->
         {% if messages %}

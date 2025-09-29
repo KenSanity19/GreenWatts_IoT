@@ -1,7 +1,9 @@
+@import url('common.css');
+
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
-    background: #d3d3d3;
+    font-family: var(--font-family);
+    background: var(--bg-light-gray);
     display: flex;
     height: 100vh;
 }
