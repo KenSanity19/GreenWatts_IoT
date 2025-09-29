@@ -42,12 +42,12 @@
         <a
           href="{% url 'adminpanel:admin_costs' %}"
           class="{% if request.resolver_match.url_name == 'admin_costs' %}active{% endif %}"
-          ><i class="fas fa-dollar-sign"></i> Energy Cost</a
+          ><i class="fas fa-dollar-sign"></i> Energy Costs</a
         >
         <a
           href="{% url 'adminpanel:carbon_emission' %}"
           class="{% if request.resolver_match.url_name == 'carbon_emission' %}active{% endif %}"
-          ><i class="fas fa-leaf"></i> CO2 Emission</a
+          ><i class="fas fa-leaf"></i> Co2 Emission</a
         >
         <a
           href="{% url 'adminpanel:admin_setting' %}"

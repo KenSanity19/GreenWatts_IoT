@@ -25,3 +25,54 @@
 .admin-icon {
   font-size: var(--font-size-xxl);
 }
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+.sidebar {
+  width: 220px;
+  background: var(--bg-sidebar);
+  color: var(--text-white);
+  height: 100%;
+  padding: 20px 15px;
+  overflow-y: auto;
+}
+
+.logo {
+  font-size: var(--font-size-lg);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.admin-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 12px;
+  margin: 8px 0;
+  text-decoration: none;
+  color: white;
+  border-radius: 5px;
+}
+
+.sidebar nav a.active {
+  background: #f4b400;
+  color: black;
+  font-weight: bold;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px 30px;
+  overflow-y: auto;
+}
