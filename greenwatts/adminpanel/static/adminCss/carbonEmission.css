@@ -1,0 +1,47 @@
+/* General Layout */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  display: flex;
+  background: #fdfaf6; /* beige background like screenshot */
+  color: #333;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  background: #0b1444; /* deep navy blue */
+  color: white;
+  height: 100vh;
+  padding: 20px 15px;
+}
+
+.logo {
+  font-size: 22px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.admin-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.admin-icon {
+  font-size: 30px;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 12px;
+  margin: 8px 0;
+  text-decoration: none;
+  color: white;
+  border-radius: 5px;
+}
+
+.sidebar nav a.active {
+  background: #f4b400;
+  color: black;
+  font-weight: bold;
+}

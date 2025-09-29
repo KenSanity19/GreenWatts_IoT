@@ -1,0 +1,2 @@
+- [ ] Add Font Awesome link to all admin templates
+- [ ] Replace emojis with Font Awesome icons in sidebar nav

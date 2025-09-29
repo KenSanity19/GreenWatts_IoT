@@ -8,6 +8,10 @@
     <title>GreenWatts Admin Dashboard</title>
     <!-- correct relative path -->
     <link rel="stylesheet" href="{% static 'adminCss/adminDashboard.css' %}" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
   </head>
 
   <body>
@@ -20,16 +24,40 @@
       </div>
 
       <nav>
-        <a href="{% url 'adminpanel:admin_dashboard' %}" class="active"
-          >📊 Dashboard</a
+        <a
+          href="{% url 'adminpanel:admin_dashboard' %}"
+          class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"
+          ><i class="fas fa-tachometer-alt"></i> Dashboard</a
         >
-        <a href="{% url 'adminpanel:office_usage' %}">🏢 Office Usage</a>
-        <a href="{% url 'adminpanel:admin_reports' %}">📑 Admin Reports</a>
-        <a href="{% url 'adminpanel:admin_costs' %}">💸 Energy Costs</a>
-        <a href="{% url 'adminpanel:carbon_emission' %}">🌍 Co2 Emission</a>
-        <a href="{% url 'adminpanel:admin_setting' %}">⚙️ Admin Setting</a>
+        <a
+          href="{% url 'adminpanel:office_usage' %}"
+          class="{% if request.resolver_match.url_name == 'office_usage' %}active{% endif %}"
+          ><i class="fas fa-building"></i> Office Usage</a
+        >
+        <a
+          href="{% url 'adminpanel:admin_reports' %}"
+          class="{% if request.resolver_match.url_name == 'admin_reports' %}active{% endif %}"
+          ><i class="fas fa-chart-bar"></i> Admin Reports</a
+        >
+        <a
+          href="{% url 'adminpanel:admin_costs' %}"
+          class="{% if request.resolver_match.url_name == 'admin_costs' %}active{% endif %}"
+          ><i class="fas fa-dollar-sign"></i> Energy Costs</a
+        >
+        <a
+          href="{% url 'adminpanel:carbon_emission' %}"
+          class="{% if request.resolver_match.url_name == 'carbon_emission' %}active{% endif %}"
+          ><i class="fas fa-leaf"></i> Co2 Emission</a
+        >
+        <a
+          href="{% url 'adminpanel:admin_setting' %}"
+          class="{% if request.resolver_match.url_name == 'admin_setting' %}active{% endif %}"
+          ><i class="fas fa-cog"></i> Admin Setting</a
+        >
         <!-- logout goes to login page -->
-        <a href="{% url 'users:index' %}">🚪 Log Out</a>
+        <a href="{% url 'users:index' %}"
+          ><i class="fas fa-sign-out-alt"></i> Log Out</a
+        >
       </nav>
     </div>
 
