@@ -5,9 +5,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GreenWatts - Costs</title>
+    <title>GreenWatts Energy Cost</title>
+    <!-- correct relative path -->
     <link rel="stylesheet" href="{% static 'adminCss/common.css' %}" />
-    <link rel="stylesheet" href="{% static 'adminCss/adminCosts.css' %}" />
+    <link rel="stylesheet" href="{% static 'adminCss/adminDashboard.css' %}" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -61,5 +62,123 @@
         >
       </nav>
     </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <header>
+        <h1>Energy Cost</h1>
+        <p class="note">
+          <span class="red-text">Noted!</span> The data will be captured every
+          12:00am midnight
+        </p>
+        <div class="date-time">
+          <i class="fas fa-calendar" style="cursor: pointer"></i> July 20, 2025
+          21:57 PM
+        </div>
+      </header>
+
+      <!-- Filters -->
+      <div class="filters">
+        <select>
+          <option>Week</option>
+        </select>
+        <select>
+          <option>Month</option>
+        </select>
+        <select>
+          <option>Year</option>
+        </select>
+      </div>
+
+      <!-- Top Cards -->
+      <div class="cards">
+        <div class="card green">
+          <p>Total Energy Use</p>
+          <h2>143 kWh</h2>
+        </div>
+        <div class="card dark">
+          <p>Total Cost</p>
+          <h2>₱120.50</h2>
+        </div>
+        <div class="card dark">
+          <p>Average Daily Cost</p>
+          <h2>₱12.05</h2>
+        </div>
+      </div>
+
+      <!-- Bottom Section -->
+      <div class="bottom-section">
+        <!-- Chart Section -->
+        <div class="change-cost">
+          <h3>Energy Cost Chart</h3>
+          <canvas id="energyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Energy Tip -->
+      <div class="energy-tip">
+        <p>
+          <span class="green-text">Energy Tip:</span> On warm days, setting a
+          programmable thermostat to a higher setting when you are not at home
+          can help reduce your energy costs by approximately 10 percent.
+        </p>
+      </div>
+    </div>
+
+    <!-- Chart Script -->
+    <script>
+      const ctx = document.getElementById("energyChart").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+          ],
+          datasets: [
+            {
+              label: "Cost",
+              data: [50, 65, 37, 60, 70, 42, 28],
+              backgroundColor: "#4caf50",
+              borderRadius: 5,
+              barPercentage: 0.5,
+            },
+          ],
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                stepSize: 20,
+                callback: function (value) {
+                  return "₱" + value;
+                },
+              },
+              grid: {
+                color: "#ddd",
+                borderColor: "#ddd",
+              },
+            },
+            x: {
+              grid: {
+                display: false,
+              },
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+        },
+      });
+    </script>
   </body>
 </html>

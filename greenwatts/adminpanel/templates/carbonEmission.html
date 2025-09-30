@@ -5,7 +5,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GreenWatts - Carbon Emission</title>
+    <title>GreenWatts - CO2 Emissions</title>
     <link rel="stylesheet" href="{% static 'adminCss/common.css' %}" />
     <link rel="stylesheet" href="{% static 'adminCss/carbonEmission.css' %}" />
     <link
@@ -48,18 +48,175 @@
         <a
           href="{% url 'adminpanel:carbon_emission' %}"
           class="{% if request.resolver_match.url_name == 'carbon_emission' %}active{% endif %}"
-          ><i class="fas fa-leaf"></i> Co2 Emission</a
+          ><i class="fas fa-leaf"></i> CO2 Emission</a
         >
         <a
           href="{% url 'adminpanel:admin_setting' %}"
           class="{% if request.resolver_match.url_name == 'admin_setting' %}active{% endif %}"
           ><i class="fas fa-cog"></i> Admin Setting</a
         >
-        <!-- logout goes to login page -->
         <a href="{% url 'users:index' %}"
           ><i class="fas fa-sign-out-alt"></i> Log Out</a
         >
       </nav>
     </div>
+
+    <!-- Main Content -->
+    <div class="main-content carbon-emission-content">
+      <header class="carbon-header">
+        <h1>CO2 Emissions</h1>
+        <div class="timestamp">
+          <i class="fas fa-calendar-alt"></i>
+          <span>July 20, 2025 21:57 PM</span>
+        </div>
+      </header>
+
+      <p class="note">
+        <strong>Noted!</strong> The data will be captured every 12:00am midnight
+      </p>
+
+      <div class="filters-bar">
+        <select name="week" id="week-select" class="filter-select">
+          <option value="week">Week</option>
+        </select>
+        <select name="month" id="month-select" class="filter-select">
+          <option value="month">Month</option>
+        </select>
+        <select name="year" id="year-select" class="filter-select">
+          <option value="year">Year</option>
+        </select>
+      </div>
+
+      <div class="summary-cards">
+        <div class="card total-energy">
+          <div class="card-title">Total Energy Use</div>
+          <div class="card-value">143 <span>kWh</span></div>
+        </div>
+        <div class="card total-cost">
+          <div class="card-title">Total Cost</div>
+          <div class="card-value">₱120.50</div>
+        </div>
+        <div class="card avg-daily-cost">
+          <div class="card-title">Average Daily Cost</div>
+          <div class="card-value">₱12.05</div>
+        </div>
+        <div class="card highest-cost-office">
+          <div class="card-title">HIGHEST CO2 EMISSION OFFICE</div>
+          <div class="card-value">IT Office</div>
+        </div>
+      </div>
+
+      <section class="chart-section">
+        <a href="#" class="carbon-footprint-link">CARBON FOOTPRINT EMISSIONS</a>
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="info-item">
+              <div class="info-label">June</div>
+              <div class="info-value">189.8 kg</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">SO FAR THIS MONTH</div>
+              <div class="info-value">100.5 kg</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">PREDICTED THIS MONTH</div>
+              <div class="info-value">209 kg</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">CHANGE IN EMISSIONS</div>
+              <div class="info-value">
+                10.12% <span class="red-arrow">▲</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <canvas id="co2Chart"></canvas>
+        <p class="energy-tip">
+          <strong>Energy Tip:</strong> On warm days, setting a programmable
+          thermostat to a higher setting when you are not at home can help
+          reduce your energy costs by approximately 10 percent.
+        </p>
+      </section>
+    </div>
+
+    <script>
+      const ctx = document.getElementById("co2Chart").getContext("2d");
+      const co2Chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: [
+            "June 1",
+            "June 5",
+            "June 10",
+            "June 15",
+            "June 20",
+            "June 25",
+            "June 30",
+            "July 1",
+            "July 5",
+            "July 10",
+            "July 15",
+            "July 20",
+          ],
+          datasets: [
+            {
+              label: "June",
+              data: [10, 40, 70, 100, 130, 160, 190, 0, 0, 0, 0, 0],
+              borderColor: "#f0ad4e",
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+            },
+            {
+              label: "July",
+              data: [0, 0, 0, 0, 0, 0, 0, 20, 60, 100, 150, 210],
+              borderColor: "#5cb85c",
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+            },
+            {
+              label: "Threshold",
+              data: Array(12).fill(180),
+              borderColor: "red",
+              borderWidth: 2,
+              borderDash: [10, 5],
+              fill: false,
+              pointRadius: 0,
+              tension: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 230,
+              ticks: {
+                stepSize: 46,
+                callback: function (value) {
+                  return value + " kg";
+                },
+              },
+              grid: {
+                color: "#555",
+                borderColor: "#555",
+              },
+            },
+            x: {
+              grid: {
+                display: false,
+              },
+            },
+          },
+        },
+      });
+    </script>
   </body>
 </html>

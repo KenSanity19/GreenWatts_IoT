@@ -1,2 +1,436 @@
 @import url('common.css');
 
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    background-color: #fff;
+    color: #000;
+}
+
+.sidebar {
+    width: 220px;
+    background-color: #1a237e; /* dark blue */
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    height: 100vh;
+    position: fixed;
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin-bottom: 30px;
+    text-align: center;
+    letter-spacing: 2px;
+}
+
+.admin-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 40px;
+    justify-content: center;
+}
+
+.admin-icon {
+    font-size: 1.5rem;
+    color: #64b5f6; /* lighter blue */
+}
+
+.sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.sidebar nav a {
+    color: #b0bec5;
+    text-decoration: none;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+
+.sidebar nav a:hover,
+.sidebar nav a.active {
+    background-color: #ffca28; /* yellow highlight */
+    color: #1a237e;
+}
+
+.main-content {
+    margin-left: 220px;
+    padding: 30px 40px;
+    overflow-y: auto;
+    min-height: 100vh;
+    background-color: #fff;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    font-weight: 700;
+    font-size: 2rem;
+    margin: 0;
+}
+
+.date-time {
+    font-size: 0.9rem;
+    color: #111;
+    font-weight: bold;
+}
+
+.export-btn {
+    background-color: #1a237e;
+    color: #fff;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.report-cards {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.card {
+    flex: 1;
+    padding: 15px;
+    border-radius: 6px;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.card.total {
+    background-color: #4caf50; /* green */
+}
+
+.card.highest {
+    background-color: #d9534f; /* red */
+}
+
+.card.inactive {
+    background-color: #2196f3; /* blue */
+}
+
+.card.best {
+    background-color: #ffc107; /* yellow */
+}
+
+.chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+}
+
+.chart-container h2 {
+    margin-top: 0;
+    font-weight: 700;
+}
+
+.recommendation {
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.energy-tip {
+    background-color: #f5f5f5;
+    color: #111;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .main-content {
+        margin-left: 0;
+        padding: 20px;
+    }
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 10px 0;
+    }
+    .sidebar nav {
+        flex-direction: row;
+        gap: 10px;
+    }
+    .report-cards {
+        flex-direction: column;
+    }
+    .card {
+        width: 100%;
+    }
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar styles */
+.sidebar {
+    width: 220px;
+    background-color: #1B1B2F;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    height: 100vh;
+    position: fixed;
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin-bottom: 30px;
+    text-align: center;
+    letter-spacing: 2px;
+}
+
+.admin-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 40px;
+    justify-content: center;
+}
+
+.admin-icon {
+    font-size: 1.5rem;
+    color: #7ED957;
+}
+
+.sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.sidebar nav a {
+    color: #B0B0B0;
+    text-decoration: none;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+
+.sidebar nav a:hover,
+.sidebar nav a.active {
+    background-color: #7ED957;
+    color: #1B1B2F;
+}
+
+/* Main content styles */
+.main-content {
+    margin-left: 220px;
+    padding: 30px 40px;
+    overflow-y: auto;
+    min-height: 100vh;
+    background-color: #E9E4D4;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h1 {
+    font-weight: 700;
+    font-size: 2rem;
+    margin: 0;
+}
+
+.timestamp {
+    font-size: 0.9rem;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.note {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #B22222;
+    font-weight: 600;
+}
+
+.filters {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+}
+
+.filter-select {
+    background-color: #1B1B2F;
+    color: #fff;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    position: relative;
+}
+
+.filter-select option {
+    color: #000;
+}
+
+/* Summary cards */
+.summary-cards {
+    margin-top: 25px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.card {
+    flex: 1 1 180px;
+    padding: 15px 20px;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 180px;
+}
+
+.card-title {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.card-value {
+    font-size: 1.8rem;
+}
+
+.card-value span {
+    font-size: 1rem;
+}
+
+/* Specific card colors */
+.total-energy {
+    background-color: #5A7D4C;
+}
+
+.total-cost {
+    background-color: #2F3A40;
+}
+
+.avg-daily-cost {
+    background-color: #2B4A6F;
+}
+
+.highest-cost-office {
+    background-color: #E05A5A;
+}
+
+/* Chart section */
+.chart-section {
+    margin-top: 30px;
+    background-color: #1B1B2F;
+    border-radius: 8px;
+    padding: 20px 25px 30px 25px;
+    color: #fff;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.chart-info {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.info-item {
+    flex: 1 1 120px;
+    text-align: center;
+}
+
+.info-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    color: #bbb;
+}
+
+.info-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+/* Energy tip */
+.energy-tip {
+    margin-top: 15px;
+    font-size: 0.8rem;
+    color: #7ED957;
+    text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .main-content {
+        margin-left: 0;
+        padding: 20px;
+    }
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 10px 0;
+    }
+    .sidebar nav {
+        flex-direction: row;
+        gap: 10px;
+    }
+    .summary-cards {
+        flex-direction: column;
+    }
+    .card {
+        min-width: auto;
+        width: 100%;
+    }
+}
