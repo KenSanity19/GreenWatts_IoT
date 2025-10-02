@@ -71,8 +71,7 @@
           </p>
         </div>
         <div class="date-time">
-          <i class="fas fa-calendar" style="cursor: pointer"></i> July 20, 2025
-          21:57 PM
+          <i class="fas fa-calendar"></i> July 20, 2025 21:57 PM
         </div>
       </header>
 
@@ -82,70 +81,214 @@
           <input type="text" placeholder="Search Office" />
           <button class="add-btn">+ Add Office</button>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Office</th>
-              <th>Department</th>
-              <th>Location</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Dean’s Office</td>
-              <td><b>CITC</b></td>
-              <td>Building 9</td>
-              <td>Active</td>
-              <td>
-                <button class="edit-btn">Edit</button
-                ><button class="deactivate-btn">Deactivate</button>
-              </td>
-            </tr>
-            <tr>
-              <td>CS Office</td>
-              <td><b>CITC</b></td>
-              <td>Building 9</td>
-              <td>Active</td>
-              <td>
-                <button class="edit-btn">Edit</button
-                ><button class="deactivate-btn">Deactivate</button>
-              </td>
-            </tr>
-            <tr>
-              <td>IT Office</td>
-              <td><b>CITC</b></td>
-              <td>Building 9</td>
-              <td>Active</td>
-              <td>
-                <button class="edit-btn">Edit</button
-                ><button class="deactivate-btn">Deactivate</button>
-              </td>
-            </tr>
-            <tr>
-              <td>TCM Office</td>
-              <td><b>CITC</b></td>
-              <td>Building 9</td>
-              <td>Active</td>
-              <td>
-                <button class="edit-btn">Edit</button
-                ><button class="deactivate-btn">Deactivate</button>
-              </td>
-            </tr>
-            <tr>
-              <td>DS Office</td>
-              <td><b>CITC</b></td>
-              <td>Building 9</td>
-              <td>Active</td>
-              <td>
-                <button class="edit-btn">Edit</button
-                ><button class="deactivate-btn">Deactivate</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+
+        <!-- Modal for Add Office -->
+        <div
+          id="addOfficeModal"
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modalTitle"
+          aria-describedby="modalDesc"
+        >
+          <div class="modal-content">
+            <button
+              id="closeModal"
+              aria-label="Close modal"
+              class="close-button"
+            >
+              &times;
+            </button>
+            <h2 id="modalTitle">Add Office</h2>
+            <p id="modalDesc">
+              Please fill in the details below to add a new office.
+            </p>
+            <form id="addOfficeForm" novalidate>
+              <div class="form-group">
+                <label for="name">Office Name</label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div class="form-group">
+                <label for="location">Location</label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div class="form-group">
+                <label for="username">Username</label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div class="form-group">
+                <label for="password">Password</label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <div class="form-group">
+                <label for="role">Department</label>
+                <input
+                  type="text"
+                  id="department"
+                  name="department"
+                  required
+                  aria-required="true"
+                />
+              </div>
+              <button type="submit" class="submit-button">Submit</button>
+            </form>
+            <div id="formMessage" department="alert" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="office-table">
+            <thead>
+              <tr>
+                <th>Office</th>
+                <th>Department</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for office in offices %}
+              <tr>
+                <td>{{ office.name }}</td>
+                <td>CITC</td>
+                <td>{{ office.location }}</td>
+                <td>Active</td>
+                <td>
+                  <button
+                    class="edit-office-btn"
+                    data-office-id="{{ office.id }}"
+                  >
+                    Edit
+                  </button>
+                  <button class="deactivate-btn">Deactivate</button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5">No offices found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </section>
+
+      <!-- Edit Office Modal -->
+      <div
+        id="editOfficeModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editModalTitle"
+        aria-describedby="editModalDesc"
+      >
+        <div class="modal-content">
+          <button id="closeEditModal" aria-label="Close modal">&times;</button>
+          <h2 id="editModalTitle">Edit Office</h2>
+          <p id="editModalDesc">Please update the details below.</p>
+          <form id="editOfficeForm" novalidate>
+            <input type="hidden" id="editOfficeId" name="id" />
+            <div class="edit-form-group">
+              <label for="editName"> Office Name </label>
+              <input
+                type="text"
+                id="editName"
+                name="name"
+                required
+                aria-required="true"
+              />
+            </div>
+            <div class="edit-form-group">
+              <label for="editLocation"> Location </label>
+              <input
+                type="text"
+                id="editLocation"
+                name="location"
+                required
+                aria-required="true"
+              />
+            </div>
+            <div class="edit-form-group">
+              <label for="editEmail"> Email </label>
+              <input
+                type="email"
+                id="editEmail"
+                name="email"
+                required
+                aria-required="true"
+              />
+            </div>
+            <div class="edit-form-group">
+              <label for="editUsername"> Username </label>
+              <input
+                type="text"
+                id="editUsername"
+                name="username"
+                required
+                aria-required="true"
+              />
+            </div>
+            <div class="edit-form-group">
+              <label for="editPassword"> Password </label>
+              <input
+                type="password"
+                id="editPassword"
+                name="password"
+                required
+                aria-required="true"
+              />
+            </div>
+            <div class="edit-form-group">
+              <label for="editDepartment"> Department </label>
+              <input
+                type="text"
+                id="editDepartment"
+                name="department"
+                value=""
+                required
+                aria-required="true"
+              />
+            </div>
+            <button type="submit" class="edit-submit-button">Update</button>
+          </form>
+          <div id="editFormMessage" role="alert" aria-live="polite"></div>
+        </div>
+      </div>
 
       <!-- Thresholds -->
       <section class="thresholds">
@@ -153,16 +296,13 @@
         <div class="threshold-boxes">
           <div class="threshold-card">
             <h3>Energy Consumption Threshold</h3>
+            <p><span class="efficient">Efficient</span>: less than <</p>
             <p>
-              <span class="efficient">Efficient</span>: less than &lt;
-              <input type="text" value="10kWh" />
-            </p>
-            <p>
-              <span class="moderate">Moderate</span>: between &lt;=
+              <span class="moderate">Moderate</span>: between <=
               <input type="text" value="15kWh" />
             </p>
             <p>
-              <span class="high">High</span>: greater than &gt;
+              <span class="high">High</span>: greater than >
               <input type="text" value="15kWh" />
             </p>
             <div class="btn-group">
@@ -174,15 +314,15 @@
           <div class="threshold-card">
             <h3>Carbon Emission Threshold</h3>
             <p>
-              <span class="efficient">Efficient</span>: less than &lt;
+              <span class="efficient">Efficient</span>: less than <
               <input type="text" value="8kg" />
             </p>
             <p>
-              <span class="moderate">Moderate</span>: between &lt;=
+              <span class="moderate">Moderate</span>: between <=
               <input type="text" value="13kg" />
             </p>
             <p>
-              <span class="high">High</span>: greater than &gt;
+              <span class="high">High</span>: greater than >
               <input type="text" value="13kg" />
             </p>
             <div class="btn-group">
@@ -202,5 +342,195 @@
         </p>
       </footer>
     </div>
+
+    <script>
+      // Get modal and elements
+      const modal = document.getElementById("addOfficeModal");
+      const addBtn = document.querySelector(".add-btn");
+      const closeModal = document.getElementById("closeModal");
+      const form = document.getElementById("addOfficeForm");
+      const formMessage = document.getElementById("formMessage");
+
+      // Edit modal elements
+      const editModal = document.getElementById("editOfficeModal");
+      const closeEditModal = document.getElementById("closeEditModal");
+      const editForm = document.getElementById("editOfficeForm");
+      const editFormMessage = document.getElementById("editFormMessage");
+
+      // Open modal on button click
+      addBtn.onclick = function () {
+        modal.style.display = "block";
+        formMessage.innerHTML = "";
+        formMessage.classList.remove("success-message", "error-message");
+        form.reset();
+      };
+
+      // Close modal on close button click
+      closeModal.onclick = function () {
+        modal.style.display = "none";
+      };
+
+      // Close modal if user clicks outside modal content
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+      };
+
+      // Handle form submission via AJAX
+      form.onsubmit = async function (e) {
+        e.preventDefault();
+        formMessage.innerHTML = "";
+        formMessage.classList.remove("success-message", "error-message");
+
+        const formData = {
+          name: form.name.value,
+          location: form.location.value,
+          email: form.email.value,
+          username: form.username.value,
+          password: form.password.value,
+          department: form.department.value,
+        };
+
+        try {
+          const response = await fetch("{% url 'adminpanel:create_office' %}", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify(formData),
+          });
+          const result = await response.json();
+          if (result.status === "success") {
+            formMessage.classList.add("success-message");
+            formMessage.classList.remove("error-message");
+            formMessage.innerHTML = result.message;
+            setTimeout(() => {
+              modal.style.display = "none";
+              formMessage.innerHTML = "";
+              formMessage.classList.remove("success-message", "error-message");
+              form.reset();
+              // Optionally, refresh the page or update the office list dynamically here
+            }, 1500);
+          } else {
+            formMessage.classList.add("error-message");
+            formMessage.classList.remove("success-message");
+            formMessage.innerHTML = result.message;
+          }
+        } catch (error) {
+          formMessage.classList.add("error-message");
+          formMessage.classList.remove("success-message");
+          formMessage.innerHTML = "An error occurred. Please try again.";
+        }
+      };
+
+      // Close edit modal on close button click
+      closeEditModal.onclick = function () {
+        editModal.style.display = "none";
+      };
+
+      // Close edit modal if user clicks outside modal content
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          modal.style.display = "none";
+        }
+        if (event.target == editModal) {
+          editModal.style.display = "none";
+        }
+      };
+
+      // Handle edit button clicks
+      document.querySelectorAll(".edit-office-btn").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const officeId = button.getAttribute("data-office-id");
+          try {
+            const response = await fetch(
+              `/adminpanel/editOffice/${officeId}/`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": "{{ csrf_token }}",
+                },
+              }
+            );
+            const result = await response.json();
+            if (result.status === "success") {
+              const office = result.office;
+              document.getElementById("editOfficeId").value = office.id;
+              document.getElementById("editName").value = office.name;
+              document.getElementById("editLocation").value = office.location;
+              document.getElementById("editEmail").value = office.email;
+              document.getElementById("editUsername").value = office.username;
+              document.getElementById("editPassword").value = office.password;
+              document.getElementById("editDepartment").value =
+                office.department || "";
+              editFormMessage.innerHTML = "";
+              editFormMessage.classList.remove(
+                "success-message",
+                "error-message"
+              );
+              editModal.style.display = "block";
+            } else {
+              alert("Failed to fetch office data.");
+            }
+          } catch (error) {
+            alert("An error occurred. Please try again.");
+          }
+        });
+      });
+
+      // Handle edit form submission via AJAX
+      editForm.onsubmit = async function (e) {
+        e.preventDefault();
+        editFormMessage.innerHTML = "";
+        editFormMessage.classList.remove("success-message", "error-message");
+
+        const officeId = document.getElementById("editOfficeId").value;
+        const formData = {
+          name: editForm.name.value,
+          location: editForm.location.value,
+          email: editForm.email.value,
+          username: editForm.username.value,
+          password: editForm.password.value,
+          department: editForm.department.value,
+        };
+
+        try {
+          const response = await fetch(`/adminpanel/editOffice/${officeId}/`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify(formData),
+          });
+          const result = await response.json();
+          if (result.status === "success") {
+            editFormMessage.classList.add("success-message");
+            editFormMessage.classList.remove("error-message");
+            editFormMessage.innerHTML = result.message;
+            setTimeout(() => {
+              editModal.style.display = "none";
+              editFormMessage.innerHTML = "";
+              editFormMessage.classList.remove(
+                "success-message",
+                "error-message"
+              );
+              location.reload(); // Refresh to show updated office
+            }, 1500);
+          } else {
+            editFormMessage.classList.add("error-message");
+            editFormMessage.classList.remove("success-message");
+            editFormMessage.innerHTML = result.message;
+          }
+        } catch (error) {
+          editFormMessage.classList.add("error-message");
+          editFormMessage.classList.remove("success-message");
+          editFormMessage.innerHTML = "An error occurred. Please try again.";
+        }
+      };
+    </script>
   </body>
 </html>

@@ -27,8 +27,8 @@ class Office(models.Model):
     password = models.CharField(max_length=255)  # Will store hashed password
     email = models.EmailField(unique=True)
 
-    # Role can be "office", "viewer", etc.
-    role = models.CharField(max_length=50, default="office")
+    # Department can be "office", "viewer", etc.
+    department = models.CharField(max_length=50)
 
     # Foreign Key to admin
     admin = models.ForeignKey(

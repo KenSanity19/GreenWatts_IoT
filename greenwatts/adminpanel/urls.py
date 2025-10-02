@@ -11,4 +11,6 @@ urlpatterns = [
     path('adminReports/', views.admin_reports, name='admin_reports'), 
     path('adminCosts./', views.admin_costs, name='admin_costs'),
     path('carbonEmission/', views.carbon_emission, name='carbon_emission'),
+    path('createOffice/', views.create_office, name='create_office'),
+    path('editOffice/<int:id>/', views.edit_office, name='edit_office'),
 ]
