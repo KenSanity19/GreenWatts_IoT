@@ -92,7 +92,7 @@ def edit_office(request, id):
             "location": office.location,
             "email": office.email,
             "username": office.username,
-            "password": office.password,
+            # Do not return password in GET response for security
             "department": office.department,
         }
         return JsonResponse({"status": "success", "office": office_data})
@@ -104,7 +104,9 @@ def edit_office(request, id):
             office.location = data.get("location", office.location)
             office.email = data.get("email", office.email)
             office.username = data.get("username", office.username)
-            office.password = data.get("password", office.password)
+            new_password = data.get("password", "")
+            if new_password:
+                office.password = new_password
             office.department = data.get("department", office.department)
             office.save()
             return JsonResponse({"status": "success", "message": "Office updated successfully"})
