@@ -28,7 +28,7 @@ class Office(models.Model):
     email = models.EmailField(unique=True)
 
     # Department can be "office", "viewer", etc.
-    department = models.CharField(max_length=50)
+    department = models.CharField(max_length=50, default="office")
 
     # Foreign Key to admin
     admin = models.ForeignKey(
