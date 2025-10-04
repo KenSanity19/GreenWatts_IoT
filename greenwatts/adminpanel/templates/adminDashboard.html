@@ -146,15 +146,15 @@
       <!-- Top Cards -->
       <div class="cards">
         <div class="card green">
-          <p>Energy Usage</p>
+          <p class="card-title">Energy Usage</p>
           <h2>143 kWh</h2>
         </div>
         <div class="card dark">
-          <p>Cost Predicted</p>
+          <p class="card-title">Cost Predicted</p>
           <h2>₱120.50</h2>
         </div>
         <div class="card red">
-          <p>CO2 Emissions</p>
+          <p class="card-title">CO2 Emissions</p>
           <h2>32 kg</h2>
         </div>
       </div>
@@ -195,13 +195,23 @@
           <!-- Change in Cost -->
           <div class="change-cost">
             <h3>CHANGE IN COST</h3>
-            <div class="chart">
-              <div class="bar" style="height: 80%">July 11</div>
-              <div class="bar" style="height: 50%">July 12</div>
-            </div>
-            <div class="percentage">
-              <span class="green-text">▼ 20.18%</span>
-              <p>DECREASE IN COST</p>
+            <hr class="change-cost-line" />
+            <div class="change-cost-content">
+              <div class="bars">
+                <div class="bar">
+                  <div class="bar-fill" style="height: 80%"></div>
+                  <div class="bar-label">July 11</div>
+                </div>
+                <div class="bar">
+                  <div class="bar-fill" style="height: 50%"></div>
+                  <div class="bar-label">July 12</div>
+                </div>
+              </div>
+              <div class="change-info">
+                <div class="arrow-down"></div>
+                <span class="percentage-text">20.18%</span>
+                <p class="change-text">DECREASE IN COST</p>
+              </div>
             </div>
           </div>
         </div>
