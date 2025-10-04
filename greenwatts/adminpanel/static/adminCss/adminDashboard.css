@@ -26,14 +26,108 @@ header h1 {
 /* Filters */
 .filters {
   margin: 15px 0;
+  position: relative;
+  display: flex;
+  gap: 15px;
+}
+
+.custom-dropdown {
+  position: relative;
+  user-select: none;
+  width: 120px;
+  background-color: transparent;
+  border-radius: 30px;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+}
+
+.custom-dropdown .selected {
+  padding: 4px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.custom-dropdown .dropdown-arrow {
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+.custom-dropdown .options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #0b1444;
+  border-radius: 10px;
+  margin-top: 5px;
+  display: none;
+  flex-direction: column;
+  z-index: 1000;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.custom-dropdown.active .options {
+  display: flex;
+}
+
+.custom-dropdown .option {
+  padding: 8px 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.custom-dropdown .option:hover {
+  background-color: #142a6b;
+}
+
+.custom-dropdown .option-arrow {
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
 }
 
 .filters select {
-  padding: 5px 15px;
-  margin-right: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-weight: bold;
+    padding: 1px 13px 1px 15px;
+    margin-right: 15px;
+    border-radius: 30px;
+    font-weight: bold;
+    color: white;
+    background-color: transparent;
+    border: 1px solid transparent;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    position: relative;
+    cursor: pointer;
+}
+
+.filters select::-ms-expand {
+    display: none; /* hide default arrow in IE */
+}
+
+.filters select::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    right: 15px;
+    top: 50%;
+    margin-top: -3px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid white;
+}
+
+.filters select option {
+    color: white;
+    background-color: #0b1444;
 }
 
 /* Cards */
@@ -73,11 +167,15 @@ header h1 {
 
 /* Active Alerts */
 .active-alerts {
-  flex: 1;
-  background: var(--text-white);
-  padding: 15px;
-  border-radius: 8px;
-  border: 2px solid var(--bg-sidebar);
+    flex: 1;
+    background: var(--text-white);
+    border-radius: 8px;
+    border: 2px solid var(--bg-sidebar);
+    margin: 20px 57px 20px 32px;
+}
+
+h3.alerts {
+    margin-left: 20px;
 }
 
 .active-alerts table {
@@ -110,11 +208,12 @@ header h1 {
 /* Change in Cost */
 .change-cost {
   flex: 1;
-  background: var(--bg-sidebar); /* dark blue box */
-  color: var(--text-white);
+  background: white; /* changed from var(--bg-sidebar) to white */
+  color: var(--text-black);
   padding: 15px;
   border-radius: 8px;
   text-align: center;
+  margin: 20px 40px 20px 54px;
 }
 
 .chart {
@@ -147,8 +246,72 @@ header h1 {
   background: var(--text-white);
   padding: 15px;
   border-radius: 8px;
-  margin-bottom: 20px;
+  margin: 20px 36px 20px 32px;
   border: 2px solid var(--bg-sidebar);
+  color: black;
+  font-family: Arial, sans-serif;
+}
+
+.carbon-footprint-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.carbon-footprint-content {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.carbon-footprint-meter-vertical {
+  width: 20px;
+  height: 100px;
+  background-color: #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.vertical-meter-fill {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 20%; /* approximate fill for 5.8kg vs 57.6kg */
+  background-color: #e74c3c; /* red color */
+  border-radius: 0 0 10px 10px;
+}
+
+.carbon-footprint-bar {
+  flex: 1;
+  height: 12px;
+  background-color: #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 20%; /* approximate fill for 5.8kg vs 57.6kg */
+  background-color: #e74c3c; /* red color */
+  border-radius: 6px 0 0 6px;
+}
+
+.carbon-footprint-values {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.carbon-footprint-values .left-value {
+  color: #e74c3c;
+}
+
+.carbon-footprint-values .right-value {
+  color: black;
 }
 
 /* Energy Tip */
@@ -159,4 +322,11 @@ header h1 {
   border-radius: 8px;
   font-size: var(--font-size-sm);
   text-align: center;
+}
+
+.filters-container {
+    background-color: #16163f;
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 20px;
 }

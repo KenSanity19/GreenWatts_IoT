@@ -1,7 +1,7 @@
 :root {
   --font-family: Arial, sans-serif;
   --bg-main: #fdfaf6;
-  --bg-sidebar: #0b1444;
+  --bg-sidebar: #16163f;
   --bg-light-gray: #d3d3d3;
   --text-primary: #333;
   --text-white: white;
@@ -10,7 +10,7 @@
   --color-red: #ef5350;
   --color-green: #4caf50;
   --color-orange: #fdd835;
-  --color-navy: #0b1444;
+  --color-navy: #16163f;
   --color-dark-gray: #424242;
   --font-size-xs: 12px;
   --font-size-sm: 14px;
@@ -38,7 +38,7 @@ body {
 
 .sidebar {
   width: 220px;
-  background: var(--bg-sidebar);
+  background: #16163f;;
   color: var(--text-white);
   height: 100%;
   padding: 20px 15px;
