@@ -112,7 +112,8 @@ table thead {
 }
 
 .thresholds h2 {
-  margin-bottom: 20px;
+    margin-bottom: 14px;
+    margin-top: 4px;
 }
 
 .threshold-boxes {
@@ -298,6 +299,99 @@ footer .tip span {
   background-color: #1e1f47;
   padding: 20px;
   border-radius: 8px;
+  color: #eee;
+}
+
+/* Device header */
+.device-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.device-header input[type="text"] {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  width: 100%;
+  max-width: 300px;
+  color: #333;
+  background-color: #fff;
+}
+
+.device-header button.add-device-btn {
+  background-color: #ffffff;
+  color: rgb(0, 0, 0);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.device-header button.add-device-btn:hover {
+  background-color: #009400;
+}
+
+/* Device table */
+.device-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  color: black;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.device-table th {
+  background-color: #004080;
+  color: white;
+  padding: 12px;
+  text-align: left;
+}
+
+.device-table td {
+  padding: 12px;
+  color: black;
+}
+
+.device-table tr:nth-child(even) {
+  background-color: white;
+}
+
+/* Buttons */
+button.edit-device-btn {
+  background-color: #1e1f47;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  margin-right: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+button.deactivate-device-btn {
+  background-color:  #d2691e;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  margin-right: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+button.edit-device-btn:hover {
+  background-color: #0056b3;
+}
+
+button.deactivate-device-btn:hover {
+  background-color: #cc0000;
 }
 
 /* Office table */

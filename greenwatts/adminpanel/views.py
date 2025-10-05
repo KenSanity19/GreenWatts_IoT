@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from .models import Admin, Office
+from ..sensors.models import Device
 import json
 
 def index(request):
@@ -33,7 +34,8 @@ from .models import Admin, Office
 
 def admin_setting(request):
     offices = Office.objects.all()
-    return render(request, 'adminSetting.html', {'offices': offices})
+    devices = Device.objects.select_related('office').all()
+    return render(request, 'adminSetting.html', {'offices': offices, 'devices': devices})
 
 def office_usage(request):
     return render(request, 'officeUsage.html')
@@ -73,6 +75,34 @@ def create_office(request):
             )
             office.save()
             return JsonResponse({"status": "success", "message": "Office created successfully"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Invalid request method"})
+
+@csrf_exempt
+def create_device(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            installed_date = data.get("installed_date")
+            status = data.get("status")
+            office_id = data.get("office_id")
+
+            from .models import Office
+            from ..sensors.models import Device
+
+            office = Office.objects.get(office_id=office_id)
+
+            device = Device(
+                installed_date=installed_date,
+                status=status,
+                office=office
+            )
+            device.save()
+            return JsonResponse({"status": "success", "message": "Device created successfully"})
+        except Office.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Office not found"})
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
     else:

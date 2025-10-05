@@ -195,7 +195,6 @@
                   >
                     Edit
                   </button>
-                  <button class="deactivate-btn">Deactivate</button>
                 </td>
               </tr>
               {% empty %}
@@ -290,47 +289,170 @@
         </div>
       </div>
 
-      <!-- Thresholds -->
-      <section class="thresholds">
-        <h2>SET THRESHOLDS</h2>
-        <div class="threshold-boxes">
-          <div class="threshold-card">
-            <h3>Energy Consumption Threshold</h3>
-            <p><span class="efficient">Efficient</span>: less than <</p>
-            <p>
-              <span class="moderate">Moderate</span>: between <=
-              <input type="text" value="15kWh" />
-            </p>
-            <p>
-              <span class="high">High</span>: greater than >
-              <input type="text" value="15kWh" />
-            </p>
-            <div class="btn-group">
-              <button class="edit-btn">Edit</button>
-              <button class="save-btn">Save</button>
+      <!-- Thresholds and Device Management Side by Side -->
+      <section
+        class="thresholds-device-container"
+        style="display: flex; gap: 20px"
+      >
+        <section class="device-section" style="flex: 1">
+          <!-- Modal for Add Device -->
+          <div
+            id="addDeviceModal"
+            class="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="deviceModalTitle"
+            aria-describedby="deviceModalDesc"
+          >
+            <div class="modal-content">
+              <button
+                id="closeDeviceModal"
+                aria-label="Close modal"
+                class="close-button"
+              >
+                &times;
+              </button>
+              <h2 id="deviceModalTitle">Add Device</h2>
+              <p id="deviceModalDesc">
+                Please fill in the details below to add a new device.
+              </p>
+              <form id="addDeviceForm" novalidate>
+                <div class="form-group">
+                  <label for="installed_date">Installed Date</label>
+                  <input
+                    type="date"
+                    id="installed_date"
+                    name="installed_date"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="status">Status</label>
+                  <select
+                    id="status"
+                    name="status"
+                    required
+                    aria-required="true"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="office">Office</label>
+                  <select
+                    id="office"
+                    name="office"
+                    required
+                    aria-required="true"
+                  >
+                    {% for office in offices %}
+                    <option value="{{ office.office_id }}">
+                      {{ office.name }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <button type="submit" class="submit-button">Submit</button>
+              </form>
+              <div id="deviceFormMessage" role="alert" aria-live="polite"></div>
             </div>
           </div>
 
-          <div class="threshold-card">
-            <h3>Carbon Emission Threshold</h3>
-            <p>
-              <span class="efficient">Efficient</span>: less than <
-              <input type="text" value="8kg" />
-            </p>
-            <p>
-              <span class="moderate">Moderate</span>: between <=
-              <input type="text" value="13kg" />
-            </p>
-            <p>
-              <span class="high">High</span>: greater than >
-              <input type="text" value="13kg" />
-            </p>
-            <div class="btn-group">
-              <button class="edit-btn">Edit</button>
-              <button class="save-btn">Save</button>
+          <div class="table-wrapper" style="margin-top: 20px">
+            <div
+              class="device-header"
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              <input
+                type="text"
+                placeholder="Search Device"
+                style="flex-grow: 1; margin-right: 10px"
+              />
+              <button class="add-device-btn" id="openAddDeviceModal">
+                + Add Device
+              </button>
+            </div>
+            <table class="device-table" style="width: 100%">
+              <thead>
+                <tr>
+                  <th>Installed Date</th>
+                  <th>Status</th>
+                  <th>Office</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for device in devices %}
+                <tr>
+                  <td>{{ device.installed_date }}</td>
+                  <td>{{ device.status }}</td>
+                  <td>{{ device.office.name }}</td>
+                  <td>
+                    <button
+                      class="edit-device-btn"
+                      data-device-id="{{ device.device_id }}"
+                    >
+                      Edit
+                    </button>
+                    <button class="deactivate-device-btn">Deactivate</button>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4">No devices found.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="thresholds" style="flex: 1">
+          <h2>SET THRESHOLDS</h2>
+          <div class="threshold-boxes">
+            <div class="threshold-card">
+              <h3>Energy Consumption Threshold</h3>
+              <p><span class="efficient">Efficient</span>: less than <</p>
+              <p>
+                <span class="moderate">Moderate</span>: between <=
+                <input type="text" value="15kWh" />
+              </p>
+              <p>
+                <span class="high">High</span>: greater than >
+                <input type="text" value="15kWh" />
+              </p>
+              <div class="btn-group">
+                <button class="edit-btn">Edit</button>
+                <button class="save-btn">Save</button>
+              </div>
+            </div>
+
+            <div class="threshold-card">
+              <h3>Carbon Emission Threshold</h3>
+              <p>
+                <span class="efficient">Efficient</span>: less than <
+                <input type="text" value="8kg" />
+              </p>
+              <p>
+                <span class="moderate">Moderate</span>: between <=
+                <input type="text" value="13kg" />
+              </p>
+              <p>
+                <span class="high">High</span>: greater than >
+                <input type="text" value="13kg" />
+              </p>
+              <div class="btn-group">
+                <button class="edit-btn">Edit</button>
+                <button class="save-btn">Save</button>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       </section>
 
       <!-- Footer -->
@@ -357,7 +479,15 @@
       const editForm = document.getElementById("editOfficeForm");
       const editFormMessage = document.getElementById("editFormMessage");
 
-      // Open modal on button click
+      // Device modal elements
+      const addDeviceModal = document.getElementById("addDeviceModal");
+      const openAddDeviceModalBtn =
+        document.getElementById("openAddDeviceModal");
+      const closeDeviceModal = document.getElementById("closeDeviceModal");
+      const addDeviceForm = document.getElementById("addDeviceForm");
+      const deviceFormMessage = document.getElementById("deviceFormMessage");
+
+      // Open office modal on button click
       addBtn.onclick = function () {
         modal.style.display = "block";
         formMessage.innerHTML = "";
@@ -365,19 +495,38 @@
         form.reset();
       };
 
-      // Close modal on close button click
+      // Close office modal on close button click
       closeModal.onclick = function () {
         modal.style.display = "none";
       };
 
-      // Close modal if user clicks outside modal content
+      // Open device modal on button click
+      openAddDeviceModalBtn.onclick = function () {
+        addDeviceModal.style.display = "block";
+        deviceFormMessage.innerHTML = "";
+        deviceFormMessage.classList.remove("success-message", "error-message");
+        addDeviceForm.reset();
+      };
+
+      // Close device modal on close button click
+      closeDeviceModal.onclick = function () {
+        addDeviceModal.style.display = "none";
+      };
+
+      // Close modals if user clicks outside modal content
       window.onclick = function (event) {
         if (event.target == modal) {
           modal.style.display = "none";
         }
+        if (event.target == editModal) {
+          editModal.style.display = "none";
+        }
+        if (event.target == addDeviceModal) {
+          addDeviceModal.style.display = "none";
+        }
       };
 
-      // Handle form submission via AJAX
+      // Handle office form submission via AJAX
       form.onsubmit = async function (e) {
         e.preventDefault();
         formMessage.innerHTML = "";
@@ -428,16 +577,6 @@
       // Close edit modal on close button click
       closeEditModal.onclick = function () {
         editModal.style.display = "none";
-      };
-
-      // Close edit modal if user clicks outside modal content
-      window.onclick = function (event) {
-        if (event.target == modal) {
-          modal.style.display = "none";
-        }
-        if (event.target == editModal) {
-          editModal.style.display = "none";
-        }
       };
 
       // Handle edit button clicks
@@ -529,6 +668,54 @@
           editFormMessage.classList.add("error-message");
           editFormMessage.classList.remove("success-message");
           editFormMessage.innerHTML = "An error occurred. Please try again.";
+        }
+      };
+
+      // Handle add device form submission via AJAX
+      addDeviceForm.onsubmit = async function (e) {
+        e.preventDefault();
+        deviceFormMessage.innerHTML = "";
+        deviceFormMessage.classList.remove("success-message", "error-message");
+
+        const formData = {
+          installed_date: addDeviceForm.installed_date.value,
+          status: addDeviceForm.status.value,
+          office_id: addDeviceForm.office.value,
+        };
+
+        try {
+          const response = await fetch("{% url 'adminpanel:create_device' %}", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify(formData),
+          });
+          const result = await response.json();
+          if (result.status === "success") {
+            deviceFormMessage.classList.add("success-message");
+            deviceFormMessage.classList.remove("error-message");
+            deviceFormMessage.innerHTML = result.message;
+            setTimeout(() => {
+              addDeviceModal.style.display = "none";
+              deviceFormMessage.innerHTML = "";
+              deviceFormMessage.classList.remove(
+                "success-message",
+                "error-message"
+              );
+              addDeviceForm.reset();
+              location.reload(); // Refresh to show new device
+            }, 1500);
+          } else {
+            deviceFormMessage.classList.add("error-message");
+            deviceFormMessage.classList.remove("success-message");
+            deviceFormMessage.innerHTML = result.message;
+          }
+        } catch (error) {
+          deviceFormMessage.classList.add("error-message");
+          deviceFormMessage.classList.remove("success-message");
+          deviceFormMessage.innerHTML = "An error occurred. Please try again.";
         }
       };
     </script>

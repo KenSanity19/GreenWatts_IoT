@@ -13,4 +13,5 @@ urlpatterns = [
     path('carbonEmission/', views.carbon_emission, name='carbon_emission'),
     path('createOffice/', views.create_office, name='create_office'),
     path('editOffice/<int:id>/', views.edit_office, name='edit_office'),
+    path('createDevice/', views.create_device, name='create_device'),
 ]
