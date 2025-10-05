@@ -1,0 +1,8 @@
+- [x] Modify adminDashboard.html to add span for live time
+- [x] Add JavaScript script to update the live time every second
+- [x] Modify adminCosts.html to add live time
+- [x] Modify adminReports.html to add live time
+- [x] Modify users/dashboard.html to add live time
+- [x] Modify officeUsage.html to add live time
+- [x] Modify adminSetting.html to add live time
+- [x] Modify carbonEmission.html to add live time

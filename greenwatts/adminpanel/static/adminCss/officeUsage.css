@@ -11,7 +11,7 @@ header h1 {
 }
 
 .red-text {
-  color: red;
+  color: var(--color-red);
   font-weight: bold;
 }
 

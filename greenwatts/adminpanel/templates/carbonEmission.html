@@ -67,23 +67,25 @@
         <h1>CO2 Emissions</h1>
         <div class="timestamp">
           <i class="fas fa-calendar-alt"></i>
-          <span>July 20, 2025 21:57 PM</span>
+          <span id="live-time"></span>
         </div>
       </header>
 
       <p class="note">
-        <strong>Noted!</strong> The data will be captured every 12:00am midnight
+        <strong class="red-text">Noted!</strong> The data will be captured every
+        12:00am midnight
       </p>
 
-      <div class="filters-bar">
-        <select name="week" id="week-select" class="filter-select">
-          <option value="week">Week</option>
+      <!-- Filters -->
+      <div class="filters">
+        <select>
+          <option>Day</option>
         </select>
-        <select name="month" id="month-select" class="filter-select">
-          <option value="month">Month</option>
+        <select>
+          <option>Month</option>
         </select>
-        <select name="year" id="year-select" class="filter-select">
-          <option value="year">Year</option>
+        <select>
+          <option>Year</option>
         </select>
       </div>
 
