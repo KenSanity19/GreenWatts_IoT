@@ -171,39 +171,41 @@
         </div>
 
         <div class="table-wrapper">
-          <table class="office-table">
-            <thead>
-              <tr>
-                <th>Office</th>
-                <th>Department</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for office in offices %}
-              <tr>
-                <td>{{ office.name }}</td>
-                <td>CITC</td>
-                <td>{{ office.location }}</td>
-                <td>Active</td>
-                <td>
-                  <button
-                    class="edit-office-btn"
-                    data-office-id="{{ office.office_id }}"
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="5">No offices found.</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="office-table-container">
+            <table class="office-table">
+              <thead>
+                <tr>
+                  <th>Office</th>
+                  <th>Department</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for office in offices %}
+                <tr>
+                  <td>{{ office.name }}</td>
+                  <td>CITC</td>
+                  <td>{{ office.location }}</td>
+                  <td>Active</td>
+                  <td>
+                    <button
+                      class="edit-office-btn"
+                      data-office-id="{{ office.office_id }}"
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5">No offices found.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -378,38 +380,40 @@
                 + Add Device
               </button>
             </div>
-            <table class="device-table" style="width: 100%">
-              <thead>
-                <tr>
-                  <th>Installed Date</th>
-                  <th>Status</th>
-                  <th>Office</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for device in devices %}
-                <tr>
-                  <td>{{ device.installed_date }}</td>
-                  <td>{{ device.status }}</td>
-                  <td>{{ device.office.name }}</td>
-                  <td>
-                    <button
-                      class="edit-device-btn"
-                      data-device-id="{{ device.device_id }}"
-                    >
-                      Edit
-                    </button>
-                    <button class="deactivate-device-btn">Deactivate</button>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="4">No devices found.</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+            <div class="device-table-container">
+              <table class="device-table" style="width: 100%">
+                <thead>
+                  <tr>
+                    <th>Installed Date</th>
+                    <th>Status</th>
+                    <th>Office</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for device in devices %}
+                  <tr>
+                    <td>{{ device.installed_date }}</td>
+                    <td>{{ device.status }}</td>
+                    <td>{{ device.office.name }}</td>
+                    <td>
+                      <button
+                        class="edit-device-btn"
+                        data-device-id="{{ device.device_id }}"
+                      >
+                        Edit
+                      </button>
+                      <button class="deactivate-device-btn">Deactivate</button>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4">No devices found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
         <section class="thresholds" style="flex: 1">

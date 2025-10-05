@@ -35,12 +35,12 @@ strong.red-text {
     margin: 5px 0;
 }
 
-.date-time {
-    font-size: 1rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+span#live-time {
+    font-size: var(--font-size-sm);
+    color: #111;
+    font-weight: bold;
+    text-align: right;
+    margin-left: auto;
 }
 
 .date-time i {

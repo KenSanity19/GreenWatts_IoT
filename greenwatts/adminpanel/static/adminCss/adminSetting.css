@@ -49,6 +49,12 @@ header h1 {
   display: flex;
   justify-content: space-between;
   margin-bottom: 15px;
+  position: sticky;
+  top: 0;
+  background-color: #1e1f47;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  z-index: 10;
 }
 
 .office-header input {
@@ -343,6 +349,42 @@ footer .tip span {
   color: black;
   border-radius: 8px;
   overflow: hidden;
+  display: block;
+}
+
+.device-table thead, .device-table tbody {
+  display: block;
+}
+
+.device-table tbody {
+  height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.device-table th, .device-table td {
+  width: 25%;
+  box-sizing: border-box;
+  padding: 12px;
+  text-align: left;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.device-table thead tr {
+  width: 100%;
+  display: flex;
+  background-color: #004080;
+  color: white;
+}
+
+.device-table tbody tr {
+  display: flex;
+  width: 100%;
+}
+
+.device-table tr:nth-child(even) {
+  background-color: white;
 }
 
 .device-table th {
@@ -372,6 +414,14 @@ button.edit-device-btn {
   cursor: pointer;
   font-weight: 600;
   transition: background-color 0.3s ease;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.device-table td:last-child {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 button.deactivate-device-btn {
@@ -402,6 +452,44 @@ button.deactivate-device-btn:hover {
   border-collapse: collapse;
   border-radius: 8px;
   overflow: hidden;
+  display: block;
+}
+
+.office-table thead, .office-table tbody {
+  display: block;
+}
+
+.office-table tbody {
+  height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.office-table th, .office-table td {
+  width: 20%;
+  box-sizing: border-box;
+  padding: 10px;
+  text-align: left;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.office-table thead tr {
+  width: 100%;
+  display: flex;
+  background-color: white;
+  color: black;
+  border-bottom: 1px solid #ccc;
+}
+
+.office-table tbody tr {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid #ccc;
+}
+
+.office-table td:first-child {
+  font-weight: bold;
 }
 
 .office-table th {
@@ -554,4 +642,13 @@ button.deactivate-device-btn:hover {
 
 .error-message {
   color: red;
+}
+
+.device-section > .table-wrapper {
+  height: 390px;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 8px;
+  background-color: #1e1f47;
+  color: #eee;
 }
