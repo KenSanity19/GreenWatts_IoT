@@ -27,8 +27,162 @@ def admin_login(request):
     return render(request, "adminLogin.html")
 
 
+from django.db.models import Sum
+from ..sensors.models import EnergyRecord
+
+from datetime import datetime, timedelta
+
 def admin_dashboard(request):
-    return render(request, 'adminDashboard.html')
+    # Aggregate sums for total energy usage, cost estimate, and carbon emission
+    aggregates = EnergyRecord.objects.aggregate(
+        total_energy_usage=Sum('total_energy_kwh'),
+        total_cost_predicted=Sum('cost_estimate'),
+        total_co2_emission=Sum('carbon_emission_kgco2')
+    )
+
+    # Calculate predicted CO2 emission (simple projection: current emission * 10 as example)
+    predicted_co2_emission = (aggregates['total_co2_emission'] or 0) * 10
+
+    # Prepare dates for display
+    current_date = datetime.now().strftime("%B %d, %Y")
+    predicted_date = (datetime.now() + timedelta(days=7)).strftime("%B %d, %Y")
+
+    # Aggregate energy usage per office
+    from django.db.models import F
+    # Get all valid office ids from Office table
+    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+
+    office_energy_qs = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).values(
+        office_id=F('device__office__office_id'),
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh')
+    ).order_by('-total_energy')
+
+    # Determine status based on total_energy thresholds
+    active_alerts = []
+    for record in office_energy_qs:
+        # Skip office with name exactly 'DS' or empty to remove duplicate entry
+        if record['office_name'] == 'DS' or not record['office_name']:
+            continue
+        energy = record['total_energy']
+        if energy > 20:
+            status = 'High'
+        elif energy > 10:
+            status = 'Moderate'
+        else:
+            status = 'Efficient'
+        active_alerts.append({
+            'office_name': record['office_name'],
+            'energy_usage': energy,
+            'status': status
+        })
+
+    # Calculate progress percentage for CO2 emission bar
+    co2_emission_progress = 0
+    if predicted_co2_emission > 0:
+        co2_emission_progress = min(100, (aggregates['total_co2_emission'] or 0) / predicted_co2_emission * 100)
+
+    context = {
+        'total_energy_usage': aggregates['total_energy_usage'] or 0,
+        'total_cost_predicted': aggregates['total_cost_predicted'] or 0,
+        'total_co2_emission': aggregates['total_co2_emission'] or 0,
+        'predicted_co2_emission': predicted_co2_emission,
+        'current_date': current_date,
+        'predicted_date': predicted_date,
+        'co2_emission_progress': co2_emission_progress,
+        'active_alerts': active_alerts,
+    }
+    return render(request, 'adminDashboard.html', context)
+
+    # Aggregate energy usage per office
+    from django.db.models import F
+    # Get all valid office ids from Office table
+    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+
+    office_energy_qs = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).values(
+        office_id=F('device__office__office_id'),
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh')
+    ).order_by('-total_energy')
+
+    # Determine status based on total_energy thresholds
+    active_alerts = []
+    for record in office_energy_qs:
+        # Skip office with name exactly 'DS' or empty to remove duplicate entry
+        if record['office_name'] == 'DS' or not record['office_name']:
+            continue
+        energy = record['total_energy']
+        if energy > 20:
+            status = 'High'
+        elif energy > 10:
+            status = 'Moderate'
+        else:
+            status = 'Efficient'
+        active_alerts.append({
+            'office_name': record['office_name'],
+            'energy_usage': energy,
+            'status': status
+        })
+
+    context = {
+        'total_energy_usage': aggregates['total_energy_usage'] or 0,
+        'total_cost_predicted': aggregates['total_cost_predicted'] or 0,
+        'total_co2_emission': aggregates['total_co2_emission'] or 0,
+        'predicted_co2_emission': predicted_co2_emission,
+        'active_alerts': active_alerts,
+    }
+    return render(request, 'adminDashboard.html', context)
+
+    # Aggregate energy usage per office
+    from django.db.models import F
+    # Get all valid office ids from Office table
+    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+
+    office_energy_qs = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).values(
+        office_id=F('device__office__office_id'),
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh')
+    ).order_by('-total_energy')
+
+    # Determine status based on total_energy thresholds
+    active_alerts = []
+    for record in office_energy_qs:
+        # Skip office with name exactly 'DS' or empty to remove duplicate entry
+        if record['office_name'] == 'DS' or not record['office_name']:
+            continue
+        energy = record['total_energy']
+        if energy > 20:
+            status = 'High'
+        elif energy > 10:
+            status = 'Moderate'
+        else:
+            status = 'Efficient'
+        active_alerts.append({
+            'office_name': record['office_name'],
+            'energy_usage': energy,
+            'status': status
+        })
+
+    context = {
+        'total_energy_usage': aggregates['total_energy_usage'] or 0,
+        'total_cost_predicted': aggregates['total_cost_predicted'] or 0,
+        'total_co2_emission': aggregates['total_co2_emission'] or 0,
+        'active_alerts': active_alerts,
+    }
+    return render(request, 'adminDashboard.html', context)
 
 from .models import Admin, Office
 

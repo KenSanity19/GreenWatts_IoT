@@ -93,15 +93,15 @@
       <div class="cards">
         <div class="card green">
           <p class="card-title">Energy Usage</p>
-          <h2>143 kWh</h2>
+          <h2>{{ total_energy_usage|floatformat:2 }} kWh</h2>
         </div>
         <div class="card dark">
           <p class="card-title">Cost Predicted</p>
-          <h2>₱120.50</h2>
+          <h2>₱{{ total_cost_predicted|floatformat:2 }}</h2>
         </div>
         <div class="card red">
           <p class="card-title">CO2 Emissions</p>
-          <h2>32 kg</h2>
+          <h2>{{ total_co2_emission|floatformat:2 }} kg</h2>
         </div>
       </div>
 
@@ -114,26 +114,23 @@
           <!-- Active Alerts -->
           <div class="active-alerts">
             <h3 class="alerts">Active Alerts</h3>
-            <table>
+          <table>
               <tr>
                 <th>Office Name</th>
                 <th>Energy Usage</th>
                 <th>Status</th>
               </tr>
-              <tr class="high">
-                <td>IT</td>
-                <td>21.2 kWh</td>
-                <td>High</td>
+              {% for alert in active_alerts %}
+              <tr class="{{ alert.status|lower }}">
+                <td>{{ alert.office_name }}</td>
+                <td>{{ alert.energy_usage|floatformat:2 }} kWh</td>
+                <td>{{ alert.status }}</td>
               </tr>
-              <tr class="moderate">
-                <td>TCM</td>
-                <td>15.7 kWh</td>
-                <td>Moderate</td>
+              {% empty %}
+              <tr>
+                <td colspan="3">No active alerts</td>
               </tr>
-              <tr class="efficient">
-                <td>DS</td>
-                <td>11.8 kWh</td>
-                <td>Efficient</td>
+              {% endfor %}
               </tr>
             </table>
           </div>
@@ -167,18 +164,18 @@
           <h3>Carbon Footprint</h3>
           <div class="carbon-footprint-header">
             <span class="left-label"
-              ><strong>Emission</strong> Till Date (as of July 12, 2025)</span
+              ><strong>Emission</strong> Till Date (as of {{ current_date }})</span
             >
-            <span class="right-label">Predicted (by July 19, 2025)</span>
+            <span class="right-label">Predicted (by {{ predicted_date }})</span>
           </div>
           <div class="carbon-footprint-content">
             <div class="carbon-footprint-bar">
-              <div class="progress-bar-fill"></div>
+              <div class="progress-bar-fill" style="width: {{ co2_emission_progress }}%;"></div>
             </div>
           </div>
           <div class="carbon-footprint-values">
-            <span class="left-value"><b>5.8kg</b> of CO2</span>
-            <span class="right-value"><b>57.6kg</b> of CO2</span>
+            <span class="left-value"><b>{{ total_co2_emission|floatformat:2 }}kg</b> of CO2</span>
+            <span class="right-value"><b>{{ predicted_co2_emission|floatformat:2 }}kg</b> of CO2</span>
           </div>
         </div>
 
