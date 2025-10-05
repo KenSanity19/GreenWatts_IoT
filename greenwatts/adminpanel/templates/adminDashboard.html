@@ -77,70 +77,16 @@
       </header>
 
       <!-- Filters -->
-      <div class="filters-container">
-        <div class="filters">
-          <div class="custom-dropdown" tabindex="0" data-name="day">
-            <div class="selected">
-              Day
-              <img
-                src="{% static 'images/arrow-down.png' %}"
-                alt="arrow"
-                class="dropdown-arrow"
-                onerror="this.style.display='none'"
-              />
-            </div>
-            <div class="options">
-              <div class="option">
-                Day
-                <img
-                  src="{% static 'images/arrow-down.png' %}"
-                  alt="arrow"
-                  class="option-arrow"
-                />
-              </div>
-            </div>
-          </div>
-          <div class="custom-dropdown" tabindex="0" data-name="month">
-            <div class="selected">
-              Month
-              <img
-                src="{% static 'images/arrow-down.png' %}"
-                alt="arrow"
-                class="dropdown-arrow"
-              />
-            </div>
-            <div class="options">
-              <div class="option">
-                Month
-                <img
-                  src="{% static 'images/arrow-down.png' %}"
-                  alt="arrow"
-                  class="option-arrow"
-                />
-              </div>
-            </div>
-          </div>
-          <div class="custom-dropdown" tabindex="0" data-name="year">
-            <div class="selected">
-              Year
-              <img
-                src="{% static 'images/arrow-down.png' %}"
-                alt="arrow"
-                class="dropdown-arrow"
-              />
-            </div>
-            <div class="options">
-              <div class="option">
-                Year
-                <img
-                  src="{% static 'images/arrow-down.png' %}"
-                  alt="arrow"
-                  class="option-arrow"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="filters">
+        <select>
+          <option>Day</option>
+        </select>
+        <select>
+          <option>Month</option>
+        </select>
+        <select>
+          <option>Year</option>
+        </select>
       </div>
 
       <!-- Top Cards -->
