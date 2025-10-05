@@ -6,7 +6,7 @@ class Device(models.Model):
     device_id = models.AutoField(primary_key=True)
     # Additional fields can be added here as needed, e.g. device name, type, etc.
     installed_date = models.DateField(null=True, blank=True)
-    status = models.CharField(max_length=50, default="active")
+    status = models.CharField(max_length=50, default="Active")
     office = models.ForeignKey(Office, on_delete=models.CASCADE, related_name="devices", null=True, blank=True)
 
     class Meta:
@@ -18,9 +18,9 @@ class Device(models.Model):
 class EnergyRecord(models.Model):
     record_id = models.AutoField(primary_key=True)
     date = models.DateField()
-    total_energy_kWh = models.FloatField()
-    peak_power_W = models.FloatField()
-    carbon_emission_kgCO2 = models.FloatField()
+    total_energy_kwh = models.FloatField()
+    peak_power_w = models.FloatField()
+    carbon_emission_kgco2 = models.FloatField()
     cost_estimate = models.FloatField()
     device = models.ForeignKey(Device, on_delete=models.CASCADE)
 
