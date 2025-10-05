@@ -1,9 +1,13 @@
 from django.db import models
 
+from greenwatts.adminpanel.models import Office
+
 class Device(models.Model):
     device_id = models.AutoField(primary_key=True)
     # Additional fields can be added here as needed, e.g. device name, type, etc.
-    name = models.CharField(max_length=255, null=True, blank=True)
+    installed_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=50, default="active")
+    office = models.ForeignKey(Office, on_delete=models.CASCADE, related_name="devices", null=True, blank=True)
 
     class Meta:
         db_table = "tbl_device"
