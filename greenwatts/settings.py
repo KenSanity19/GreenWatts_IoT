@@ -79,11 +79,11 @@ WSGI_APPLICATION = 'greenwatts.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'tsdb',
-        'USER': 'tsdbadmin',
-        'PASSWORD': 'x1yrwi3qrdcx2d52',
-        'HOST': 'vxev8q3dvc.nbypkmh3v2.tsdb.cloud.timescale.com',
-        'PORT': '36010',
+        'NAME': 'postgres',
+        'USER': 'postgres.xirjflvzmmvpufhdygeo',
+        'PASSWORD': 'Greenwatts!123',
+        'HOST': 'aws-1-us-east-1.pooler.supabase.com',
+        'PORT': '5432',
         'OPTIONS': {
             'sslmode': 'require',
         },
