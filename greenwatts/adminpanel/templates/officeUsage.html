@@ -148,25 +148,25 @@
       </div>
 
       <!-- Charts Section -->
-      <div class="charts">
-        <div class="chart-box">
-          <h3>Office Share of Total Energy Usage</h3>
-          <canvas id="pieChart"></canvas>
+      <div class="charts-container">
+        <div class="charts">
+          <div class="chart-box centered-chart-box">
+            <h3 class="centered-heading">
+              Office Share of<br />Total Energy Usage
+            </h3>
+            <canvas id="pieChart"></canvas>
+          </div>
+          <div class="chart-box">
+            <h3>Energy Usage (kWh)</h3>
+            <select>
+              <option>Week</option>
+              <option>Month</option>
+              <option>Year</option>
+            </select>
+            <canvas id="lineChart"></canvas>
+          </div>
         </div>
-        <div class="chart-box">
-          <h3>Energy Usage (kWh)</h3>
-          <select>
-            <option>Week</option>
-            <option>Month</option>
-            <option>Year</option>
-          </select>
-          <canvas id="lineChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Energy Tip -->
-      <div class="energy-tip">
-        <p>
+        <p class="energy-tip">
           <span class="green-text">Energy Tip:</span> On warm days, setting a
           programmable thermostat to a higher setting when you are not at home
           can help reduce your energy costs by approximately 10 percent.
@@ -200,6 +200,17 @@
             },
           ],
         },
+        options: {
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                boxWidth: 20,
+                padding: 20,
+              },
+            },
+          },
+        },
       });
 
       // Line Chart
@@ -207,7 +218,15 @@
       new Chart(ctxLine, {
         type: "line",
         data: {
-          labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+          labels: [
+            { day: "Mon", date: "July 14, 2025" },
+            { day: "Tue", date: "July 15, 2025" },
+            { day: "Wed", date: "July 16, 2025" },
+            { day: "Thu", date: "July 17, 2025" },
+            { day: "Fri", date: "July 18, 2025" },
+            { day: "Sat", date: "July 19, 2025" },
+            { day: "Sun", date: "July 20, 2025" },
+          ],
           datasets: [
             {
               label: "IT Office",
@@ -245,7 +264,27 @@
           responsive: true,
           plugins: {
             legend: {
-              position: "bottom",
+              position: "right",
+              labels: {
+                boxWidth: 20,
+                padding: 60,
+              },
+            },
+          },
+          scales: {
+            x: {
+              ticks: {
+                callback: function (value, index, ticks) {
+                  const label = this.getLabelForValue(value);
+                  if (label && typeof label === "object") {
+                    return [label.day, "", label.date];
+                  }
+                  return label;
+                },
+                font: {
+                  size: 12,
+                },
+              },
             },
           },
         },
