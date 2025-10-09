@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password
-from greenwatts.adminpanel.models import Office
+from greenwatts.users.models import Office
 
 def index(request):
     if request.method == 'POST':

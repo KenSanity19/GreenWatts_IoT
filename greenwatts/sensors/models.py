@@ -1,6 +1,6 @@
 from django.db import models
 
-from greenwatts.adminpanel.models import Office
+from greenwatts.users.models import Office
 
 class Device(models.Model):
     device_id = models.AutoField(primary_key=True)

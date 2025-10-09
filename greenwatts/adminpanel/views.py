@@ -2,7 +2,8 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
-from .models import Admin, Office
+from .models import Admin
+from greenwatts.users.models import Office
 from ..sensors.models import Device
 import json
 
@@ -184,7 +185,7 @@ def admin_dashboard(request):
     }
     return render(request, 'adminDashboard.html', context)
 
-from .models import Admin, Office
+from greenwatts.users.models import Office
 
 def admin_setting(request):
     offices = Office.objects.all()
@@ -243,7 +244,7 @@ def create_device(request):
             status = data.get("status")
             office_id = data.get("office_id")
 
-            from .models import Office
+            from greenwatts.users.models import Office
             from ..sensors.models import Device
 
             office = Office.objects.get(office_id=office_id)
