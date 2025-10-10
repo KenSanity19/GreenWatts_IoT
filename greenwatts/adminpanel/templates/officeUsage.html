@@ -78,8 +78,11 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select>
-          <option>Day</option>
+        <select id="day-select">
+          <option value="">Day</option>
+          {% for day in day_options %}
+          <option value="{{ day }}" {% if selected_date == day %}selected{% endif %}>{{ day }}</option>
+          {% endfor %}
         </select>
         <select>
           <option>Month</option>
@@ -239,6 +242,19 @@
       }
       setInterval(updateTime, 1000);
       updateTime(); // initial call
+
+      // Handle day dropdown change
+      document.addEventListener('DOMContentLoaded', function() {
+        const daySelect = document.getElementById('day-select');
+        daySelect.addEventListener('change', function() {
+          const selectedValue = this.value;
+          if (selectedValue) {
+            window.location.href = `?selected_date=${encodeURIComponent(selectedValue)}`;
+          } else {
+            window.location.href = '?'; // Clear selection, back to latest
+          }
+        });
+      });
     </script>
   </body>
 </html>
