@@ -5,6 +5,9 @@ from django.contrib import messages
 from .models import Admin
 from greenwatts.users.models import Office
 from ..sensors.models import Device
+from ..sensors.models import EnergyRecord
+from django.db.models import Sum, F
+from datetime import datetime, timedelta
 import json
 
 def index(request):
@@ -27,11 +30,6 @@ def admin_login(request):
 
     return render(request, "adminLogin.html")
 
-
-from django.db.models import Sum
-from ..sensors.models import EnergyRecord
-
-from datetime import datetime, timedelta
 
 def admin_dashboard(request):
     # Aggregate sums for total energy usage, cost estimate, and carbon emission
@@ -100,100 +98,157 @@ def admin_dashboard(request):
     }
     return render(request, 'adminDashboard.html', context)
 
-    # Aggregate energy usage per office
-    from django.db.models import F
-    # Get all valid office ids from Office table
-    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
-
-    office_energy_qs = EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).values(
-        office_id=F('device__office__office_id'),
-        office_name=F('device__office__name')
-    ).annotate(
-        total_energy=Sum('total_energy_kwh')
-    ).order_by('-total_energy')
-
-    # Determine status based on total_energy thresholds
-    active_alerts = []
-    for record in office_energy_qs:
-        # Skip office with name exactly 'DS' or empty to remove duplicate entry
-        if record['office_name'] == 'DS' or not record['office_name']:
-            continue
-        energy = record['total_energy']
-        if energy > 20:
-            status = 'High'
-        elif energy > 10:
-            status = 'Moderate'
-        else:
-            status = 'Efficient'
-        active_alerts.append({
-            'office_name': record['office_name'],
-            'energy_usage': energy,
-            'status': status
-        })
-
-    context = {
-        'total_energy_usage': aggregates['total_energy_usage'] or 0,
-        'total_cost_predicted': aggregates['total_cost_predicted'] or 0,
-        'total_co2_emission': aggregates['total_co2_emission'] or 0,
-        'predicted_co2_emission': predicted_co2_emission,
-        'active_alerts': active_alerts,
-    }
-    return render(request, 'adminDashboard.html', context)
-
-    # Aggregate energy usage per office
-    from django.db.models import F
-    # Get all valid office ids from Office table
-    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
-
-    office_energy_qs = EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).values(
-        office_id=F('device__office__office_id'),
-        office_name=F('device__office__name')
-    ).annotate(
-        total_energy=Sum('total_energy_kwh')
-    ).order_by('-total_energy')
-
-    # Determine status based on total_energy thresholds
-    active_alerts = []
-    for record in office_energy_qs:
-        # Skip office with name exactly 'DS' or empty to remove duplicate entry
-        if record['office_name'] == 'DS' or not record['office_name']:
-            continue
-        energy = record['total_energy']
-        if energy > 20:
-            status = 'High'
-        elif energy > 10:
-            status = 'Moderate'
-        else:
-            status = 'Efficient'
-        active_alerts.append({
-            'office_name': record['office_name'],
-            'energy_usage': energy,
-            'status': status
-        })
-
-    context = {
-        'total_energy_usage': aggregates['total_energy_usage'] or 0,
-        'total_cost_predicted': aggregates['total_cost_predicted'] or 0,
-        'total_co2_emission': aggregates['total_co2_emission'] or 0,
-        'active_alerts': active_alerts,
-    }
-    return render(request, 'adminDashboard.html', context)
-
-from greenwatts.users.models import Office
-
 def admin_setting(request):
     offices = Office.objects.all()
     devices = Device.objects.select_related('office').all()
     return render(request, 'adminSetting.html', {'offices': offices, 'devices': devices})
 
 def office_usage(request):
-    return render(request, 'officeUsage.html')
+    # Get all valid office ids from Office table
+    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+
+    office_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).values(
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
+    ).order_by('-total_energy')
+
+    table_data = []
+    for record in office_data:
+        energy = record['total_energy'] or 0
+        if energy > 20:
+            status = 'HIGH'
+            status_class = 'high'
+        elif energy > 10:
+            status = 'MODERATE'
+            status_class = 'moderate'
+        else:
+            status = 'EFFICIENT'
+            status_class = 'efficient'
+
+        table_data.append({
+            'office': record['office_name'],
+            'energy': f"{energy:.1f} kWh",
+            'cost': f"₱{record['total_cost']:.2f}" if record['total_cost'] else '₱0.00',
+            'co2': f"{record['total_co2']:.1f} kg" if record['total_co2'] else '0.0 kg',
+            'status': status,
+            'status_class': status_class
+        })
+
+    # Prepare data for pie chart
+    pie_labels = [record['office_name'] for record in office_data]
+    pie_values = [record['total_energy'] or 0 for record in office_data]
+
+    # Prepare data for line chart (based on available data range)
+    from django.db.models import Min, Max
+    from django.db.models.functions import TruncDay
+    from django.utils import timezone
+    from datetime import timedelta, date
+
+    # Get min and max dates from the database
+    date_range = EnergyRecord.objects.aggregate(
+        min_date=Min('date'),
+        max_date=Max('date')
+    )
+    min_date = date_range['min_date']
+    max_date = date_range['max_date']
+
+    if min_date and max_date:
+        # Ensure they are date objects
+        if isinstance(min_date, timezone.datetime):
+            min_date = min_date.date()
+        if isinstance(max_date, timezone.datetime):
+            max_date = max_date.date()
+        # Use the full range of available data, up to 30 days max for chart readability
+        date_diff = (max_date - min_date).days
+        if date_diff > 30:
+            start_date = max_date - timedelta(days=30)
+        else:
+            start_date = min_date
+        end_date = max_date
+    else:
+        # Fallback if no data
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=7)
+
+    line_data = EnergyRecord.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(
+        day_date=TruncDay('date')
+    ).values(
+        'day_date',
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh')
+    ).order_by('day_date', 'office_name')
+
+    # Group data by date and office
+    date_dict = {}
+    for item in line_data:
+        date_key = item['day_date'].strftime('%Y-%m-%d')
+        office = item['office_name']
+        energy = item['total_energy'] or 0
+        if date_key not in date_dict:
+            date_dict[date_key] = {}
+        date_dict[date_key][office] = energy
+
+    # Generate dates for the range
+    full_dates = []
+    current_date = start_date
+    while current_date <= end_date:
+        date_str = current_date.strftime('%Y-%m-%d')
+        full_dates.append(date_str)
+        current_date += timedelta(days=1)
+    dates = sorted(full_dates)
+
+    # Get offices from line_data or fallback to office_data
+    line_offices = set(item['office_name'] for item in line_data)
+    if not line_offices:
+        line_offices = set(record['office_name'] for record in office_data)
+    offices = sorted(line_offices)
+
+    # Prepare labels (day and date) for the range
+    line_labels = []
+    for date_str in dates:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        day_abbr = date_obj.strftime('%a')
+        full_date = date_obj.strftime('%B %d, %Y')
+        line_labels.append({'day': day_abbr, 'date': full_date})
+
+    # Prepare datasets
+    line_datasets = []
+    colors = ["#3b82f6", "#f97316", "#8b5cf6", "#22c55e", "#ef4444"]
+    color_index = 0
+    for office in offices:
+        data_points = []
+        for date_str in dates:
+            data_points.append(date_dict.get(date_str, {}).get(office, 0))
+        line_datasets.append({
+            'label': office,
+            'data': data_points,
+            'borderColor': colors[color_index % len(colors)],
+            'fill': False
+        })
+        color_index += 1
+
+    context = {
+        'table_data': table_data,
+        'pie_labels': json.dumps(pie_labels),
+        'pie_values': json.dumps(pie_values),
+        'line_labels': json.dumps(line_labels),
+        'line_datasets': json.dumps(line_datasets)
+    }
+    return render(request, 'officeUsage.html', context)
 
 def admin_reports(request):
     return render(request, 'adminReports.html')

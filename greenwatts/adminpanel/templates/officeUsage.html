@@ -109,41 +109,15 @@
             <th>CO₂ Emissions</th>
             <th>Status</th>
           </tr>
-          <tr class="moderate">
-            <td>Dean’s Office</td>
-            <td>15.2 kWh (+5%)</td>
-            <td>₱76.00</td>
-            <td>12.3 kg</td>
-            <td>MODERATE</td>
+          {% for item in table_data %}
+          <tr class="{{ item.status_class }}">
+            <td>{{ item.office }}</td>
+            <td>{{ item.energy }}</td>
+            <td>{{ item.cost }}</td>
+            <td>{{ item.co2 }}</td>
+            <td>{{ item.status }}</td>
           </tr>
-          <tr class="efficient">
-            <td>CS Office</td>
-            <td>9.3 kWh (-6%)</td>
-            <td>₱46.00</td>
-            <td>7.1 kg</td>
-            <td>EFFICIENT</td>
-          </tr>
-          <tr class="high">
-            <td>IT Office</td>
-            <td>21.2 kWh (+10%)</td>
-            <td>₱109.00</td>
-            <td>18.7 kg</td>
-            <td>HIGH</td>
-          </tr>
-          <tr class="efficient">
-            <td>TCM Office</td>
-            <td>11.2 kWh (-3%)</td>
-            <td>₱59.00</td>
-            <td>9.6 kg</td>
-            <td>EFFICIENT</td>
-          </tr>
-          <tr class="moderate">
-            <td>DS Office</td>
-            <td>13.5 kWh (-5%)</td>
-            <td>₱69.00</td>
-            <td>10.5 kg</td>
-            <td>MODERATE</td>
-          </tr>
+          {% endfor %}
         </table>
       </div>
 
@@ -177,19 +151,15 @@
     <script>
       // Pie Chart
       const ctxPie = document.getElementById("pieChart");
+      const pieLabels = {{ pie_labels|safe }};
+      const pieValues = {{ pie_values|safe }};
       new Chart(ctxPie, {
         type: "pie",
         data: {
-          labels: [
-            "IT Office",
-            "Dean’s Office",
-            "CS Office",
-            "TCM Office",
-            "DS Office",
-          ],
+          labels: pieLabels,
           datasets: [
             {
-              data: [30.11, 21.59, 13.21, 15.91, 19.18],
+              data: pieValues,
               backgroundColor: [
                 "#3b82f6",
                 "#f97316",
@@ -215,50 +185,13 @@
 
       // Line Chart
       const ctxLine = document.getElementById("lineChart");
+      const lineLabels = {{ line_labels|safe }};
+      const lineDatasets = {{ line_datasets|safe }};
       new Chart(ctxLine, {
         type: "line",
         data: {
-          labels: [
-            { day: "Mon", date: "July 14, 2025" },
-            { day: "Tue", date: "July 15, 2025" },
-            { day: "Wed", date: "July 16, 2025" },
-            { day: "Thu", date: "July 17, 2025" },
-            { day: "Fri", date: "July 18, 2025" },
-            { day: "Sat", date: "July 19, 2025" },
-            { day: "Sun", date: "July 20, 2025" },
-          ],
-          datasets: [
-            {
-              label: "IT Office",
-              data: [10, 14, 13, 15, 17, 20, 23],
-              borderColor: "#3b82f6",
-              fill: false,
-            },
-            {
-              label: "Dean’s Office",
-              data: [9, 12, 11, 12, 14, 16, 18],
-              borderColor: "#f97316",
-              fill: false,
-            },
-            {
-              label: "CS Office",
-              data: [7, 10, 9, 8, 10, 12, 13],
-              borderColor: "#8b5cf6",
-              fill: false,
-            },
-            {
-              label: "TCM Office",
-              data: [6, 9, 7, 8, 9, 11, 12],
-              borderColor: "#22c55e",
-              fill: false,
-            },
-            {
-              label: "DS Office",
-              data: [8, 11, 10, 11, 12, 13, 14],
-              borderColor: "#ef4444",
-              fill: false,
-            },
-          ],
+          labels: lineLabels,
+          datasets: lineDatasets,
         },
         options: {
           responsive: true,
