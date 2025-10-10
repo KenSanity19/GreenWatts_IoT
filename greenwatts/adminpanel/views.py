@@ -32,35 +32,75 @@ def admin_login(request):
 
 
 def admin_dashboard(request):
-    # Aggregate sums for total energy usage, cost estimate, and carbon emission
-    aggregates = EnergyRecord.objects.aggregate(
-        total_energy_usage=Sum('total_energy_kwh'),
-        total_cost_predicted=Sum('cost_estimate'),
-        total_co2_emission=Sum('carbon_emission_kgco2')
-    )
+    from django.db.models import Max
+    from django.db.models.functions import TruncDate
+    from datetime import date
+    from datetime import datetime as dt
+
+    # Get unique dates from EnergyRecord, last 7 days with data, ordered descending
+    unique_dates_qs = EnergyRecord.objects.dates('date', 'day').distinct().order_by('-date')[:7]
+    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
+
+    # Get selected date from request or use latest
+    selected_date_str = request.GET.get('selected_date')
+    selected_date = None
+    if selected_date_str and selected_date_str in day_options:
+        # Parse the selected date (format mm/dd/yyyy)
+        try:
+            month, day, year = map(int, selected_date_str.split('/'))
+            selected_date = date(year, month, day)
+        except ValueError:
+            selected_date = None
+    if not selected_date:
+        # Default to latest date
+        latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
+        latest_date = latest_date_qs['latest_date']
+        if latest_date:
+            selected_date = latest_date.date() if hasattr(latest_date, 'date') else latest_date
+
+    # Aggregate sums for total energy usage, cost estimate, and carbon emission from selected date
+    if selected_date:
+        aggregates = EnergyRecord.objects.filter(date=selected_date).aggregate(
+            total_energy_usage=Sum('total_energy_kwh'),
+            total_cost_predicted=Sum('cost_estimate'),
+            total_co2_emission=Sum('carbon_emission_kgco2')
+        )
+    else:
+        aggregates = {
+            'total_energy_usage': 0,
+            'total_cost_predicted': 0,
+            'total_co2_emission': 0
+        }
 
     # Calculate predicted CO2 emission (simple projection: current emission * 10 as example)
     predicted_co2_emission = (aggregates['total_co2_emission'] or 0) * 10
 
     # Prepare dates for display
-    current_date = datetime.now().strftime("%B %d, %Y")
-    predicted_date = (datetime.now() + timedelta(days=7)).strftime("%B %d, %Y")
+    if selected_date:
+        current_date = selected_date.strftime("%B %d, %Y")
+    else:
+        current_date = datetime.now().strftime("%B %d, %Y")
+    predicted_date = (dt.combine(selected_date, dt.min.time()) + timedelta(days=7)).strftime("%B %d, %Y") if selected_date else (datetime.now() + timedelta(days=7)).strftime("%B %d, %Y")
 
-    # Aggregate energy usage per office
+    # Aggregate energy usage per office from selected date
     from django.db.models import F
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    office_energy_qs = EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).values(
-        office_id=F('device__office__office_id'),
-        office_name=F('device__office__name')
-    ).annotate(
-        total_energy=Sum('total_energy_kwh')
-    ).order_by('-total_energy')
+    if selected_date:
+        office_energy_qs = EnergyRecord.objects.filter(
+            date=selected_date,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).values(
+            office_id=F('device__office__office_id'),
+            office_name=F('device__office__name')
+        ).annotate(
+            total_energy=Sum('total_energy_kwh')
+        ).order_by('-total_energy')
+    else:
+        office_energy_qs = []
 
     # Determine status based on total_energy thresholds
     active_alerts = []
@@ -68,7 +108,7 @@ def admin_dashboard(request):
         # Skip office with name exactly 'DS' or empty to remove duplicate entry
         if record['office_name'] == 'DS' or not record['office_name']:
             continue
-        energy = record['total_energy']
+        energy = record['total_energy'] or 0
         if energy > 20:
             status = 'High'
         elif energy > 10:
@@ -95,6 +135,8 @@ def admin_dashboard(request):
         'predicted_date': predicted_date,
         'co2_emission_progress': co2_emission_progress,
         'active_alerts': active_alerts,
+        'day_options': day_options,
+        'selected_date': selected_date_str if selected_date_str else None,
     }
     return render(request, 'adminDashboard.html', context)
 
