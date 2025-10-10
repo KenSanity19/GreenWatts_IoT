@@ -63,34 +63,63 @@
     <!-- Main Content -->
     <div class="main-content">
       <header>
-        <h1>Reports</h1>
-        <div class="date-time"><span id="live-time"></span></div>
-        <button class="export-btn">⬆️ Export</button>
+        <div class="header-left">
+          <h1>Admin Reports</h1>
+          <p class="note">
+            <span class="red-text">Noted!</span> The data will be captured every
+            12:00am midnight
+          </p>
+        </div>
+          <div class="date-time">
+            <i class="fas fa-calendar" style="cursor: pointer"></i>
+            <span id="live-time"></span>
+        </div>
       </header>
+
+      <!-- Filters -->
+      <div class="filters">
+        <select id="day-select">
+          <option value="">Day</option>
+          {% for day in day_options %}
+          <option value="{{ day }}" {% if selected_date == day %}selected{% endif %}>{{ day }}</option>
+          {% endfor %}
+        </select>
+        <select>
+          <option>Month</option>
+        </select>
+        <select>
+          <option>Year</option>
+        </select>
+        <button class="export-btn">⬆️ Export</button>
+      </div>
 
       <!-- Top Report Cards -->
       <div class="report-cards">
         <div class="card total">
-          Total Energy Usage <br /><span>143 kWh</span>
+          Total Energy Usage <br /><span>{{ total_energy_usage|floatformat:0 }} kWh</span>
         </div>
         <div class="card highest">
-          Highest Usage Office <br /><span>IT OFFICE</span>
+          Highest Usage Office <br /><span>{{ highest_usage_office }}</span>
         </div>
         <div class="card inactive">
-          Inactive Office/s <br /><span>NONE</span>
+          Inactive Office/s <br /><span>{{ inactive_offices }}</span>
         </div>
         <div class="card best">
-          Best Performing Office <br /><span>CS</span>
+          Best Performing Office <br /><span>{{ best_performing_office }}</span>
         </div>
       </div>
 
       <!-- Chart Section -->
-      <div class="chart-container">
-        <h2>Energy Usage</h2>
-        <canvas id="energyChart"></canvas>
-        <div class="recommendation">
-          <strong>Recommendation:</strong> IT Office exceeded usage for 3 days.
-          Consider scheduling equipment shutdowns during off-hours.
+      <div class="chart-frame">
+        <div class="chart-container">
+          <h2 class="chart-title">Energy Usage</h2>
+          <div class="chart-inner">
+            <canvas id="energyChart"></canvas>
+          </div>
+          <div class="recommendation chart-recommendation">
+            <strong>Recommendation:</strong> IT Office exceeded usage for 3 days.
+            Consider scheduling equipment shutdowns during off-hours.
+          </div>
         </div>
       </div>
 
@@ -107,34 +136,86 @@
     <!-- Chart Script -->
     <script>
       const ctx = document.getElementById("energyChart").getContext("2d");
-      new Chart(ctx, {
+      const chartLabels = {{ chart_labels|safe }};
+      const chartValues = {{ chart_values|safe }};
+      const chartColors = {{ chart_colors|safe }};
+
+      // Map colors to status texts
+      const getStatusFromColor = (color) => {
+        const hexRed = color.toLowerCase().includes('#ff0000') || color.toLowerCase() === 'red' || color.toLowerCase().includes('#dc3545');
+        const hexYellow = color.toLowerCase().includes('#ffff00') || color.toLowerCase() === 'yellow' || color.toLowerCase().includes('#ffc107');
+        const hexGreen = color.toLowerCase().includes('#00ff00') || color.toLowerCase() === 'green' || color.toLowerCase().includes('#28a745') || color.toLowerCase().includes('#527e4c');
+        if (hexRed) return 'Above Threshold';
+        if (hexYellow) return 'Within Threshold';
+        if (hexGreen) return 'Below Threshold';
+        return 'Within Threshold'; // default
+      };
+      const statuses = chartColors.map(getStatusFromColor);
+
+      // Custom plugin for status labels below bars
+      const statusLabelsPlugin = {
+        id: 'statusLabels',
+        afterDraw: (chart) => {
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.font = 'bold 10px Arial';
+          ctx.fillStyle = '#333';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+
+          const chartArea = chart.chartArea;
+          const xScale = chart.scales.x;
+          const bottom = chartArea.bottom + 10; // Position below x-axis
+
+          statuses.forEach((status, index) => {
+            const x = xScale.getPixelForValue(index);
+            ctx.fillText(status, x, bottom);
+          });
+
+          ctx.restore();
+        }
+      };
+
+      const chart = new Chart(ctx, {
         type: "bar",
         data: {
-          labels: [
-            "IT Office",
-            "CS Office",
-            "DS Office",
-            "TCM Office",
-            "Dean's Office",
-          ],
+          labels: chartLabels,
           datasets: [
             {
               label: "kWh",
-              data: [21, 9, 12, 11, 14],
-              backgroundColor: [
-                "#d9534f", // IT Office - red
-                "#5cb85c", // CS Office - green
-                "#f0ad4e", // DS Office - yellow
-                "#5cb85c", // TCM Office - green
-                "#f0ad4e", // Dean's Office - yellow
-              ],
+              data: chartValues,
+              backgroundColor: chartColors,
+              borderWidth: 0
             },
           ],
         },
         options: {
           responsive: true,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true } },
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { display: false }
+          },
+          scales: { 
+            y: { 
+              beginAtZero: true,
+              grid: {
+                color: '#e0e0e0'
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                maxRotation: 45,
+                minRotation: 0,
+                font: {
+                  size: 11
+                }
+              }
+            }
+          },
+          plugins: [statusLabelsPlugin]
         },
       });
     </script>
@@ -154,6 +235,19 @@
       }
       setInterval(updateTime, 1000);
       updateTime(); // initial call
+
+      // Handle day dropdown change
+      document.addEventListener('DOMContentLoaded', function() {
+        const daySelect = document.getElementById('day-select');
+        daySelect.addEventListener('change', function() {
+          const selectedValue = this.value;
+          if (selectedValue) {
+            window.location.href = `?selected_date=${encodeURIComponent(selectedValue)}`;
+          } else {
+            window.location.href = '?'; // Clear selection, back to latest
+          }
+        });
+      });
     </script>
   </body>
 </html>
