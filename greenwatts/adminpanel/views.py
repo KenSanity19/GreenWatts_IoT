@@ -457,7 +457,173 @@ def admin_reports(request):
     return render(request, 'adminReports.html', context)
 
 def admin_costs(request):
-    return render(request, 'adminCosts.html')
+    from django.db.models import Sum, Max, Count
+    from django.db.models.functions import TruncDate
+    from datetime import datetime, timedelta, date
+    from django.utils import timezone
+
+    # Get all valid office ids from Office table
+    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+
+    # Get unique dates from EnergyRecord, last 7 days with data, ordered descending
+    unique_dates_qs = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).dates('date', 'day').distinct().order_by('-date')[:7]
+    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
+
+    # Get selected date from request or use latest
+    selected_date_str = request.GET.get('selected_date')
+    selected_date = None
+    if selected_date_str and selected_date_str in day_options:
+        # Parse the selected date (format mm/dd/yyyy)
+        try:
+            month, day, year = map(int, selected_date_str.split('/'))
+            selected_date = date(year, month, day)
+        except ValueError:
+            selected_date = None
+    if not selected_date:
+        # Default to latest date
+        latest_date_qs = EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).aggregate(latest_date=Max('date'))
+        latest_date = latest_date_qs['latest_date']
+        if latest_date:
+            selected_date = latest_date.date() if hasattr(latest_date, 'date') else latest_date
+
+    # Aggregate totals for selected date or overall if no date
+    if selected_date:
+        aggregates = EnergyRecord.objects.filter(
+            date=selected_date,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).aggregate(
+            total_energy=Sum('total_energy_kwh'),
+            total_cost=Sum('cost_estimate')
+        )
+        num_days = 1
+    else:
+        aggregates = EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).aggregate(
+            total_energy=Sum('total_energy_kwh'),
+            total_cost=Sum('cost_estimate')
+        )
+        num_days = EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').distinct().count()
+
+    total_energy = aggregates['total_energy'] or 0
+    total_cost = aggregates['total_cost'] or 0
+    avg_daily_cost = total_cost / num_days if num_days > 0 else 0
+
+    # Highest cost office
+    if selected_date:
+        office_costs = EnergyRecord.objects.filter(
+            date=selected_date,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).values(
+            office_name=F('device__office__name')
+        ).annotate(
+            total_cost=Sum('cost_estimate')
+        ).order_by('-total_cost')
+    else:
+        office_costs = EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).values(
+            office_name=F('device__office__name')
+        ).annotate(
+            total_cost=Sum('cost_estimate')
+        ).order_by('-total_cost')
+
+    highest_office = office_costs.first()['office_name'] if office_costs and office_costs.first()['total_cost'] else 'NONE'
+
+    # For chart header: assume current month is the month of selected_date or current
+    now = timezone.now().date()
+    current_month = selected_date.month if selected_date else now.month
+    current_year = selected_date.year if selected_date else now.year
+
+    # June total (hardcoded as previous month, adjust)
+    june_cost = EnergyRecord.objects.filter(
+        date__year=current_year,
+        date__month=6,  # June
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    # So far this month
+    so_far_cost = EnergyRecord.objects.filter(
+        date__year=current_year,
+        date__month=current_month,
+        date__lte=now,
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    # Predicted this month: average daily * days in month
+    days_in_month = (date(current_year, current_month + 1, 1) - date(current_year, current_month, 1)).days if current_month < 12 else 31
+    avg_daily = so_far_cost / now.day if now.day > 0 else 0
+    predicted_cost = avg_daily * days_in_month
+
+    # Estimate savings: difference from previous month
+    prev_month = current_month - 1 if current_month > 1 else 12
+    prev_year = current_year if current_month > 1 else current_year - 1
+    prev_cost = EnergyRecord.objects.filter(
+        date__year=prev_year,
+        date__month=prev_month,
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+    savings = prev_cost - predicted_cost if prev_cost > predicted_cost else 0
+
+    # Chart data: last 7 days costs
+    chart_dates_desc = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).dates('date', 'day').distinct().order_by('-date')[:7]
+    chart_dates = list(reversed(chart_dates_desc))
+    chart_labels = [d.strftime('%B %d') for d in chart_dates]
+    chart_data = []
+    for d in chart_dates:
+        cost = EnergyRecord.objects.filter(
+            date=d,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        chart_data.append(cost)
+
+    context = {
+        'total_energy': total_energy,
+        'total_cost': total_cost,
+        'avg_daily_cost': avg_daily_cost,
+        'highest_office': highest_office,
+        'june_cost': june_cost,
+        'so_far_cost': so_far_cost,
+        'predicted_cost': predicted_cost,
+        'savings': savings,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+        'day_options': day_options,
+        'selected_date': selected_date_str if selected_date_str else None,
+    }
+    return render(request, 'adminCosts.html', context)
 
 def carbon_emission(request):
     return render(request, 'carbonEmission.html')

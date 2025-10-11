@@ -20,7 +20,7 @@
   <body>
     <!-- Sidebar -->
     <div class="sidebar">
-      <h2 class="logo">GreenWaTts</h2>
+      <h2 class="logo">GreenWatts</h2>
       <div class="admin-section">
         <div class="admin-icon"><i class="fas fa-user-cog"></i></div>
         <p>ADMIN</p>
@@ -95,19 +95,19 @@
       <div class="report-cards">
         <div class="card total">
           <p>Total Energy Use</p>
-          <span>143 kWh</span>
+          <span>{{ total_energy|floatformat:1 }} kWh</span>
         </div>
         <div class="card inactive">
           <p>Total Cost</p>
-          <span>₱120.50</span>
+          <span>₱{{ total_cost|floatformat:2 }}</span>
         </div>
         <div class="card inactive">
           <p>Average Daily Cost</p>
-          <span>₱12.05</span>
+          <span>₱{{ avg_daily_cost|floatformat:2 }}</span>
         </div>
         <div class="card highest">
           <p>HIGHEST COST OFFICE</p>
-          <span>IT Office</span>
+          <span>{{ highest_office }}</span>
         </div>
       </div>
 
@@ -119,19 +119,21 @@
             <div class="chart-info">
               <div class="info-item">
                 <div class="info-label">June</div>
-                <div class="info-value">₱1,203.76</div>
+                <div class="info-value">₱{{ june_cost|floatformat:2 }}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">So far this month</div>
-                <div class="info-value">₱587.36</div>
+                <div class="info-value">₱{{ so_far_cost|floatformat:2 }}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Predicted this month</div>
-                <div class="info-value">₱909.87</div>
+                <div class="info-value">
+                  ₱{{ predicted_cost|floatformat:2 }}
+                </div>
               </div>
               <div class="info-item">
                 <div class="info-label">Estimate savings</div>
-                <div class="info-value">₱303.10</div>
+                <div class="info-value">₱{{ savings|floatformat:2 }}</div>
               </div>
             </div>
           </div>
@@ -152,22 +154,17 @@
     <!-- Chart Script -->
     <script>
       const ctx = document.getElementById("energyChart").getContext("2d");
+      const chartLabels = {{ chart_labels|safe }};
+      const chartData = {{ chart_data|safe }};
+      const maxValue = Math.max(...chartData) + 20;
       new Chart(ctx, {
         type: "bar",
         data: {
-          labels: [
-            "July 14",
-            "July 15",
-            "July 16",
-            "July 17",
-            "July 18",
-            "July 19",
-            "July 20",
-          ],
+          labels: chartLabels,
           datasets: [
             {
               label: "Cost",
-              data: [60, 30, 110, 20, 90, 50, 40],
+              data: chartData,
               backgroundColor: "#4caf50",
               borderRadius: 5,
               barPercentage: 0.6,
@@ -178,9 +175,9 @@
           scales: {
             y: {
               beginAtZero: true,
-              max: 120,
+              max: maxValue,
               ticks: {
-                stepSize: 20,
+                stepSize: Math.ceil(maxValue / 6),
                 color: "#fff",
                 callback: function (value) {
                   return "₱" + value;
