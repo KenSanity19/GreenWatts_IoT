@@ -1,15 +1,9 @@
-# Task: Make live time in office usage similar to admin dashboard (right-aligned with icon, restructured header)
+# TODO: Fix Password Hashing for Office Users
 
 ## Steps:
 
-- [x] Previous: Update .date-time font-size to var(--font-size-sm).
-- [x] Restructure greenwatts/adminpanel/templates/officeUsage.html: Add .header-left (h1 + note), .header-right (Export button + date-time).
-- [x] Update greenwatts/adminpanel/static/adminCss/officeUsage.css: Style .header-left, .header-right, and .export-btn for layout and appearance.
-- [ ] Verify the update (reload page to check layout, alignment, icon, and button).
-- [ ] Complete the task.
-
-## Admin Reports Layout Update
-
-- [x] Step 1: Edit adminReports.html to restructure header with .header-left (title + note) and .header-right (export + date-time below).
-- [x] Step 2: Add CSS styles for .header-left and .header-right in adminReports.css.
-- [x] Step 3: Verify the layout and complete the task.
+- [x] Edit adminpanel/views.py: Update create_office to use Office.objects.create_user() for proper hashing.
+- [x] Edit adminpanel/views.py: Update edit_office to use set_password() when changing password.
+- [ ] Hash existing plain text passwords using Django shell command.
+- [ ] Test: Create a new office via the admin interface and verify password is hashed in DB.
+- [ ] Verify login works with hashed passwords.

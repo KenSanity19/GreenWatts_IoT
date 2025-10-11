@@ -477,16 +477,15 @@ def create_office(request):
             # For simplicity, assign admin as the first admin in DB (adjust as needed)
             admin = Admin.objects.first()
 
-            office = Office(
+            office = Office.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
                 name=name,
                 location=location,
-                email=email,
-                username=username,
-                password=password,
                 department=department,
                 admin=admin
             )
-            office.save()
             return JsonResponse({"status": "success", "message": "Office created successfully"})
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
@@ -549,7 +548,7 @@ def edit_office(request, id):
             office.username = data.get("username", office.username)
             new_password = data.get("password", "")
             if new_password:
-                office.password = new_password
+                office.set_password(new_password)
             office.department = data.get("department", office.department)
             office.save()
             return JsonResponse({"status": "success", "message": "Office updated successfully"})
