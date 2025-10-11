@@ -126,6 +126,37 @@ def admin_dashboard(request):
     if predicted_co2_emission > 0:
         co2_emission_progress = min(100, (aggregates['total_co2_emission'] or 0) / predicted_co2_emission * 100)
 
+    # Change in cost data
+    change_dates_qs = EnergyRecord.objects.dates('date', 'day').distinct().order_by('-date')[:2]
+    change_dates = list(change_dates_qs)
+    change_costs = []
+    for d in change_dates:
+        cost = EnergyRecord.objects.filter(date=d).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        change_costs.append(cost)
+    if len(change_costs) >= 2:
+        latest_cost = change_costs[0]
+        prev_cost = change_costs[1]
+        if prev_cost > 0:
+            change_percent = ((latest_cost - prev_cost) / prev_cost) * 100
+        else:
+            change_percent = 0
+        is_decrease = change_percent < 0
+        change_percent_abs = abs(change_percent)
+        # Heights: scale to max
+        max_cost = max(change_costs)
+        heights = [(c / max_cost * 100) if max_cost > 0 else 0 for c in change_costs]
+        change_data = {
+            'bar1_label': change_dates[1].strftime('%B %d'),  # previous
+            'bar1_height': heights[1],
+            'bar2_label': change_dates[0].strftime('%B %d'),  # latest
+            'bar2_height': heights[0],
+            'percent': change_percent_abs,
+            'type': 'DECREASE' if is_decrease else 'INCREASE',
+            'arrow': 'down' if is_decrease else 'up'
+        }
+    else:
+        change_data = None
+
     context = {
         'total_energy_usage': aggregates['total_energy_usage'] or 0,
         'total_cost_predicted': aggregates['total_cost_predicted'] or 0,
@@ -135,6 +166,7 @@ def admin_dashboard(request):
         'predicted_date': predicted_date,
         'co2_emission_progress': co2_emission_progress,
         'active_alerts': active_alerts,
+        'change_data': change_data,
         'day_options': day_options,
         'selected_date': selected_date_str if selected_date_str else None,
     }

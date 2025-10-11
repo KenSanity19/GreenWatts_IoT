@@ -139,27 +139,34 @@
           </div>
 
           <!-- Change in Cost -->
+          {% if change_data %}
           <div class="change-cost">
             <h3>CHANGE IN COST</h3>
             <hr class="change-cost-line" />
             <div class="change-cost-content">
               <div class="bars">
                 <div class="bar">
-                  <div class="bar-fill" style="height: 80%"></div>
-                  <div class="bar-label">July 11</div>
+                  <div class="bar-fill" style="height: {{ change_data.bar1_height }}%"></div>
+                  <div class="bar-label">{{ change_data.bar1_label }}</div>
                 </div>
                 <div class="bar">
-                  <div class="bar-fill" style="height: 50%"></div>
-                  <div class="bar-label">July 12</div>
+                  <div class="bar-fill" style="height: {{ change_data.bar2_height }}%"></div>
+                  <div class="bar-label">{{ change_data.bar2_label }}</div>
                 </div>
               </div>
               <div class="change-info">
-                <div class="arrow-down"></div>
-                <span class="percentage-text">20.18%</span>
-                <p class="change-text">DECREASE IN COST</p>
+                <div class="arrow-{{ change_data.arrow }}"></div>
+                <span class="percentage-text">{{ change_data.percent|floatformat:2 }}%</span>
+                <p class="change-text">{{ change_data.type }} IN COST</p>
               </div>
             </div>
           </div>
+          {% else %}
+          <div class="change-cost">
+            <h3>CHANGE IN COST</h3>
+            <p>No data available for change in cost.</p>
+          </div>
+          {% endif %}
         </div>
 
         <!-- Carbon Footprint -->
