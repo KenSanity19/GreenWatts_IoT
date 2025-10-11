@@ -92,19 +92,19 @@
       <div class="report-cards">
         <div class="card total">
           <p>Total Energy Use</p>
-          <span>143 kWh</span>
+          <span>{{ total_energy_kwh }} kWh</span>
         </div>
         <div class="card inactive">
           <p>Total Cost</p>
-          <span>₱120.50</span>
+          <span>₱{{ total_cost }}</span>
         </div>
         <div class="card inactive">
           <p>Average Daily Cost</p>
-          <span>₱12.05</span>
+          <span>₱{{ avg_daily_cost }}</span>
         </div>
         <div class="card highest">
           <p>HIGHEST CO2 EMISSION OFFICE</p>
-          <span>IT Office</span>
+          <span>{{ highest_co2_office }}</span>
         </div>
       </div>
 
@@ -113,21 +113,22 @@
         <div class="chart-header">
           <div class="chart-info">
             <div class="info-item">
-              <div class="info-label">June</div>
-              <div class="info-value">189.8 kg</div>
+              <div class="info-label">{{ previous_month_name }}</div>
+              <div class="info-value">{{ last_month_co2 }} kg</div>
             </div>
             <div class="info-item">
               <div class="info-label">SO FAR THIS MONTH</div>
-              <div class="info-value">100.5 kg</div>
+              <div class="info-value">{{ current_month_so_far_co2 }} kg</div>
             </div>
             <div class="info-item">
               <div class="info-label">PREDICTED THIS MONTH</div>
-              <div class="info-value">209 kg</div>
+              <div class="info-value">{{ predicted_month_co2 }} kg</div>
             </div>
             <div class="info-item">
               <div class="info-label">CHANGE IN EMISSIONS</div>
               <div class="info-value">
-                10.12% <span class="red-arrow">▲</span>
+                {{ change_percent }}
+                <span class="{{ change_class }}">{{ change_direction }}</span>
               </div>
             </div>
           </div>
@@ -146,32 +147,19 @@
       const co2Chart = new Chart(ctx, {
         type: "line",
         data: {
-          labels: [
-            "June 1",
-            "June 5",
-            "June 10",
-            "June 15",
-            "June 20",
-            "June 25",
-            "June 30",
-            "July 1",
-            "July 5",
-            "July 10",
-            "July 15",
-            "July 20",
-          ],
+          labels: {{ chart_labels|safe }},
           datasets: [
             {
-              label: "June",
-              data: [10, 40, 70, 100, 130, 160, 190, 0, 0, 0, 0, 0],
+              label: "Previous Month",
+              data: {{ prev_month_data|safe }},
               borderColor: "#f0ad4e",
               borderWidth: 2,
               fill: false,
               tension: 0.1,
             },
             {
-              label: "July",
-              data: [0, 0, 0, 0, 0, 0, 0, 20, 60, 100, 150, 210],
+              label: "Current Month",
+              data: {{ current_month_data|safe }},
               borderColor: "#5cb85c",
               borderWidth: 2,
               fill: false,
@@ -179,7 +167,7 @@
             },
             {
               label: "Threshold",
-              data: Array(12).fill(180),
+              data: Array({{ chart_labels|length }}).fill({{ threshold }}),
               borderColor: "red",
               borderWidth: 2,
               borderDash: [10, 5],
@@ -200,7 +188,7 @@
               const ctx = chart.ctx;
               const xAxis = chart.scales.x;
               const yAxis = chart.scales.y;
-              const thresholdY = yAxis.getPixelForValue(180);
+              const thresholdY = yAxis.getPixelForValue({{ threshold }});
               const rightX = xAxis.getPixelForValue(
                 chart.data.labels.length - 1
               );

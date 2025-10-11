@@ -56,7 +56,7 @@ def admin_dashboard(request):
         latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
         latest_date = latest_date_qs['latest_date']
         if latest_date:
-            selected_date = latest_date.date() if hasattr(latest_date, 'date') else latest_date
+            selected_date = latest_date
 
     # Aggregate sums for total energy usage, cost estimate, and carbon emission from selected date
     if selected_date:
@@ -669,7 +669,158 @@ def admin_costs(request):
     return render(request, 'adminCosts.html', context)
 
 def carbon_emission(request):
-    return render(request, 'carbonEmission.html')
+    from django.db.models import Sum, Max
+    from django.db.models.functions import TruncDate
+    from datetime import datetime, timedelta, date
+    from calendar import monthrange
+    from django.utils import timezone
+    import json
+
+    # Get all valid office ids from Office table
+    from greenwatts.users.models import Office
+    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+
+    now = timezone.now().date()
+    current_month = now.month
+    current_year = now.year
+    days_so_far = now.day
+
+    # Previous month
+    prev_month = current_month - 1 if current_month > 1 else 12
+    prev_year = current_year if current_month > 1 else current_year - 1
+    previous_month_name = date(prev_year, prev_month, 1).strftime('%B %Y')
+
+    # Days in current month
+    days_in_month = monthrange(current_year, current_month)[1]
+
+    # Aggregates for current month so far
+    current_month_aggregates = EnergyRecord.objects.filter(
+        date__year=current_year,
+        date__month=current_month,
+        date__lte=now,
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).aggregate(
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
+    )
+
+    total_energy_kwh = current_month_aggregates['total_energy'] or 0
+    total_cost = current_month_aggregates['total_cost'] or 0
+    avg_daily_cost = total_cost / days_so_far if days_so_far > 0 else 0
+
+    # Highest CO2 emission office (current month)
+    highest_office_data = EnergyRecord.objects.filter(
+        date__year=current_year,
+        date__month=current_month,
+        date__lte=now,
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).values(
+        office_name=F('device__office__name')
+    ).annotate(
+        total_co2=Sum('carbon_emission_kgco2')
+    ).order_by('-total_co2')
+
+    highest_co2_office = highest_office_data.first()['office_name'] if highest_office_data else 'NONE'
+
+    # Last month total CO2
+    last_month_total_co2 = EnergyRecord.objects.filter(
+        date__year=prev_year,
+        date__month=prev_month,
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
+
+    # Current month so far CO2
+    current_month_so_far_co2 = current_month_aggregates['total_co2'] or 0
+
+    # Predicted this month CO2
+    avg_daily_co2 = current_month_so_far_co2 / days_so_far if days_so_far > 0 else 0
+    predicted_month_co2 = avg_daily_co2 * days_in_month
+
+    # Change in emissions
+    if last_month_total_co2 > 0:
+        change_percent = ((current_month_so_far_co2 - last_month_total_co2) / last_month_total_co2) * 100
+    else:
+        change_percent = 0
+    change_direction = '▲' if change_percent > 0 else '▼'
+    change_class = 'red-arrow' if change_percent > 0 else 'green-arrow'  # Assume red for increase
+
+    # Chart data: Last 40 days to cover two months
+    end_date = now
+    start_date = end_date - timedelta(days=40)
+    daily_data = EnergyRecord.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(
+        day_date=TruncDate('date')
+    ).values(
+        'day_date'
+    ).annotate(
+        total_co2=Sum('carbon_emission_kgco2')
+    ).order_by('day_date')
+
+    # Generate full date range
+    date_range = []
+    current = start_date
+    while current <= end_date:
+        date_range.append(current)
+        current += timedelta(days=1)
+
+    # Map data
+    date_dict = {item['day_date']: item['total_co2'] or 0 for item in daily_data}
+    daily_co2 = [date_dict.get(d, 0) for d in date_range]
+
+    # Split into previous and current month data
+    prev_month_data = []
+    current_month_data = []
+    labels = []
+    for d in date_range:
+        month_name = d.strftime('%B')
+        label = f"{month_name} {d.day}"
+        labels.append(label)
+
+        if d.month == prev_month and d.year == prev_year:
+            prev_month_data.append(date_dict.get(d, 0))
+            current_month_data.append(0)
+        else:
+            prev_month_data.append(0)
+            current_month_data.append(date_dict.get(d, 0))
+
+    # Pad to 12 points if needed, but use actual
+    # For now, use up to 12 recent points
+    labels = labels[-12:]
+    prev_month_data = prev_month_data[-12:]
+    current_month_data = current_month_data[-12:]
+
+    threshold = 180  # Fixed
+
+    context = {
+        'total_energy_kwh': round(total_energy_kwh, 1),
+        'total_cost': f"{total_cost:.2f}",
+        'avg_daily_cost': f"{avg_daily_cost:.2f}",
+        'highest_co2_office': highest_co2_office,
+        'last_month_co2': f"{last_month_total_co2:.1f}",
+        'current_month_so_far_co2': f"{current_month_so_far_co2:.1f}",
+        'predicted_month_co2': f"{predicted_month_co2:.0f}",
+        'change_percent': f"{abs(change_percent):.2f}%",
+        'change_direction': change_direction,
+        'change_class': change_class,
+        'chart_labels': json.dumps(labels),
+        'prev_month_data': json.dumps(prev_month_data),
+        'current_month_data': json.dumps(current_month_data),
+        'threshold': threshold,
+        'previous_month_name': previous_month_name,
+    }
+    return render(request, 'carbonEmission.html', context)
 
 @csrf_exempt
 def create_office(request):
