@@ -114,23 +114,24 @@
         <div class="chart-container">
           <h2 class="chart-title">Energy Usage</h2>
           <div class="chart-inner">
-            <canvas id="energyChart"></canvas>
+            <canvas id="energyChart" style="height: 400px; width: 100%;"></canvas>
           </div>
           <div class="recommendation chart-recommendation">
             <strong>Recommendation:</strong> IT Office exceeded usage for 3 days.
             Consider scheduling equipment shutdowns during off-hours.
           </div>
         </div>
+
+        <!-- Energy Tip Section -->
+        <div class="energy-tip">
+          <p>
+            <span class="green-text">Energy Tip:</span> On warm days, setting a
+            programmable thermostat to a higher setting when you are not at home
+            can help reduce your energy costs by approximately 10 percent.
+          </p>
+        </div>
       </div>
 
-      <!-- Footer Tip -->
-      <footer>
-        <p class="energy-tip">
-          <strong>Energy Tip:</strong> On warm days, setting a programmable
-          thermostat to a higher setting when you are not at home can help
-          reduce your energy costs by approximately 10 percent.
-        </p>
-      </footer>
     </div>
 
     <!-- Chart Script -->
@@ -158,14 +159,13 @@
         afterDraw: (chart) => {
           const ctx = chart.ctx;
           ctx.save();
-          ctx.font = 'bold 10px Arial';
+          ctx.font = 'bold 12px Arial';
           ctx.fillStyle = '#333';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
 
-          const chartArea = chart.chartArea;
           const xScale = chart.scales.x;
-          const bottom = chartArea.bottom + 10; // Position below x-axis
+          const bottom = xScale.bottom + 25; // Position below x-scale (ticks + padding)
 
           statuses.forEach((status, index) => {
             const x = xScale.getPixelForValue(index);
@@ -176,13 +176,16 @@
         }
       };
 
+      // Register the custom plugin
+      Chart.register(statusLabelsPlugin);
+
       const chart = new Chart(ctx, {
         type: "bar",
         data: {
           labels: chartLabels,
           datasets: [
             {
-              label: "kWh",
+              label: "",
               data: chartValues,
               backgroundColor: chartColors,
               borderWidth: 0
@@ -192,12 +195,20 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          layout: {
+            padding: {
+              bottom: 60
+            }
+          },
           plugins: { 
             legend: { display: false }
           },
           scales: { 
             y: { 
               beginAtZero: true,
+              title: {
+                display: false
+              },
               grid: {
                 color: '#e0e0e0'
               }
@@ -209,13 +220,13 @@
               ticks: {
                 maxRotation: 45,
                 minRotation: 0,
+                padding: 20,
                 font: {
-                  size: 11
+                  size: 12
                 }
               }
             }
-          },
-          plugins: [statusLabelsPlugin]
+          }
         },
       });
     </script>

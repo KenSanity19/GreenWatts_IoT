@@ -104,10 +104,19 @@ header h1 {
     text-align: center;
   }
   
-  .energy-tip {
-    color: #28a745;
-    font-size: 14px;
-  }
+.energy-tip {
+  background: var(--bg-sidebar);
+  color: var(--text-white);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+span.green-text {
+    color: #2dff39;
+    font-weight: bold;
+}
 
   /* Chart Frame Styles */
   .chart-frame {
