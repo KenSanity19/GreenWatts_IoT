@@ -9,6 +9,7 @@
     <!-- correct relative path -->
     <link rel="stylesheet" href="{% static 'adminCss/common.css' %}" />
     <link rel="stylesheet" href="{% static 'adminCss/adminDashboard.css' %}" />
+    <link rel="stylesheet" href="{% static 'adminCss/adminCosts.css' %}" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -91,18 +92,22 @@
       </div>
 
       <!-- Top Cards -->
-      <div class="cards">
-        <div class="card green">
+      <div class="report-cards">
+        <div class="card total">
           <p>Total Energy Use</p>
-          <h2>143 kWh</h2>
+          <span>143 kWh</span>
         </div>
-        <div class="card dark">
+        <div class="card inactive">
           <p>Total Cost</p>
-          <h2>₱120.50</h2>
+          <span>₱120.50</span>
         </div>
-        <div class="card dark">
+        <div class="card inactive">
           <p>Average Daily Cost</p>
-          <h2>₱12.05</h2>
+          <span>₱12.05</span>
+        </div>
+        <div class="card highest">
+          <p>HIGHEST COST OFFICE</p>
+          <span>IT Office</span>
         </div>
       </div>
 
@@ -110,18 +115,37 @@
       <div class="bottom-section">
         <!-- Chart Section -->
         <div class="change-cost">
-          <h3>Energy Cost Chart</h3>
+          <div class="chart-header">
+            <div class="chart-info">
+              <div class="info-item">
+                <div class="info-label">June</div>
+                <div class="info-value">₱1,203.76</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">So far this month</div>
+                <div class="info-value">₱587.36</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Predicted this month</div>
+                <div class="info-value">₱909.87</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Estimate savings</div>
+                <div class="info-value">₱303.10</div>
+              </div>
+            </div>
+          </div>
           <canvas id="energyChart"></canvas>
+          <!-- Energy Tip -->
+          <div class="energy-tip">
+            <p>
+              <span class="green-text">Energy Tip:</span> On warm days, setting
+              a programmable thermostat to a higher setting when you are not at
+              home can help reduce your energy costs by approximately 10
+              percent.
+            </p>
+          </div>
         </div>
-      </div>
-
-      <!-- Energy Tip -->
-      <div class="energy-tip">
-        <p>
-          <span class="green-text">Energy Tip:</span> On warm days, setting a
-          programmable thermostat to a higher setting when you are not at home
-          can help reduce your energy costs by approximately 10 percent.
-        </p>
       </div>
     </div>
 
@@ -132,21 +156,21 @@
         type: "bar",
         data: {
           labels: [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday",
+            "July 14",
+            "July 15",
+            "July 16",
+            "July 17",
+            "July 18",
+            "July 19",
+            "July 20",
           ],
           datasets: [
             {
               label: "Cost",
-              data: [50, 65, 37, 60, 70, 42, 28],
+              data: [60, 30, 110, 20, 90, 50, 40],
               backgroundColor: "#4caf50",
               borderRadius: 5,
-              barPercentage: 0.5,
+              barPercentage: 0.6,
             },
           ],
         },
@@ -154,21 +178,25 @@
           scales: {
             y: {
               beginAtZero: true,
-              max: 100,
+              max: 120,
               ticks: {
                 stepSize: 20,
+                color: "#fff",
                 callback: function (value) {
                   return "₱" + value;
                 },
               },
               grid: {
-                color: "#ddd",
-                borderColor: "#ddd",
+                color: "#444",
+                borderColor: "#444",
               },
             },
             x: {
               grid: {
                 display: false,
+              },
+              ticks: {
+                color: "#fff",
               },
             },
           },

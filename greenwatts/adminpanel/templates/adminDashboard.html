@@ -93,18 +93,18 @@
       </div>
 
       <!-- Top Cards -->
-      <div class="cards">
-        <div class="card green">
-          <p class="card-title">Energy Usage</p>
-          <h2>{{ total_energy_usage|floatformat:2 }} kWh</h2>
+      <div class="report-cards">
+        <div class="card total">
+          <p>Energy Usage</p>
+          <span>{{ total_energy_usage|floatformat:2 }} kWh</span>
         </div>
-        <div class="card dark">
-          <p class="card-title">Cost Predicted</p>
-          <h2>₱{{ total_cost_predicted|floatformat:2 }}</h2>
+        <div class="card inactive">
+          <p>Cost Predicted</p>
+          <span>₱{{ total_cost_predicted|floatformat:2 }}</span>
         </div>
-        <div class="card red">
-          <p class="card-title">CO2 Emissions</p>
-          <h2>{{ total_co2_emission|floatformat:2 }} kg</h2>
+        <div class="card highest">
+          <p>CO2 Emissions</p>
+          <span>{{ total_co2_emission|floatformat:2 }} kg</span>
         </div>
       </div>
 
