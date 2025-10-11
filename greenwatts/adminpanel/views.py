@@ -126,12 +126,22 @@ def admin_dashboard(request):
     if predicted_co2_emission > 0:
         co2_emission_progress = min(100, (aggregates['total_co2_emission'] or 0) / predicted_co2_emission * 100)
 
-    # Change in cost data
-    change_dates_qs = EnergyRecord.objects.dates('date', 'day').distinct().order_by('-date')[:2]
+    # Change in cost data - filter consistently
+    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+    change_dates_qs = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).dates('date', 'day').distinct().order_by('-date')[:2]
     change_dates = list(change_dates_qs)
     change_costs = []
     for d in change_dates:
-        cost = EnergyRecord.objects.filter(date=d).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        cost = EnergyRecord.objects.filter(
+            date=d,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
         change_costs.append(cost)
     if len(change_costs) >= 2:
         latest_cost = change_costs[0]
@@ -152,7 +162,8 @@ def admin_dashboard(request):
             'bar2_height': heights[0],
             'percent': change_percent_abs,
             'type': 'DECREASE' if is_decrease else 'INCREASE',
-            'arrow': 'down' if is_decrease else 'up'
+            'arrow': 'down' if is_decrease else 'up',
+            'color_class': 'decrease' if is_decrease else 'increase'
         }
     else:
         change_data = None
