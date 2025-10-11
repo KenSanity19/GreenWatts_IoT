@@ -171,10 +171,14 @@ span.green-text {
   }
 
   .chart-recommendation {
-    color: white;
+    color: #333;
     margin-top: 15px;
-    padding: 10px;
-    background: transparent;
-    border-left: none;
+    padding: 15px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-left: 4px solid #007bff;
+    border-radius: 8px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
   
