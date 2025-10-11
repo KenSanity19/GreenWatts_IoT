@@ -102,7 +102,7 @@ span#live-time {
 
 .chart-section {
     margin-top: 30px;
-    background-color: #1B1B3D;
+    background-color: #16163f;
     border-radius: 12px;
     padding: 25px 30px 35px 30px;
     color: #fff;
@@ -120,6 +120,7 @@ span#live-time {
     width: 100%;
     gap: 25px;
     flex-wrap: wrap;
+    margin-bottom: 45px;
 }
 
 .info-item {
@@ -151,6 +152,11 @@ span#live-time {
     font-size: 1rem;
     color: #7ED957;
     text-align: center;
+}
+
+#co2Chart {
+    height: 300px !important;
+    max-height: 300px;
 }
 
 /* Responsive adjustments */
