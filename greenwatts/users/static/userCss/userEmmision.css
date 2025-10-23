@@ -1,0 +1,140 @@
+@import url('common.css');
+
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    background-color: #E9E4D4;
+    color: #000;
+}
+
+.main-content {
+    padding: 20px 30px;
+    background-color: var(--bg-main);
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+strong.red-text {
+    color: var(--color-red);
+}
+
+.note {
+    font-size: 14px;
+    margin: 5px 0;
+}
+
+span#live-time {
+    font-size: var(--font-size-sm);
+    color: #111;
+    font-weight: bold;
+    text-align: right;
+    margin-left: auto;
+}
+
+.date-time i {
+    font-size: 1.2rem;
+}
+
+.filters {
+    margin: 15px 0;
+    display: flex;
+    gap: 15px;
+}
+
+.filters select {
+    padding: 8px 15px;
+    border-radius: 6px;
+    border: 2px solid #0b1444;
+    font-weight: bold;
+    background: #16163f;
+    color: #ffffff;
+    min-width: 120px;
+    box-sizing: border-box;
+}
+
+.filters select option {
+    color: #000;
+}
+
+.chart-section {
+    margin-top: 30px;
+    background-color: #16163f;
+    border-radius: 12px;
+    padding: 25px 30px 35px 30px;
+    color: #fff;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.chart-info {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    gap: 25px;
+    flex-wrap: wrap;
+    margin-bottom: 45px;
+}
+
+.info-item {
+    flex: 1 1 120px;
+    text-align: center;
+}
+
+.info-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    color: #bbb;
+}
+
+.info-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.red-arrow {
+    color: #E05A5A;
+    font-weight: 700;
+    margin-left: 5px;
+}
+
+.energy-tip {
+    margin-top: 20px;
+    font-size: 1rem;
+    color: #7ED957;
+    text-align: center;
+}
+
+#co2Chart {
+    height: 300px !important;
+    max-height: 300px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .main-content {
+        margin-left: 0;
+        padding: 20px;
+    }
+    .filters {
+        width: 100%;
+        justify-content: space-around;
+    }
+}

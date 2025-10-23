@@ -1,0 +1,4 @@
+- [x] Copy styles from adminReports.css to userReport.css
+- [x] Edit userReports.html: Adapt HTML structure from adminReports.html, replace sidebar with user sidebar (add Reports link, make active), change to User Reports with static example data
+- [x] Test the page by running the server
+- [x] Add Reports link to sidebar in dashboard.html and userUsage.html

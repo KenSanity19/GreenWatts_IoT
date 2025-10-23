@@ -1,0 +1,175 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GreenWatts | Energy Cost</title>
+    <!-- Static CSS -->
+    <link rel="stylesheet" href="{% static 'userCss/common.css' %}" />
+    <link rel="stylesheet" href="{% static 'userCss/userEnergyCost.css' %}" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+
+  <body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2 class="logo">GreenWatts</h2>
+      <div class="admin-section">
+        <div class="admin-icon"><i class="fas fa-user"></i></div>
+        <p>USER</p>
+      </div>
+
+      <nav>
+        <a href="{% url 'users:dashboard' %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="{% url 'users:office_usage' %}"><i class="fas fa-building"></i> Office Usage</a>
+        <a href="{% url 'users:user_reports' %}"><i class="fas fa-chart-bar"></i> Reports</a>
+        <a href="{% url 'users:user_energy_cost' %}" class="active"><i class="fas fa-dollar-sign"></i> Energy Cost</a>
+        <a href="{% url 'users:user_emmision' %}"><i class="fas fa-leaf"></i> CO2 Emission</a>
+        <a href="{% url 'users:index' %}"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <header>
+        <h1>Energy Cost</h1>
+        <p class="note">
+          <span class="red-text">Noted!</span> The data will be captured every
+          12:00am midnight
+        </p>
+        <div class="date-time">
+          <i class="fas fa-calendar" style="cursor: pointer"></i>
+          <span id="live-time"></span>
+        </div>
+      </header>
+
+      <!-- Filters -->
+      <div class="filters">
+        <select>
+          <option>Week</option>
+        </select>
+        <select>
+          <option>Month</option>
+        </select>
+        <select>
+          <option>Year</option>
+        </select>
+      </div>
+
+      <!-- Bottom Section -->
+      <div class="bottom-section">
+        <!-- Chart Section -->
+        <div class="change-cost">
+          <div class="chart-header">
+            <div class="chart-info">
+              <div class="info-item">
+                <div class="info-label">Last month</div>
+                <div class="info-value">₱5000.00</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Present day of the month</div>
+                <div class="info-value">₱150.00</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Predicted total cost this month</div>
+                <div class="info-value">₱4500.00</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Estimate saving</div>
+                <div class="info-value">₱500.00</div>
+              </div>
+            </div>
+          </div>
+          <canvas id="energyChart"></canvas>
+          <!-- Energy Tip -->
+          <div class="energy-tip">
+            <p>
+              <span class="green-text">Energy Tip:</span> On warm days, setting
+              a programmable thermostat to a higher setting when you are not at
+              home can help reduce your energy costs by approximately 10
+              percent.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart Script -->
+    <script>
+      const ctx = document.getElementById("energyChart").getContext("2d");
+      const chartLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      const chartData = [100, 120, 90, 110, 130, 80, 95];
+      const maxValue = Math.max(...chartData) + 20;
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: chartLabels,
+          datasets: [
+            {
+              label: "Cost",
+              data: chartData,
+              backgroundColor: "#4caf50",
+              borderRadius: 5,
+              barPercentage: 0.6,
+            },
+          ],
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: maxValue,
+              ticks: {
+                stepSize: Math.ceil(maxValue / 6),
+                color: "#fff",
+                callback: function (value) {
+                  return "₱" + value;
+                },
+              },
+              grid: {
+                color: "#444",
+                borderColor: "#444",
+              },
+            },
+            x: {
+              grid: {
+                display: false,
+              },
+              ticks: {
+                color: "#fff",
+              },
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+        },
+      });
+    </script>
+    <script>
+      function updateTime() {
+        const now = new Date();
+        const options = {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        };
+        const timeString = now.toLocaleDateString("en-US", options);
+        document.getElementById("live-time").textContent = timeString;
+      }
+      setInterval(updateTime, 1000);
+      updateTime(); // initial call
+    </script>
+  </body>
+</html>

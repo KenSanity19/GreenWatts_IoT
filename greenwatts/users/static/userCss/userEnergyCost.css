@@ -1,0 +1,141 @@
+/* Bottom Section for full-width chart */
+.bottom-section {
+  display: flex;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+/* Chart section for energy cost - large prominent like Figma */
+.change-cost {
+    background-color: #16163f;
+    color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    height: 825px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    flex-grow: 1;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+.change-cost h3 {
+  color: #fff;
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.chart-info {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.info-item {
+  flex: 1 1 120px;
+  text-align: center;
+}
+
+.info-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  color: #bbb;
+}
+
+.info-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 35px;
+
+}
+
+.change-cost canvas {
+  height: 700px !important;
+  width: 100% !important;
+  flex-grow: 1;
+  margin-bottom: 0 !important;
+}
+
+.change-cost .energy-tip {
+  margin: 0 !important;
+  padding: 25px 0 0 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  font-size: 0.9rem !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+}
+
+.change-cost .energy-tip p {
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.change-cost .energy-tip .green-text {
+  color: #4caf50 !important;
+}
+
+.report-cards {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin: 20px 0px 0px;
+
+}
+
+.card {
+  flex: 1;
+  padding: 20px;
+  text-align: center;
+  border-radius: 10px;
+  font-weight: bold;
+  color: #fff; /* default white text */
+}
+
+.card p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.card span {
+  display: block;
+  font-size: 22px;
+  margin-top: 8px;
+}
+
+/* Colors for each card */
+.total {  background: #527e4c; }     /* Green */
+.highest { background: #dc3545; }   /* Red */
+.inactive { background: #214574; }  /* Blue */
+
+.filters {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.filters select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #333;
+  font-size: 14px;
+}

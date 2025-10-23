@@ -1,0 +1,183 @@
+@import url('common.css');
+
+header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.note {
+  font-size: 14px;
+  margin: 5px 0;
+}
+
+.red-text {
+  color: var(--color-red);
+  font-weight: bold;
+}
+
+.date-time {
+  font-size: 14px;
+  font-weight: bold;
+  text-align: right;
+  color: #111;
+}
+
+/* Filters (Day/Month/Year dropdowns) */
+.filters {
+  margin: 15px 0;
+  display: flex;
+  gap: 15px;
+}
+
+.filters select {
+  padding: 8px 15px;
+  border-radius: 6px;
+  border: 2px solid #0b1444;
+  font-weight: bold;
+  background: #16163f;
+  color: #ffffff;
+  min-width: 120px;
+  box-sizing: border-box;
+}
+
+  .export-btn {
+    background: #1d1f27;
+    color: #fff;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: auto;
+  }
+
+  /* Report Cards */
+  .report-cards {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin: 20px 0;
+  }
+
+  .card {
+    flex: 1;
+    padding: 20px;
+    text-align: center;
+    border-radius: 10px;
+    font-weight: bold;
+    color: #fff; /* default white text */
+  }
+
+  .card p {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .card span {
+    display: block;
+    font-size: 22px;
+    margin-top: 8px;
+  }
+
+  /* Colors for each card */
+  .total {  background: #527e4c; }     /* Green */
+  .highest { background: #dc3545; }   /* Red */
+  .inactive { background: #214574; }  /* Blue */
+  .best { background: #ffc107; color: #000; } /* Yellow with black text */
+
+  /* Chart Section */
+  .chart-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+  }
+
+  .recommendation {
+    margin-top: 15px;
+    padding: 10px;
+    background: #eef5ff;
+    border-left: 4px solid #0275d8;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 20px;
+    text-align: center;
+  }
+
+.energy-tip {
+  background: var(--bg-sidebar);
+  color: var(--text-white);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+span.green-text {
+    color: #2dff39;
+    font-weight: bold;
+}
+
+  /* Chart Frame Styles */
+  .chart-frame {
+    background-color: #16163f;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+
+  .chart-title {
+  color: #000000;
+    margin-bottom: 20px;
+  }
+
+  .chart-inner {
+    background-color: white;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+
+  .chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 20px;
+    color: #000000;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .legend-swatch {
+    width: 20px;
+    height: 20px;
+  }
+
+  .swatch-red {
+    background-color: red;
+  }
+
+  .swatch-yellow {
+    background-color: yellow;
+  }
+
+  .swatch-green {
+    background-color: green;
+  }
+
+  .chart-recommendation {
+    color: #333;
+    margin-top: 15px;
+    padding: 15px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-left: 4px solid #007bff;
+    border-radius: 8px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }

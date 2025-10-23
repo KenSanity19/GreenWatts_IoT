@@ -1,0 +1,199 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GreenWatts User - CO2 Emissions</title>
+    <link rel="stylesheet" href="{% static 'userCss/common.css' %}" />
+    <link rel="stylesheet" href="{% static 'userCss/userEmmision.css' %}" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+
+  <body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2 class="logo">GreenWatts</h2>
+      <div class="admin-section">
+        <div class="admin-icon"><i class="fas fa-user"></i></div>
+        <p>USER</p>
+      </div>
+
+      <nav>
+        <a href="{% url 'users:dashboard' %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="{% url 'users:office_usage' %}"><i class="fas fa-building"></i> Office Usage</a>
+        <a href="{% url 'users:user_reports' %}"><i class="fas fa-chart-bar"></i> Reports</a>
+        <a href="{% url 'users:user_energy_cost' %}"><i class="fas fa-dollar-sign"></i> Energy Cost</a>
+        <a href="{% url 'users:user_emmision' %}" class="active"><i class="fas fa-leaf"></i> CO2 Emission</a>
+        <a href="{% url 'users:index' %}"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content carbon-emission-content">
+      <header class="carbon-header">
+        <h1>CO2 Emissions</h1>
+        <div class="timestamp">
+          <i class="fas fa-calendar-alt"></i>
+          <span id="live-time"></span>
+        </div>
+      </header>
+
+      <p class="note">
+        <strong class="red-text">Noted!</strong> The data will be captured every
+        12:00am midnight
+      </p>
+
+      <!-- Filters -->
+      <div class="filters">
+        <select>
+          <option>Week</option>
+        </select>
+        <select>
+          <option>Month</option>
+        </select>
+        <select>
+          <option>Year</option>
+        </select>
+      </div>
+
+      <section class="chart-section">
+        <p>CARBON FOOTPRINT EMISSION</p>
+        <div class="chart-header">
+          <div class="chart-info">
+            <div class="info-item">
+              <div class="info-label">{{ previous_month_name }}</div>
+              <div class="info-value">{{ last_month_co2 }} kg</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">SO FAR THIS MONTH</div>
+              <div class="info-value">{{ current_month_so_far_co2 }} kg</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">PREDICTED THIS MONTH</div>
+              <div class="info-value">{{ predicted_month_co2 }} kg</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">CHANGE IN EMISSIONS</div>
+              <div class="info-value">
+                {{ change_percent }}
+                <span class="{{ change_class }}">{{ change_direction }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <canvas id="co2Chart"></canvas>
+        <p class="energy-tip">
+          <strong>Energy Tip:</strong> On warm days, setting a programmable
+          thermostat to a higher setting when you are not at home can help
+          reduce your energy costs by approximately 10 percent.
+        </p>
+      </section>
+    </div>
+
+    <script>
+      const ctx = document.getElementById("co2Chart").getContext("2d");
+      const co2Chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: {{ chart_labels|safe }},
+          datasets: [
+            {
+              label: "Previous Month",
+              data: {{ prev_month_data|safe }},
+              borderColor: "#f0ad4e",
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+            },
+            {
+              label: "Current Month",
+              data: {{ current_month_data|safe }},
+              borderColor: "#5cb85c",
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+            },
+            {
+              label: "Threshold",
+              data: Array({{ chart_labels|length }}).fill({{ threshold }}),
+              borderColor: "red",
+              borderWidth: 2,
+              borderDash: [10, 5],
+              fill: false,
+              pointRadius: 0,
+              tension: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+            afterDraw: function (chart) {
+              const ctx = chart.ctx;
+              const xAxis = chart.scales.x;
+              const yAxis = chart.scales.y;
+              const thresholdY = yAxis.getPixelForValue({{ threshold }});
+              const rightX = xAxis.getPixelForValue(
+                chart.data.labels.length - 1
+              );
+              ctx.save();
+              ctx.font = "bold 12px Arial";
+              ctx.fillStyle = "red";
+              ctx.textAlign = "left";
+              ctx.fillText("THRESHOLD", rightX + 5, thresholdY - 5);
+              ctx.restore();
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 230,
+              ticks: {
+                stepSize: 46,
+                callback: function (value) {
+                  return value + " kg";
+                },
+              },
+              grid: {
+                color: "#555",
+                borderColor: "#555",
+              },
+            },
+            x: {
+              grid: {
+                display: false,
+              },
+            },
+          },
+        },
+      });
+    </script>
+    <script>
+      function updateTime() {
+        const now = new Date();
+        const options = {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        };
+        const timeString = now.toLocaleDateString("en-US", options);
+        document.getElementById("live-time").textContent = timeString;
+      }
+      setInterval(updateTime, 1000);
+      updateTime(); // initial call
+    </script>
+  </body>
+</html>
