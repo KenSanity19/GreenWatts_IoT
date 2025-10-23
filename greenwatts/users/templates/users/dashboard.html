@@ -7,8 +7,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GreenWatts User Dashboard</title>
     <!-- correct relative path -->
-    <link rel="stylesheet" href="{% static 'adminCss/common.css' %}" />
-    <link rel="stylesheet" href="{% static 'adminCss/adminDashboard.css' %}" />
+    <link rel="stylesheet" href="{% static 'userCss/common.css' %}" />
+    <link rel="stylesheet" href="{% static 'userCss/userDashboard.css' %}" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -18,47 +18,20 @@
   <body>
     <!-- Sidebar -->
     <div class="sidebar">
-      <h2 class="logo">GreenWaTts</h2>
+      <h2 class="logo">GreenWatts</h2>
       <div class="admin-section">
-        <div class="admin-icon"><i class="fas fa-user-cog"></i></div>
+        <div class="admin-icon"><i class="fas fa-user"></i></div>
         <p>USER</p>
       </div>
 
       <nav>
-        <a
-          href="{% url 'adminpanel:admin_dashboard' %}"
-          class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"
-          ><i class="fas fa-tachometer-alt"></i> Dashboard</a
-        >
-        <a
-          href="{% url 'adminpanel:office_usage' %}"
-          class="{% if request.resolver_match.url_name == 'office_usage' %}active{% endif %}"
-          ><i class="fas fa-building"></i> Office Usage</a
-        >
-        <a
-          href="{% url 'adminpanel:admin_reports' %}"
-          class="{% if request.resolver_match.url_name == 'admin_reports' %}active{% endif %}"
-          ><i class="fas fa-chart-bar"></i> Admin Reports</a
-        >
-        <a
-          href="{% url 'adminpanel:admin_costs' %}"
-          class="{% if request.resolver_match.url_name == 'admin_costs' %}active{% endif %}"
-          ><i class="fas fa-dollar-sign"></i> Energy Costs</a
-        >
-        <a
-          href="{% url 'adminpanel:carbon_emission' %}"
-          class="{% if request.resolver_match.url_name == 'carbon_emission' %}active{% endif %}"
-          ><i class="fas fa-leaf"></i> Co2 Emission</a
-        >
-        <a
-          href="{% url 'adminpanel:admin_setting' %}"
-          class="{% if request.resolver_match.url_name == 'admin_setting' %}active{% endif %}"
-          ><i class="fas fa-cog"></i> Admin Setting</a
-        >
+        <a href="{% url 'users:dashboard' %}" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="{% url 'users:office_usage' %}"><i class="fas fa-building"></i> Office Usage</a>
+        <a href="{% url 'users:user_reports' %}"><i class="fas fa-chart-bar"></i> Reports</a>
+        <a href="{% url 'users:user_energy_cost' %}"><i class="fas fa-dollar-sign"></i> Energy Cost</a>
+        <a href="{% url 'users:user_emmision' %}"><i class="fas fa-leaf"></i> CO2 Emission</a>
         <!-- logout goes to login page -->
-        <a href="{% url 'users:index' %}"
-          ><i class="fas fa-sign-out-alt"></i> Log Out</a
-        >
+        <a href="{% url 'users:index' %}"><i class="fas fa-sign-out-alt"></i> Log Out</a>
       </nav>
     </div>
 
@@ -78,91 +51,113 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select>
-          <option>Day</option>
+        <select id="day-select">
+          <option value="">Day</option>
+          <option value="2023-10-01">2023-10-01</option>
+          <option value="2023-10-02">2023-10-02</option>
+          <option value="2023-10-03">2023-10-03</option>
         </select>
         <select>
           <option>Month</option>
+          <option>October</option>
+          <option>November</option>
         </select>
         <select>
           <option>Year</option>
+          <option>2023</option>
+          <option>2024</option>
         </select>
       </div>
 
       <!-- Top Cards -->
-      <div class="cards">
-        <div class="card green">
+      <div class="report-cards">
+        <div class="card total">
           <p>Energy Usage</p>
-          <h2>143 kWh</h2>
+          <span>45.67 kWh</span>
         </div>
-        <div class="card dark">
+        <div class="card inactive">
           <p>Cost Predicted</p>
-          <h2>₱120.50</h2>
+          <span>₱123.45</span>
         </div>
-        <div class="card red">
+        <div class="card highest">
           <p>CO2 Emissions</p>
-          <h2>32 kg</h2>
+          <span>12.34 kg</span>
         </div>
       </div>
 
       <!-- Bottom Section -->
-      <div class="bottom-section">
-        <!-- Active Alerts -->
-        <div class="active-alerts">
-          <h3>Active Alerts</h3>
+      <div
+        class="custom-container"
+        style="background-color: #16163f; padding: 20px; border-radius: 8px"
+      >
+        <div class="bottom-section">
+          <!-- Active Alerts -->
+          <div class="active-alerts">
+            <h3 class="alerts">Active Alerts</h3>
           <table>
-            <tr>
-              <th>Office Name</th>
-              <th>Energy Usage</th>
-              <th>Status</th>
-            </tr>
-            <tr class="high">
-              <td>IT</td>
-              <td>21.2 kWh</td>
-              <td>High</td>
-            </tr>
-            <tr class="moderate">
-              <td>TCM</td>
-              <td>15.7 kWh</td>
-              <td>Moderate</td>
-            </tr>
-            <tr class="efficient">
-              <td>DS</td>
-              <td>11.8 kWh</td>
-              <td>Efficient</td>
-            </tr>
-          </table>
+              <tr>
+                <th>Office Name</th>
+                <th>Energy Usage</th>
+                <th>Status</th>
+              </tr>
+              <tr class="moderate">
+                <td>IT Office</td>
+                <td>15.20 kWh</td>
+                <td>Moderate</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Change in Cost -->
+          <div class="change-cost">
+            <h3>CHANGE IN COST</h3>
+            <hr class="change-cost-line" />
+            <div class="change-cost-content">
+              <div class="bars">
+                <div class="bar">
+                  <div class="bar-fill" style="height: 70%"></div>
+                  <div class="bar-label">Last Week</div>
+                </div>
+                <div class="bar">
+                  <div class="bar-fill" style="height: 50%"></div>
+                  <div class="bar-label">This Week</div>
+                </div>
+              </div>
+              <div class="change-info">
+                <div class="arrow-down"></div>
+                <span class="percentage-text">15.00%</span>
+                <p class="change-text">DECREASE IN COST</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Change in Cost -->
-        <div class="change-cost">
-          <h3>CHANGE IN COST</h3>
-          <div class="chart">
-            <div class="bar" style="height: 80%">July 11</div>
-            <div class="bar" style="height: 50%">July 12</div>
+        <!-- Carbon Footprint -->
+        <div class="carbon-footprint">
+          <h3>Carbon Footprint</h3>
+          <div class="carbon-footprint-header">
+            <span class="left-label"
+              ><strong>Emission</strong> Till Date (as of October 3, 2023)</span
+            >
+            <span class="right-label">Predicted (by October 10, 2023)</span>
           </div>
-          <div class="percentage">
-            <span class="green-text">▼ 20.18%</span>
-            <p>DECREASE IN COST</p>
+          <div class="carbon-footprint-content">
+            <div class="carbon-footprint-bar">
+              <div class="progress-bar-fill" style="width: 60%;"></div>
+            </div>
+          </div>
+          <div class="carbon-footprint-values">
+            <span class="left-value"><b>12.34kg</b> of CO2</span>
+            <span class="right-value"><b>18.50kg</b> of CO2</span>
           </div>
         </div>
-      </div>
 
-      <!-- Carbon Footprint -->
-      <div class="carbon-footprint">
-        <h3>Carbon Footprint</h3>
-        <p><strong>Emission</strong> Till Date (as of July 12, 2025)</p>
-        <p><b>5.8kg</b> of CO2</p>
-        <p>Predicted (by July 19, 2025): <b>57.6kg</b> of CO2</p>
-      </div>
-
-      <!-- Energy Tip -->
-      <div class="energy-tip">
-        <p>
-          <span class="green-text">Energy Tip:</span> On warm days, setting a
-          programmable thermostat to a higher setting when you are not at home
-          can help reduce your energy costs by approximately 10 percent.
-        </p>
+        <!-- Energy Tip -->
+        <div class="energy-tip">
+          <p>
+            <span class="green-text">Energy Tip:</span> Turn off computers and servers when not in use to reduce energy consumption in the IT Office.
+          </p>
+        </div>
       </div>
     </div>
     <script>
@@ -181,6 +176,19 @@
       }
       setInterval(updateTime, 1000);
       updateTime(); // initial call
+
+      // Handle day dropdown change
+      document.addEventListener('DOMContentLoaded', function() {
+        const daySelect = document.getElementById('day-select');
+        daySelect.addEventListener('change', function() {
+          const selectedValue = this.value;
+          if (selectedValue) {
+            window.location.href = `?selected_date=${encodeURIComponent(selectedValue)}`;
+          } else {
+            window.location.href = '?'; // Clear selection, back to latest
+          }
+        });
+      });
     </script>
   </body>
 </html>
