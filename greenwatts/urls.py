@@ -5,7 +5,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('greenwatts.users.urls', namespace='users')),
     path('adminpanel/', include('greenwatts.adminpanel.urls', namespace='adminpanel')),
-
-    #xvndbfnsd;lfb
-    
+    path('', include('greenwatts.sensors.urls')),
 ]

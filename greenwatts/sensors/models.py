@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 from greenwatts.users.models import Office
 
@@ -14,6 +15,31 @@ class Device(models.Model):
 
     def __str__(self):
         return self.name if self.name else f"Device {self.device_id}"
+
+class SensorReading(models.Model):
+    """
+    Stores individual sensor readings from ESP32.
+    Each reading contains voltage and current at a specific timestamp.
+    """
+    reading_id = models.AutoField(primary_key=True)
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="sensor_readings")
+    voltage = models.FloatField()  # Voltage in Volts
+    current = models.FloatField()  # Current in Amperes
+    timestamp = models.DateTimeField()  # When the reading was taken
+    created_at = models.DateTimeField(auto_now_add=True)  # When it was stored in DB
+
+    class Meta:
+        db_table = "tbl_sensor_reading"
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['device', 'timestamp']),
+            models.Index(fields=['device', 'created_at']),
+            models.Index(fields=['timestamp']),
+        ]
+
+    def __str__(self):
+        return f"Reading {self.reading_id} - Device {self.device.device_id} - {self.timestamp}"
+
 
 class EnergyRecord(models.Model):
     record_id = models.AutoField(primary_key=True)
