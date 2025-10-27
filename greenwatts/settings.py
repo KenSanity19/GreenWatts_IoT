@@ -79,10 +79,7 @@ WSGI_APPLICATION = 'greenwatts.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get(
-            'DATABASE_URL',
-            'postgresql://postgres:Greenwatts!123@db.sfweuxojewjwxyzomyal.supabase.co:5432/postgres'
-        ),
+        default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
         ssl_require=True
     )
