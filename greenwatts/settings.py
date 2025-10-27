@@ -27,8 +27,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'fallbacksecretkey')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['.onrender.com', 'localhost', '127.0.0.1']
-
+ALLOWED_HOSTS = ['greenwatts-iot.onrender.com', 'localhost', '127.0.0.1']
 
 # Application definition
 
@@ -82,7 +81,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get(
             'DATABASE_URL',
-            'postgresql://postgres.sfweuxojewjwxyzomyal:Greenwatts!123@aws-1-us-east-2.pooler.supabase.com:5432/postgres'
+            'postgresql://postgres:Greenwatts!123@db.sfweuxojewjwxyzomyal.supabase.co:5432/postgres'
         ),
         conn_max_age=600,
         ssl_require=True
