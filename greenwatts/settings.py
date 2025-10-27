@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-d7y3v!4$u%7n2t@a+qozjjg&g&5u8#-ux-t3b2p6j566h$tgy!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['.onrender.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -138,3 +138,9 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.Office'
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+import os
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
