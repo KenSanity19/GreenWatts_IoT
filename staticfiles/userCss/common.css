@@ -1,0 +1,78 @@
+:root {
+  --font-family: Arial, sans-serif;
+  --bg-main: #fdfaf6;
+  --bg-sidebar: #16163f;
+  --bg-light-gray: #d3d3d3;
+  --text-primary: #333;
+  --text-white: white;
+  --text-black: black;
+  --color-accent: #f4b400;
+  --color-red: #ef5350;
+  --color-green: #4caf50;
+  --color-orange: #fdd835;
+  --color-navy: #16163f;
+  --color-dark-gray: #424242;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 22px;
+  --font-size-xl: 28px;
+  --font-size-xxl: 30px;
+  --font-size-xxxl: 90px;
+  --font-size-xxxxl: 36px;
+}
+
+.admin-icon {
+  font-size: var(--font-size-xxl);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(to bottom, #fdedcd, #ffc300);
+  color: var(--text-primary);
+}
+
+.sidebar {
+  width: 220px;
+  background: #16163f;;
+  color: var(--text-white);
+  height: 100%;
+  padding: 20px 15px;
+  overflow-y: auto;
+}
+
+.logo {
+  font-size: var(--font-size-lg);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.admin-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 12px;
+  margin: 8px 0;
+  text-decoration: none;
+  color: white;
+  border-radius: 5px;
+}
+
+.sidebar nav a.active {
+  background: #f4b400;
+  color: black;
+  font-weight: bold;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px 30px;
+  overflow-y: auto;
+}
