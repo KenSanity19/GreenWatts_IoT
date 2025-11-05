@@ -100,17 +100,18 @@ def dashboard(request):
     last_week_height = (last_week_cost / max_cost) * 100
     this_week_height = (this_week_cost / max_cost) * 100
 
-    # Carbon footprint: Till date and predicted
-    current_year = today.year
-    current_month = today.month
-    days_so_far = today.day
+    # Carbon footprint: Till date and predicted (always current month)
+    current_date = timezone.now().date()
+    current_year = current_date.year
+    current_month = current_date.month
+    days_so_far = current_date.day
     days_in_month = monthrange(current_year, current_month)[1]
 
     month_so_far_co2 = EnergyRecord.objects.filter(
         device__in=devices,
         date__year=current_year,
         date__month=current_month,
-        date__lte=today
+        date__lte=current_date
     ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
     avg_daily_co2 = month_so_far_co2 / days_so_far if days_so_far > 0 else 0
