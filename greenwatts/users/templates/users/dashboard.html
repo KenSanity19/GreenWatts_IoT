@@ -112,11 +112,11 @@
                 <th>Energy Usage</th>
                 <th>Status</th>
               </tr>
-              {% for alert in alerts %}  <!-- Updated: Loop through alerts -->
-                <tr class="{% if alert.total_energy_kwh > 20 %}high{% elif alert.total_energy_kwh > 10 %}moderate{% else %}efficient{% endif %}">
-                  <td>{{ alert.device__office__name }}</td>
-                  <td>{{ alert.total_energy_kwh }} kWh</td>
-                  <td>{% if alert.total_energy_kwh > 20 %}High{% elif alert.total_energy_kwh > 10 %}Moderate{% else %}Efficient{% endif %}</td>
+              {% for alert in active_alerts %}
+                <tr class="{% if alert.status == 'High' %}high{% elif alert.status == 'Moderate' %}moderate{% else %}efficient{% endif %}">
+                  <td>{{ alert.office_name }}</td>
+                  <td>{{ alert.energy_usage }} kWh</td>
+                  <td>{{ alert.status }}</td>
                 </tr>
               {% endfor %}
             </table>
@@ -127,21 +127,25 @@
             <h3>CHANGE IN COST</h3>
             <hr class="change-cost-line" />
             <div class="change-cost-content">
+              {% if change_data %}
               <div class="bars">
                 <div class="bar">
-                  <div class="bar-fill" style="height: {{ last_week_height }}%"></div>  <!-- Updated: Dynamic height -->
-                  <div class="bar-label">Last Week</div>
+                  <div class="bar-fill" style="height: {{ change_data.bar1_height }}%"></div>
+                  <div class="bar-label">{{ change_data.bar1_label }}</div>
                 </div>
                 <div class="bar">
-                  <div class="bar-fill" style="height: {{ this_week_height }}%"></div>  <!-- Updated: Dynamic height -->
-                  <div class="bar-label">This Week</div>
+                  <div class="bar-fill" style="height: {{ change_data.bar2_height }}%"></div>
+                  <div class="bar-label">{{ change_data.bar2_label }}</div>
                 </div>
               </div>
               <div class="change-info">
-                <div class="arrow-{{ cost_change_direction }}"></div>  <!-- Updated: Dynamic arrow -->
-                <span class="percentage-text">{{ cost_change_percent }}%</span>  <!-- Updated: Dynamic percentage -->
-                <p class="change-text">{{ cost_change_text }} IN COST</p>  <!-- Updated: Dynamic text -->
+                <div class="arrow-{{ change_data.arrow }}"></div>
+                <span class="percentage-text">{{ change_data.percent }}%</span>
+                <p class="change-text">{{ change_data.type }} IN COST</p>
               </div>
+              {% else %}
+              <p>No data available for change in cost.</p>
+              {% endif %}
             </div>
           </div>
         </div>

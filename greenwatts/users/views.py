@@ -62,56 +62,62 @@ def dashboard(request):
         date=selected_date
     ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
-    # Active alerts: Devices with energy usage > 10 kWh (example threshold)
-    alerts = EnergyRecord.objects.filter(
+    # Active alerts: All devices' energy for selected date
+    alerts_qs = EnergyRecord.objects.filter(
         device__in=devices,
-        date=selected_date,
-        total_energy_kwh__gt=10  # Threshold for alert
+        date=selected_date
     ).select_related('device').values('device__office__name', 'total_energy_kwh')
 
-    # Change in cost: Compare last week vs this week
-    today = selected_date
-    start_of_week = today - timedelta(days=today.weekday())  # Monday of current week
-    end_of_week = start_of_week + timedelta(days=6)  # Sunday
+    active_alerts = []
+    for record in alerts_qs:
+        energy = record['total_energy_kwh'] or 0
+        if energy > 20:
+            status = 'High'
+        elif energy > 10:
+            status = 'Moderate'
+        else:
+            status = 'Efficient'
+        active_alerts.append({
+            'office_name': record['device__office__name'],
+            'energy_usage': energy,
+            'status': status
+        })
 
-    this_week_cost = EnergyRecord.objects.filter(
-        device__in=devices,
-        date__gte=start_of_week,
-        date__lte=end_of_week
-    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+    # Change in cost: Compare selected date and the previous day
+    prev_date = selected_date - timedelta(days=1)
+    selected_cost = EnergyRecord.objects.filter(device__in=devices, date=selected_date).aggregate(total=Sum('cost_estimate'))['total'] or 0
+    prev_cost = EnergyRecord.objects.filter(device__in=devices, date=prev_date).aggregate(total=Sum('cost_estimate'))['total'] or 0
 
-    last_week_start = start_of_week - timedelta(days=7)
-    last_week_end = end_of_week - timedelta(days=7)
-    last_week_cost = EnergyRecord.objects.filter(
-        device__in=devices,
-        date__gte=last_week_start,
-        date__lte=last_week_end
-    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
-
-    if last_week_cost > 0:
-        cost_change_percent = ((this_week_cost - last_week_cost) / last_week_cost) * 100
+    if prev_cost > 0:
+        change_percent = ((selected_cost - prev_cost) / prev_cost) * 100
     else:
-        cost_change_percent = 0
-    cost_change_direction = 'down' if cost_change_percent < 0 else 'up'
-    cost_change_text = 'DECREASE' if cost_change_percent < 0 else 'INCREASE'
+        change_percent = 0
+    is_decrease = change_percent < 0
+    change_percent_abs = round(min(abs(change_percent), 100), 2)  # Cap at 100% and round to 2 decimal places
+    max_cost = max(selected_cost, prev_cost) if selected_cost > 0 or prev_cost > 0 else 1
+    heights = [(prev_cost / max_cost * 100) if max_cost > 0 else 0, (selected_cost / max_cost * 100) if max_cost > 0 else 0]
+    change_data = {
+        'bar1_label': prev_date.strftime('%B %d'),
+        'bar1_height': heights[0],
+        'bar2_label': selected_date.strftime('%B %d'),
+        'bar2_height': heights[1],
+        'percent': change_percent_abs,
+        'type': 'DECREASE' if is_decrease else 'INCREASE',
+        'arrow': 'down' if is_decrease else 'up',
+        'color_class': 'decrease' if is_decrease else 'increase'
+    }
 
-    # Calculate bar heights (normalize to 100% max)
-    max_cost = max(this_week_cost, last_week_cost) if max(this_week_cost, last_week_cost) > 0 else 1
-    last_week_height = (last_week_cost / max_cost) * 100
-    this_week_height = (this_week_cost / max_cost) * 100
-
-    # Carbon footprint: Till date and predicted (always current month)
-    current_date = timezone.now().date()
-    current_year = current_date.year
-    current_month = current_date.month
-    days_so_far = current_date.day
-    days_in_month = monthrange(current_year, current_month)[1]
+    # Carbon footprint: Till date and predicted for the selected date's month
+    selected_year = selected_date.year
+    selected_month = selected_date.month
+    days_so_far = selected_date.day
+    days_in_month = monthrange(selected_year, selected_month)[1]
 
     month_so_far_co2 = EnergyRecord.objects.filter(
         device__in=devices,
-        date__year=current_year,
-        date__month=current_month,
-        date__lte=current_date
+        date__year=selected_year,
+        date__month=selected_month,
+        date__lte=selected_date
     ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
     avg_daily_co2 = month_so_far_co2 / days_so_far if days_so_far > 0 else 0
@@ -119,11 +125,6 @@ def dashboard(request):
 
     # Calculate progress percentage for carbon footprint bar
     progress_percentage = (month_so_far_co2 / predicted_co2 * 100) if predicted_co2 > 0 else 0
-
-    # Calculate bar heights for cost change (scale to 100%)
-    max_cost = max(this_week_cost, last_week_cost) if this_week_cost or last_week_cost else 1
-    last_week_height = (last_week_cost / max_cost) * 100 if max_cost > 0 else 0
-    this_week_height = (this_week_cost / max_cost) * 100 if max_cost > 0 else 0
 
     # Predicted date for carbon footprint
     predicted_date = selected_date + timedelta(days=7)
@@ -136,14 +137,8 @@ def dashboard(request):
         'energy_usage': f"{energy_usage:.2f}",
         'cost_predicted': f"₱{cost_predicted:.2f}",
         'co2_emissions': f"{co2_emissions:.2f}",
-        'alerts': alerts,
-        'this_week_cost': this_week_cost,
-        'last_week_cost': last_week_cost,
-        'last_week_height': last_week_height,
-        'this_week_height': this_week_height,
-        'cost_change_percent': f"{abs(cost_change_percent):.2f}",
-        'cost_change_direction': cost_change_direction,
-        'cost_change_text': cost_change_text,
+        'active_alerts': active_alerts,
+        'change_data': change_data,
         'month_so_far_co2': f"{month_so_far_co2:.2f}",
         'predicted_co2': f"{predicted_co2:.2f}",
         'progress_percentage': f"{progress_percentage:.1f}",
