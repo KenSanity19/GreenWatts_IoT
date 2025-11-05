@@ -18,8 +18,134 @@ def index(request):
 
 @login_required
 def dashboard(request):
+    from django.db.models import Sum, Max
+    from django.utils import timezone
+    from datetime import timedelta, date
+    from calendar import monthrange
+    import json
+    from ..sensors.models import EnergyRecord
+
     office = request.user
-    return render(request, 'users/dashboard.html', {'office': office})
+    selected_date_str = request.GET.get('selected_date')
+    if selected_date_str:
+        try:
+            selected_date = date.fromisoformat(selected_date_str)
+        except ValueError:
+            selected_date = timezone.now().date()
+    else:
+        selected_date = timezone.now().date()
+
+    # Get devices for the user's office
+    devices = office.devices.all()
+
+    # Get unique dates for day options
+    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
+    day_options = [d.strftime('%Y-%m-%d') for d in unique_dates_qs]
+
+    # Total energy usage for selected date
+    energy_usage = EnergyRecord.objects.filter(
+        device__in=devices,
+        date=selected_date
+    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+
+    # Cost predicted (assuming cost_estimate is the predicted cost)
+    cost_predicted = EnergyRecord.objects.filter(
+        device__in=devices,
+        date=selected_date
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    # CO2 emissions for selected date
+    co2_emissions = EnergyRecord.objects.filter(
+        device__in=devices,
+        date=selected_date
+    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
+
+    # Active alerts: Devices with energy usage > 10 kWh (example threshold)
+    alerts = EnergyRecord.objects.filter(
+        device__in=devices,
+        date=selected_date,
+        total_energy_kwh__gt=10  # Threshold for alert
+    ).select_related('device').values('device__office__name', 'total_energy_kwh')
+
+    # Change in cost: Compare last week vs this week
+    today = selected_date
+    start_of_week = today - timedelta(days=today.weekday())  # Monday of current week
+    end_of_week = start_of_week + timedelta(days=6)  # Sunday
+
+    this_week_cost = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=start_of_week,
+        date__lte=end_of_week
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    last_week_start = start_of_week - timedelta(days=7)
+    last_week_end = end_of_week - timedelta(days=7)
+    last_week_cost = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=last_week_start,
+        date__lte=last_week_end
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    if last_week_cost > 0:
+        cost_change_percent = ((this_week_cost - last_week_cost) / last_week_cost) * 100
+    else:
+        cost_change_percent = 0
+    cost_change_direction = 'down' if cost_change_percent < 0 else 'up'
+    cost_change_text = 'DECREASE' if cost_change_percent < 0 else 'INCREASE'
+
+    # Calculate bar heights (normalize to 100% max)
+    max_cost = max(this_week_cost, last_week_cost) if max(this_week_cost, last_week_cost) > 0 else 1
+    last_week_height = (last_week_cost / max_cost) * 100
+    this_week_height = (this_week_cost / max_cost) * 100
+
+    # Carbon footprint: Till date and predicted
+    current_year = today.year
+    current_month = today.month
+    days_so_far = today.day
+    days_in_month = monthrange(current_year, current_month)[1]
+
+    month_so_far_co2 = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__year=current_year,
+        date__month=current_month,
+        date__lte=today
+    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
+
+    avg_daily_co2 = month_so_far_co2 / days_so_far if days_so_far > 0 else 0
+    predicted_co2 = avg_daily_co2 * days_in_month
+
+    # Calculate progress percentage for carbon footprint bar
+    progress_percentage = (month_so_far_co2 / predicted_co2 * 100) if predicted_co2 > 0 else 0
+
+    # Calculate bar heights for cost change (scale to 100%)
+    max_cost = max(this_week_cost, last_week_cost) if this_week_cost or last_week_cost else 1
+    last_week_height = (last_week_cost / max_cost) * 100 if max_cost > 0 else 0
+    this_week_height = (this_week_cost / max_cost) * 100 if max_cost > 0 else 0
+
+    # Predicted date for carbon footprint
+    predicted_date = selected_date + timedelta(days=7)
+
+    context = {
+        'office': office,
+        'selected_date': selected_date,
+        'predicted_date': predicted_date,
+        'day_options': day_options,
+        'energy_usage': f"{energy_usage:.2f}",
+        'cost_predicted': f"₱{cost_predicted:.2f}",
+        'co2_emissions': f"{co2_emissions:.2f}",
+        'alerts': alerts,
+        'this_week_cost': this_week_cost,
+        'last_week_cost': last_week_cost,
+        'last_week_height': last_week_height,
+        'this_week_height': this_week_height,
+        'cost_change_percent': f"{abs(cost_change_percent):.2f}",
+        'cost_change_direction': cost_change_direction,
+        'cost_change_text': cost_change_text,
+        'month_so_far_co2': f"{month_so_far_co2:.2f}",
+        'predicted_co2': f"{predicted_co2:.2f}",
+        'progress_percentage': f"{progress_percentage:.1f}",
+    }
+    return render(request, 'users/dashboard.html', context)
 
 @login_required
 def office_usage(request):
