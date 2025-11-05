@@ -29,8 +29,10 @@ def dashboard(request):
     selected_date_str = request.GET.get('selected_date')
     if selected_date_str:
         try:
-            selected_date = date.fromisoformat(selected_date_str)
-        except ValueError:
+            # Parse mm/dd/yyyy format
+            month, day, year = map(int, selected_date_str.split('/'))
+            selected_date = date(year, month, day)
+        except (ValueError, TypeError):
             selected_date = timezone.now().date()
     else:
         selected_date = timezone.now().date()
@@ -40,7 +42,7 @@ def dashboard(request):
 
     # Get unique dates for day options
     unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
-    day_options = [d.strftime('%Y-%m-%d') for d in unique_dates_qs]
+    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
 
     # Total energy usage for selected date
     energy_usage = EnergyRecord.objects.filter(
