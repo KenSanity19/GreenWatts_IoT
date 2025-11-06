@@ -229,8 +229,104 @@ def office_usage(request):
 
 @login_required
 def user_reports(request):
-    # Simple view to render the template, assuming data is handled elsewhere or dummy
-    return render(request, 'users/userReports.html')
+    from django.db.models import Sum, Max, Min
+    from django.utils import timezone
+    from datetime import timedelta, date
+    import json
+    from ..sensors.models import EnergyRecord
+
+    office = request.user
+    selected_date_str = request.GET.get('selected_date')
+
+    # Get devices for the user's office
+    devices = office.devices.all()
+
+    # Get unique dates for day options
+    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
+    day_options = [d.strftime('%Y-%m-%d') for d in unique_dates_qs]
+
+    if selected_date_str:
+        try:
+            selected_date = date.fromisoformat(selected_date_str)
+        except (ValueError, TypeError):
+            selected_date = timezone.now().date()
+    else:
+        # Default to the latest date with data if available, else current date
+        if day_options:
+            selected_date = date.fromisoformat(day_options[0])
+        else:
+            selected_date = timezone.now().date()
+
+    # Get the week containing the selected_date (Monday to Sunday)
+    week_start = selected_date - timedelta(days=selected_date.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    # Fetch data for the week
+    week_data = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=week_start,
+        date__lte=week_end
+    ).values('date').annotate(
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate')
+    ).order_by('date')
+
+    # Prepare daily data for chart
+    daily_energy = {}
+    for record in week_data:
+        daily_energy[record['date']] = record['total_energy'] or 0
+
+    # Generate labels and values for the week
+    chart_labels = []
+    chart_values = []
+    current = week_start
+    while current <= week_end:
+        chart_labels.append(current.strftime('%A'))  # Monday, Tuesday, etc.
+        chart_values.append(daily_energy.get(current, 0))
+        current += timedelta(days=1)
+
+    # Total energy usage for the week
+    total_energy_usage = sum(chart_values)
+
+    # Highest usage day
+    if chart_values:
+        max_energy = max(chart_values)
+        max_index = chart_values.index(max_energy)
+        highest_usage_day = (week_start + timedelta(days=max_index)).strftime('%Y-%m-%d')
+    else:
+        highest_usage_day = 'N/A'
+        max_energy = 0
+
+    # Cost predicted for the week
+    cost_predicted = sum(record['total_cost'] or 0 for record in week_data)
+
+    # Best performing day (lowest usage)
+    if chart_values:
+        min_energy = min(chart_values)
+        min_index = chart_values.index(min_energy)
+        best_performing_day = (week_start + timedelta(days=min_index)).strftime('%Y-%m-%d')
+    else:
+        best_performing_day = 'N/A'
+
+    # Recommendation based on highest usage day
+    if max_energy > 20:
+        recommendation = f"Usage exceeded on {highest_usage_day}. Consider reducing usage during peak hours."
+    else:
+        recommendation = "Energy usage is within acceptable limits. Keep up the good work!"
+
+    context = {
+        'office': office,
+        'selected_date': selected_date,
+        'day_options': day_options,
+        'total_energy_usage': f"{total_energy_usage:.2f}",
+        'highest_usage_day': highest_usage_day,
+        'cost_predicted': f"₱{cost_predicted:.2f}",
+        'best_performing_day': best_performing_day,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_values': json.dumps(chart_values),
+        'recommendation': recommendation,
+    }
+    return render(request, 'users/userReports.html', context)
 
 @login_required
 def user_energy_cost(request):

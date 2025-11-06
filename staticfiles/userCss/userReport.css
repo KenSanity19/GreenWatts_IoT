@@ -82,7 +82,7 @@ header h1 {
   .total {  background: #527e4c; }     /* Green */
   .highest { background: #dc3545; }   /* Red */
   .inactive { background: #214574; }  /* Blue */
-  .best { background: #ffc107; color: #000; } /* Yellow with black text */
+  .best { background: #f3c334; color: #000; } /* Yellow with black text */
 
   /* Chart Section */
   .chart-container {

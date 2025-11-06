@@ -53,10 +53,9 @@
       <!-- Filters -->
       <div class="filters">
         <select id="day-select">
-          <option value="">Day</option>
-          <option value="2023-10-01">2023-10-01</option>
-          <option value="2023-10-02">2023-10-02</option>
-          <option value="2023-10-03">2023-10-03</option>
+          {% for option in day_options %}
+            <option value="{{ option }}" {% if selected_date|date:"Y-m-d" == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
         </select>
         <select>
           <option>Month</option>
@@ -74,16 +73,16 @@
       <!-- Top Report Cards -->
       <div class="report-cards">
         <div class="card total">
-          Total Energy Usage <br /><span>45.67 kWh</span>
+          Total Energy Usage <br /><span>{{ total_energy_usage }} kWh</span>
         </div>
         <div class="card highest">
-          Highest Usage Day <br /><span>2023-10-03</span>
+          Highest Usage Day <br /><span>{{ highest_usage_day }}</span>
         </div>
         <div class="card inactive">
-          Cost Predicted <br /><span>₱123.45</span>
+          Cost Predicted <br /><span>{{ cost_predicted }}</span>
         </div>
         <div class="card best">
-          Best Performing Day <br /><span>2023-10-01</span>
+          Best Performing Day <br /><span>{{ best_performing_day }}</span>
         </div>
       </div>
 
@@ -96,8 +95,7 @@
           </div>
           <div class="recommendation chart-recommendation">
             <i class="fas fa-lightbulb" style="color: #ffc107; margin-right: 8px;"></i>
-            <strong>Recommendation:</strong> Usage exceeded on 2023-10-03.
-            Consider reducing usage during peak hours.
+            <strong>Recommendation:</strong> {{ recommendation }}
           </div>
         </div>
 
@@ -116,8 +114,8 @@
     <!-- Chart Script -->
     <script>
       const ctx = document.getElementById("energyChart").getContext("2d");
-      const chartLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-      const chartValues = [10.5, 15.2, 20.0, 12.3, 18.7, 14.1, 16.5];
+      const chartLabels = {{ chart_labels|safe }};
+      const chartValues = {{ chart_values|safe }};
       const chartColors = ["#28a745", "#ffc107", "#dc3545", "#28a745", "#dc3545", "#ffc107", "#28a745"];
 
       const chart = new Chart(ctx, {
