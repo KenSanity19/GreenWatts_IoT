@@ -147,8 +147,71 @@ def dashboard(request):
 
 @login_required
 def office_usage(request):
-    # Simple view to render the template, assuming data is handled elsewhere or dummy
-    return render(request, 'users/userUsage.html')
+    from django.db.models import Sum, F
+    from django.utils import timezone
+    from datetime import date
+    from ..sensors.models import EnergyRecord
+
+    office = request.user
+    selected_date_str = request.GET.get('selected_date')
+    if selected_date_str:
+        try:
+            # Parse mm/dd/yyyy format
+            month, day, year = map(int, selected_date_str.split('/'))
+            selected_date = date(year, month, day)
+        except (ValueError, TypeError):
+            selected_date = timezone.now().date()
+    else:
+        selected_date = timezone.now().date()
+
+    # Get devices for the user's office
+    devices = office.devices.all()
+
+    # Get unique dates for day options
+    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
+    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
+
+    # Filter data for selected date
+    office_data = EnergyRecord.objects.filter(
+        date=selected_date,
+        device__in=devices
+    ).values(
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
+    ).order_by('-total_energy')
+
+    table_data = []
+    for record in office_data:
+        energy = record['total_energy'] or 0
+        if energy > 20:
+            status = 'HIGH'
+            status_class = 'high'
+        elif energy > 10:
+            status = 'MODERATE'
+            status_class = 'moderate'
+        else:
+            status = 'EFFICIENT'
+            status_class = 'efficient'
+
+        table_data.append({
+            'office': record['office_name'],
+            'energy': f"{energy:.1f} kWh",
+            'cost': f"₱{record['total_cost']:.2f}" if record['total_cost'] else '₱0.00',
+            'co2': f"{record['total_co2']:.1f} kg" if record['total_co2'] else '0.0 kg',
+            'status': status,
+            'status_class': status_class
+        })
+
+    context = {
+        'office': office,
+        'selected_date': selected_date_str if selected_date_str else None,
+        'day_options': day_options,
+        'table_data': table_data,
+    }
+    return render(request, 'users/userUsage.html', context)
 
 @login_required
 def user_reports(request):

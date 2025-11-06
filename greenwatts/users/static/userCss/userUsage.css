@@ -34,24 +34,25 @@ header h1 {
 }
 
 /* Filters */
-.filter-bar {
+.filters {
+  margin: 15px 0;
+  position: relative;
   display: flex;
-  gap: 10px;
-  background-color: var(--bg-sidebar);
-  padding: 10px;
-  border-radius: 20px;
-  width: fit-content;
-  margin-bottom: 20px;
+  gap: 15px;
 }
 
-.filter-bar select {
-  background: transparent;
-  color: var(--text-white);
-  border: none;
+.filters select {
+  padding: 8px 15px;
+  border-radius: 6px;
+  border: 2px solid #0b1444 !important;
   font-weight: bold;
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
+  background: #16163f !important;
+  color: #ffffff !important;
+  min-width: 120px;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 /* Usage Table */

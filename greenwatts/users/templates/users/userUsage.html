@@ -28,18 +28,30 @@
       </div>
 
       <nav>
-        <a href="{% url 'users:dashboard' %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-        <a href="{% url 'users:office_usage' %}" class="active"><i class="fas fa-building"></i> Office Usage</a>
-        <a href="{% url 'users:user_reports' %}"><i class="fas fa-chart-bar"></i> Reports</a>
-        <a href="{% url 'users:user_energy_cost' %}"><i class="fas fa-dollar-sign"></i> Energy Cost</a>
-        <a href="{% url 'users:user_emmision' %}"><i class="fas fa-leaf"></i> CO2 Emission</a>
-        <a href="{% url 'users:index' %}"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+        <a href="{% url 'users:dashboard' %}"
+          ><i class="fas fa-tachometer-alt"></i> Dashboard</a
+        >
+        <a href="{% url 'users:office_usage' %}" class="active"
+          ><i class="fas fa-building"></i> Office Usage</a
+        >
+        <a href="{% url 'users:user_reports' %}"
+          ><i class="fas fa-chart-bar"></i> Reports</a
+        >
+        <a href="{% url 'users:user_energy_cost' %}"
+          ><i class="fas fa-dollar-sign"></i> Energy Cost</a
+        >
+        <a href="{% url 'users:user_emmision' %}"
+          ><i class="fas fa-leaf"></i> CO2 Emission</a
+        >
+        <a href="{% url 'users:index' %}"
+          ><i class="fas fa-sign-out-alt"></i> Log Out</a
+        >
       </nav>
     </div>
 
     <!-- Main Content -->
     <div class="main-content">
-      <header style="padding-top: 20px;">
+      <header style="padding-top: 20px">
         <h1>Office Usage</h1>
         <p class="note">
           <span class="red-text">Noted!</span> The data will be captured every
@@ -51,15 +63,22 @@
       </header>
 
       <!-- Filters -->
-      <div class="filter-bar">
-        <select>
-          <option>Week</option>
+      <div class="filters">
+        <select id="day-select">
+          <!-- Updated: Dynamic options if day_options added to view -->
+          {% for option in day_options %}
+            <option value="{{ option }}" {% if selected_date|date:"m/d/Y" == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
         </select>
         <select>
           <option>Month</option>
+          <option>October</option>
+          <option>November</option>
         </select>
         <select>
           <option>Year</option>
+          <option>2023</option>
+          <option>2024</option>
         </select>
       </div>
 
@@ -76,13 +95,19 @@
             </tr>
           </thead>
           <tbody>
-            <tr class="high">
-              <td>IT Office</td>
-              <td>21.2 kWh</td>
-              <td>₱109.00</td>
-              <td>18.7 kg</td>
-              <td>High</td>
+            {% for row in table_data %}
+            <tr class="{{ row.status_class }}">
+              <td>{{ row.office }}</td>
+              <td>{{ row.energy }}</td>
+              <td>{{ row.cost }}</td>
+              <td>{{ row.co2 }}</td>
+              <td>{{ row.status }}</td>
             </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5">No data available for the selected date.</td>
+            </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
@@ -97,7 +122,7 @@
       </div>
     </div>
 
-    <!-- JS Time Display -->
+    <!-- JS Time Display and Date Filter -->
     <script>
       function updateTime() {
         const now = new Date();
@@ -114,6 +139,21 @@
       }
       setInterval(updateTime, 1000);
       updateTime();
+
+      // Handle day dropdown change
+      document.addEventListener("DOMContentLoaded", function () {
+        const daySelect = document.getElementById("day-select");
+        daySelect.addEventListener("change", function () {
+          const selectedValue = this.value;
+          if (selectedValue) {
+            window.location.href = `?selected_date=${encodeURIComponent(
+              selectedValue
+            )}`;
+          } else {
+            window.location.href = "?"; // Clear selection, back to latest
+          }
+        });
+      });
     </script>
   </body>
 </html>
