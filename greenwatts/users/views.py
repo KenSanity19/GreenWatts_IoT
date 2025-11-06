@@ -27,6 +27,14 @@ def dashboard(request):
 
     office = request.user
     selected_date_str = request.GET.get('selected_date')
+
+    # Get devices for the user's office
+    devices = office.devices.all()
+
+    # Get unique dates for day options
+    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
+    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
+
     if selected_date_str:
         try:
             # Parse mm/dd/yyyy format
@@ -35,14 +43,13 @@ def dashboard(request):
         except (ValueError, TypeError):
             selected_date = timezone.now().date()
     else:
-        selected_date = timezone.now().date()
-
-    # Get devices for the user's office
-    devices = office.devices.all()
-
-    # Get unique dates for day options
-    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
-    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
+        # Default to the latest date with data if available, else current date
+        if day_options:
+            latest_date_str = day_options[0]
+            month, day, year = map(int, latest_date_str.split('/'))
+            selected_date = date(year, month, day)
+        else:
+            selected_date = timezone.now().date()
 
     # Total energy usage for selected date
     energy_usage = EnergyRecord.objects.filter(
@@ -154,6 +161,14 @@ def office_usage(request):
 
     office = request.user
     selected_date_str = request.GET.get('selected_date')
+
+    # Get devices for the user's office
+    devices = office.devices.all()
+
+    # Get unique dates for day options
+    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
+    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
+
     if selected_date_str:
         try:
             # Parse mm/dd/yyyy format
@@ -162,14 +177,13 @@ def office_usage(request):
         except (ValueError, TypeError):
             selected_date = timezone.now().date()
     else:
-        selected_date = timezone.now().date()
-
-    # Get devices for the user's office
-    devices = office.devices.all()
-
-    # Get unique dates for day options
-    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
-    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
+        # Default to the latest date with data if available, else current date
+        if day_options:
+            latest_date_str = day_options[0]
+            month, day, year = map(int, latest_date_str.split('/'))
+            selected_date = date(year, month, day)
+        else:
+            selected_date = timezone.now().date()
 
     # Filter data for selected date
     office_data = EnergyRecord.objects.filter(
