@@ -9,7 +9,6 @@ def index(request):
         user = auth.authenticate(username=username, password=password)
         if user is not None:
             auth.login(request, user)
-            messages.success(request, 'Login successful!')
             return redirect('users:dashboard')
         else:
             messages.error(request, 'Invalid username or password.')
@@ -328,10 +327,82 @@ def user_reports(request):
     }
     return render(request, 'users/userReports.html', context)
 
+
+
 @login_required
 def user_energy_cost(request):
-    # Simple view to render the template, assuming data is handled elsewhere or dummy
-    return render(request, 'users/userEnergyCost.html')
+    from django.db.models import Sum
+    from django.utils import timezone
+    from datetime import date, timedelta
+    from ..sensors.models import EnergyRecord
+    import json
+
+    office = request.user
+    devices = office.devices.all()
+    now = timezone.now().date()
+
+    # Last month
+    last_month = now.replace(day=1) - timedelta(days=1)
+    last_month_start = last_month.replace(day=1)
+    last_month_end = last_month
+    last_month_cost = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=last_month_start,
+        date__lte=last_month_end
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    # Current month so far
+    current_month_start = now.replace(day=1)
+    current_month_so_far_cost = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=current_month_start,
+        date__lte=now
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    # Predicted total this month
+    days_in_month = ((current_month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)).day
+    days_so_far = (now - current_month_start).days + 1
+    if days_so_far > 0:
+        daily_avg = current_month_so_far_cost / days_so_far
+        predicted_total_cost = daily_avg * days_in_month
+    else:
+        predicted_total_cost = 0
+
+    # Estimate saving: compared to last month
+    if last_month_cost > predicted_total_cost:
+        estimate_saving = last_month_cost - predicted_total_cost
+    else:
+        estimate_saving = 0
+
+    # Weekly chart: last 7 days
+    week_start = now - timedelta(days=6)
+    week_data = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=week_start,
+        date__lte=now
+    ).values('date').annotate(
+        total_cost=Sum('cost_estimate')
+    ).order_by('date')
+
+    chart_labels = []
+    chart_data = []
+    current = week_start
+    cost_dict = {record['date']: record['total_cost'] or 0 for record in week_data}
+
+    while current <= now:
+        chart_labels.append(f"{current.strftime('%A')}\n{current.strftime('%Y-%m-%d')}")
+        chart_data.append(cost_dict.get(current, 0))
+        current += timedelta(days=1)
+
+    context = {
+        'last_month_cost': f"₱{last_month_cost:.2f}",
+        'current_month_so_far_cost': f"₱{current_month_so_far_cost:.2f}",
+        'predicted_total_cost': f"₱{predicted_total_cost:.2f}",
+        'estimate_saving': f"₱{estimate_saving:.2f}",
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+    }
+    return render(request, 'users/userEnergyCost.html', context)
 
 @login_required
 def user_emmision(request):
@@ -461,6 +532,109 @@ def user_emmision(request):
         'threshold': threshold,
     }
     return render(request, 'users/userEmmision.html', context)
+
+@login_required
+def user_energy_cost(request):
+    from django.db.models import Sum, Max
+    from django.utils import timezone
+    from datetime import date, timedelta
+    from ..sensors.models import EnergyRecord
+    import json
+
+    office = request.user
+    devices = office.devices.all()
+    now = timezone.now().date()
+
+    # Last month
+    last_month = now.replace(day=1) - timedelta(days=1)
+    last_month_start = last_month.replace(day=1)
+    last_month_end = last_month
+    last_month_cost = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=last_month_start,
+        date__lte=last_month_end
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    # Current month so far
+    current_month_start = now.replace(day=1)
+    current_month_so_far_cost = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=current_month_start,
+        date__lte=now
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    # Predicted total this month
+    days_in_month = ((current_month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)).day
+    days_so_far = (now - current_month_start).days + 1
+    if days_so_far > 0:
+        daily_avg = current_month_so_far_cost / days_so_far
+        predicted_total_cost = daily_avg * days_in_month
+    else:
+        predicted_total_cost = 0
+
+    # Estimate saving: compared to last month
+    if last_month_cost > predicted_total_cost:
+        estimate_saving = last_month_cost - predicted_total_cost
+    else:
+        estimate_saving = 0
+
+    # Get last 7 days with data
+    chart_dates_desc = EnergyRecord.objects.filter(
+        device__in=devices
+    ).dates('date', 'day').distinct().order_by('-date')[:7]
+    chart_dates = list(reversed(chart_dates_desc))
+
+    # Total energy for last 7 days
+    total_energy = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__in=chart_dates
+    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+
+    # Total cost for last 7 days
+    total_cost = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__in=chart_dates
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+
+    # Average daily cost
+    num_days = len(chart_dates)
+    avg_daily_cost = total_cost / num_days if num_days > 0 else 0
+
+    # Day with highest cost
+    highest_cost_day = None
+    highest_cost = 0
+    for d in chart_dates:
+        cost = EnergyRecord.objects.filter(
+            date=d,
+            device__in=devices
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        if cost > highest_cost:
+            highest_cost = cost
+            highest_cost_day = d.strftime('%A')
+
+    # Chart data: last 7 days costs
+    chart_labels = [[d.strftime('%A'), d.strftime('%B %d')] for d in chart_dates]
+    chart_data = []
+    for d in chart_dates:
+        cost = EnergyRecord.objects.filter(
+            date=d,
+            device__in=devices
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        chart_data.append(round(cost))
+
+    context = {
+        'last_month_cost': f"₱{last_month_cost:.2f}",
+        'current_month_so_far_cost': f"₱{current_month_so_far_cost:.2f}",
+        'predicted_total_cost': f"₱{predicted_total_cost:.2f}",
+        'estimate_saving': f"₱{estimate_saving:.2f}",
+        'total_energy': f"{total_energy:.1f} kWh",
+        'total_cost': f"₱{total_cost:.2f}",
+        'avg_daily_cost': f"₱{avg_daily_cost:.2f}",
+        'highest_cost_day': highest_cost_day or 'N/A',
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+    }
+    return render(request, 'users/userEnergyCost.html', context)
 
 def logout(request):
     auth.logout(request)

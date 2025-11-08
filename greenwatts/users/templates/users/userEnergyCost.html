@@ -26,12 +26,24 @@
       </div>
 
       <nav>
-        <a href="{% url 'users:dashboard' %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-        <a href="{% url 'users:office_usage' %}"><i class="fas fa-building"></i> Office Usage</a>
-        <a href="{% url 'users:user_reports' %}"><i class="fas fa-chart-bar"></i> Reports</a>
-        <a href="{% url 'users:user_energy_cost' %}" class="active"><i class="fas fa-dollar-sign"></i> Energy Cost</a>
-        <a href="{% url 'users:user_emmision' %}"><i class="fas fa-leaf"></i> CO2 Emission</a>
-        <a href="{% url 'users:index' %}"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+        <a href="{% url 'users:dashboard' %}"
+          ><i class="fas fa-tachometer-alt"></i> Dashboard</a
+        >
+        <a href="{% url 'users:office_usage' %}"
+          ><i class="fas fa-building"></i> Office Usage</a
+        >
+        <a href="{% url 'users:user_reports' %}"
+          ><i class="fas fa-chart-bar"></i> Reports</a
+        >
+        <a href="{% url 'users:user_energy_cost' %}" class="active"
+          ><i class="fas fa-dollar-sign"></i> Energy Cost</a
+        >
+        <a href="{% url 'users:user_emmision' %}"
+          ><i class="fas fa-leaf"></i> CO2 Emission</a
+        >
+        <a href="{% url 'users:index' %}"
+          ><i class="fas fa-sign-out-alt"></i> Log Out</a
+        >
       </nav>
     </div>
 
@@ -62,6 +74,22 @@
         </select>
       </div>
 
+      <!-- Report Cards -->
+      <div class="report-cards">
+        <div class="card total">
+          Total Energy Use <br /><span>{{ total_energy }}</span>
+        </div>
+        <div class="card highest">
+          Total Cost <br /><span>{{ total_cost }}</span>
+        </div>
+        <div class="card inactive">
+          Average Daily Cost <br /><span>{{ avg_daily_cost }}</span>
+        </div>
+        <div class="card best">
+          Day with Highest Cost <br /><span>{{ highest_cost_day }}</span>
+        </div>
+      </div>
+
       <!-- Bottom Section -->
       <div class="bottom-section">
         <!-- Chart Section -->
@@ -69,20 +97,20 @@
           <div class="chart-header">
             <div class="chart-info">
               <div class="info-item">
-                <div class="info-label">Last month</div>
-                <div class="info-value">₱5000.00</div>
+                <div class="info-label">Last Month</div>
+                <div class="info-value">{{ last_month_cost }}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Present day of the month</div>
-                <div class="info-value">₱150.00</div>
+                <div class="info-value">{{ current_month_so_far_cost }}</div>
               </div>
               <div class="info-item">
-                <div class="info-label">Predicted total cost this month</div>
-                <div class="info-value">₱4500.00</div>
+                <div class="info-label">Predicted Total Cost this Month</div>
+                <div class="info-value">{{ predicted_total_cost }}</div>
               </div>
               <div class="info-item">
-                <div class="info-label">Estimate saving</div>
-                <div class="info-value">₱500.00</div>
+                <div class="info-label">Estimated Saving</div>
+                <div class="info-value">{{ estimate_saving }}</div>
               </div>
             </div>
           </div>
@@ -103,9 +131,9 @@
     <!-- Chart Script -->
     <script>
       const ctx = document.getElementById("energyChart").getContext("2d");
-      const chartLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      const chartData = [100, 120, 90, 110, 130, 80, 95];
-      const maxValue = Math.max(...chartData) + 20;
+      const chartLabels = {{ chart_labels|safe }};
+      const chartData = {{ chart_data|safe }};
+      const maxValue = chartData.length > 0 ? Math.max(...chartData) + 20 : 150;
       new Chart(ctx, {
         type: "bar",
         data: {
