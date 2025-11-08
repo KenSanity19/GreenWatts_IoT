@@ -52,9 +52,9 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select id="day-select">
-          {% for option in day_options %}
-            <option value="{{ option }}" {% if selected_date|date:"Y-m-d" == option %}selected{% endif %}>{{ option }}</option>
+        <select id="week-select">
+          {% for option in week_options %}
+          <option value="{{ option.value }}" {% if option.value == selected_week %}selected{% endif %}>{{ option.label }}</option>
           {% endfor %}
         </select>
         <select>
@@ -183,13 +183,13 @@
       setInterval(updateTime, 1000);
       updateTime(); // initial call
 
-      // Handle day dropdown change
+      // Handle week dropdown change
       document.addEventListener('DOMContentLoaded', function() {
-        const daySelect = document.getElementById('day-select');
-        daySelect.addEventListener('change', function() {
+        const weekSelect = document.getElementById('week-select');
+        weekSelect.addEventListener('change', function() {
           const selectedValue = this.value;
           if (selectedValue) {
-            window.location.href = `?selected_date=${encodeURIComponent(selectedValue)}`;
+            window.location.href = `?week=${encodeURIComponent(selectedValue)}`;
           } else {
             window.location.href = '?'; // Clear selection, back to latest
           }

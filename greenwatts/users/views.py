@@ -235,30 +235,62 @@ def user_reports(request):
     from ..sensors.models import EnergyRecord
 
     office = request.user
-    selected_date_str = request.GET.get('selected_date')
-
-    # Get devices for the user's office
     devices = office.devices.all()
+    now = timezone.now().date()
 
-    # Get unique dates for day options
-    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
-    day_options = [d.strftime('%Y-%m-%d') for d in unique_dates_qs]
+    # Get min date from EnergyRecord to determine available weeks
+    min_date_qs = EnergyRecord.objects.filter(device__in=devices).aggregate(min_date=Min('date'))
+    min_date = min_date_qs['min_date']
+    if not min_date:
+        # No data, handle gracefully
+        context = {
+            'week_options': [],
+            'selected_week': 1,
+            'total_energy_usage': '0.00',
+            'highest_usage_day': 'N/A',
+            'cost_predicted': '₱0.00',
+            'best_performing_day': 'N/A',
+            'chart_labels': json.dumps([]),
+            'chart_values': json.dumps([]),
+            'recommendation': 'No data available.',
+        }
+        return render(request, 'users/userReports.html', context)
 
-    if selected_date_str:
+    # Generate week options: Weeks from min_date to now, labeled as Week 1, Week 2, etc.
+    week_options = []
+    current_week_start = min_date - timedelta(days=min_date.weekday())  # Monday of min_date week
+    week_num = 1
+    while current_week_start <= now:
+        week_end = current_week_start + timedelta(days=6)
+        week_options.append({
+            'value': week_num,
+            'label': f'Week {week_num}',
+            'start_date': current_week_start,
+            'end_date': week_end,
+        })
+        current_week_start += timedelta(days=7)
+        week_num += 1
+
+    # Reverse to have latest first, but keep numbering ascending
+    week_options.reverse()
+
+    # Get selected week from GET, default to latest (Week with highest num)
+    selected_week_num = request.GET.get('week')
+    if selected_week_num:
         try:
-            selected_date = date.fromisoformat(selected_date_str)
-        except (ValueError, TypeError):
-            selected_date = timezone.now().date()
+            selected_week_num = int(selected_week_num)
+        except ValueError:
+            selected_week_num = len(week_options)
     else:
-        # Default to the latest date with data if available, else current date
-        if day_options:
-            selected_date = date.fromisoformat(day_options[0])
-        else:
-            selected_date = timezone.now().date()
+        selected_week_num = len(week_options)  # Latest
 
-    # Get the week containing the selected_date (Monday to Sunday)
-    week_start = selected_date - timedelta(days=selected_date.weekday())
-    week_end = week_start + timedelta(days=6)
+    # Find selected week
+    selected_week = next((w for w in week_options if w['value'] == selected_week_num), week_options[-1] if week_options else None)
+    if not selected_week:
+        selected_week = week_options[0] if week_options else None
+
+    week_start = selected_week['start_date']
+    week_end = selected_week['end_date']
 
     # Fetch data for the week
     week_data = EnergyRecord.objects.filter(
@@ -280,7 +312,7 @@ def user_reports(request):
     chart_values = []
     current = week_start
     while current <= week_end:
-        chart_labels.append(current.strftime('%A'))  # Monday, Tuesday, etc.
+        chart_labels.append([current.strftime('%A'), current.strftime('%Y-%m-%d')])
         chart_values.append(daily_energy.get(current, 0))
         current += timedelta(days=1)
 
@@ -315,8 +347,8 @@ def user_reports(request):
 
     context = {
         'office': office,
-        'selected_date': selected_date,
-        'day_options': day_options,
+        'week_options': week_options,
+        'selected_week': selected_week_num,
         'total_energy_usage': f"{total_energy_usage:.2f}",
         'highest_usage_day': highest_usage_day,
         'cost_predicted': f"₱{cost_predicted:.2f}",
@@ -331,7 +363,7 @@ def user_reports(request):
 
 @login_required
 def user_energy_cost(request):
-    from django.db.models import Sum
+    from django.db.models import Sum, Min
     from django.utils import timezone
     from datetime import date, timedelta
     from ..sensors.models import EnergyRecord
@@ -341,8 +373,61 @@ def user_energy_cost(request):
     devices = office.devices.all()
     now = timezone.now().date()
 
-    # Last month
-    last_month = now.replace(day=1) - timedelta(days=1)
+    # Get min date from EnergyRecord to determine available weeks
+    min_date_qs = EnergyRecord.objects.filter(device__in=devices).aggregate(min_date=Min('date'))
+    min_date = min_date_qs['min_date']
+    if not min_date:
+        # No data, handle gracefully
+        context = {
+            'week_options': [],
+            'selected_week': 1,
+            'last_month_cost': '₱0.00',
+            'current_month_so_far_cost': '₱0.00',
+            'predicted_total_cost': '₱0.00',
+            'estimate_saving': '₱0.00',
+            'chart_labels': json.dumps([]),
+            'chart_data': json.dumps([]),
+        }
+        return render(request, 'users/userEnergyCost.html', context)
+
+    # Generate week options: Weeks from min_date to now, labeled as Week 1, Week 2, etc.
+    week_options = []
+    current_week_start = min_date - timedelta(days=min_date.weekday())  # Monday of min_date week
+    week_num = 1
+    while current_week_start <= now:
+        week_end = current_week_start + timedelta(days=6)
+        week_options.append({
+            'value': week_num,
+            'label': f'Week {week_num}',
+            'start_date': current_week_start,
+            'end_date': week_end,
+        })
+        current_week_start += timedelta(days=7)
+        week_num += 1
+
+    # Reverse to have latest first, but keep numbering ascending
+    week_options.reverse()
+
+    # Get selected week from GET, default to latest (Week with highest num)
+    selected_week_num = request.GET.get('week')
+    if selected_week_num:
+        try:
+            selected_week_num = int(selected_week_num)
+        except ValueError:
+            selected_week_num = len(week_options)
+    else:
+        selected_week_num = len(week_options)  # Latest
+
+    # Find selected week
+    selected_week = next((w for w in week_options if w['value'] == selected_week_num), week_options[-1] if week_options else None)
+    if not selected_week:
+        selected_week = week_options[0] if week_options else None
+
+    week_start = selected_week['start_date']
+    week_end = selected_week['end_date']
+
+    # Last month (relative to the selected week)
+    last_month = week_start.replace(day=1) - timedelta(days=1)
     last_month_start = last_month.replace(day=1)
     last_month_end = last_month
     last_month_cost = EnergyRecord.objects.filter(
@@ -351,17 +436,18 @@ def user_energy_cost(request):
         date__lte=last_month_end
     ).aggregate(total=Sum('cost_estimate'))['total'] or 0
 
-    # Current month so far
-    current_month_start = now.replace(day=1)
+    # Current month so far (relative to the selected week)
+    current_month_start = week_start.replace(day=1)
+    current_month_end = min(week_end, now)
     current_month_so_far_cost = EnergyRecord.objects.filter(
         device__in=devices,
         date__gte=current_month_start,
-        date__lte=now
+        date__lte=current_month_end
     ).aggregate(total=Sum('cost_estimate'))['total'] or 0
 
     # Predicted total this month
     days_in_month = ((current_month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)).day
-    days_so_far = (now - current_month_start).days + 1
+    days_so_far = (current_month_end - current_month_start).days + 1
     if days_so_far > 0:
         daily_avg = current_month_so_far_cost / days_so_far
         predicted_total_cost = daily_avg * days_in_month
@@ -374,27 +460,43 @@ def user_energy_cost(request):
     else:
         estimate_saving = 0
 
-    # Weekly chart: last 7 days
-    week_start = now - timedelta(days=6)
+    # Weekly chart: for the selected week
     week_data = EnergyRecord.objects.filter(
         device__in=devices,
         date__gte=week_start,
-        date__lte=now
+        date__lte=week_end
     ).values('date').annotate(
+        total_energy=Sum('total_energy_kwh'),
         total_cost=Sum('cost_estimate')
     ).order_by('date')
+
+    # Calculate card data
+    total_energy_sum = sum(record['total_energy'] or 0 for record in week_data)
+    total_cost_sum = sum(record['total_cost'] or 0 for record in week_data)
+    avg_daily_cost = total_cost_sum / 7 if total_cost_sum else 0
+    if week_data:
+        max_record = max(week_data, key=lambda x: x['total_cost'] or 0)
+        highest_cost_day = max_record['date'].strftime('%Y-%m-%d')
+    else:
+        highest_cost_day = 'N/A'
 
     chart_labels = []
     chart_data = []
     current = week_start
     cost_dict = {record['date']: record['total_cost'] or 0 for record in week_data}
 
-    while current <= now:
-        chart_labels.append(f"{current.strftime('%A')}\n{current.strftime('%Y-%m-%d')}")
+    while current <= week_end:
+        chart_labels.append([current.strftime('%A'), current.strftime('%Y-%m-%d')])
         chart_data.append(cost_dict.get(current, 0))
         current += timedelta(days=1)
 
     context = {
+        'week_options': week_options,
+        'selected_week': selected_week_num,
+        'total_energy': f"{total_energy_sum:.2f}",
+        'total_cost': f"₱{total_cost_sum:.2f}",
+        'avg_daily_cost': f"₱{avg_daily_cost:.2f}",
+        'highest_cost_day': highest_cost_day,
         'last_month_cost': f"₱{last_month_cost:.2f}",
         'current_month_so_far_cost': f"₱{current_month_so_far_cost:.2f}",
         'predicted_total_cost': f"₱{predicted_total_cost:.2f}",

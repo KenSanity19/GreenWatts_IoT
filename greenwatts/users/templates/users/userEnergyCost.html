@@ -63,8 +63,10 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select>
-          <option>Week</option>
+        <select id="week-select">
+          {% for option in week_options %}
+          <option value="{{ option.value }}" {% if option.value == selected_week %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
         </select>
         <select>
           <option>Month</option>
@@ -171,6 +173,12 @@
               },
               ticks: {
                 color: "#fff",
+                maxRotation: 0,
+                minRotation: 0,
+                callback: function(value, index, values) {
+                  const label = chartLabels[index];
+                  return label;
+                },
               },
             },
           },
@@ -198,6 +206,19 @@
       }
       setInterval(updateTime, 1000);
       updateTime(); // initial call
+
+      // Handle week dropdown change
+      document.addEventListener('DOMContentLoaded', function() {
+        const weekSelect = document.getElementById('week-select');
+        weekSelect.addEventListener('change', function() {
+          const selectedValue = this.value;
+          if (selectedValue) {
+            window.location.href = `?week=${encodeURIComponent(selectedValue)}`;
+          } else {
+            window.location.href = '?'; // Clear selection, back to latest
+          }
+        });
+      });
     </script>
   </body>
 </html>
