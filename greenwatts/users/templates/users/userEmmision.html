@@ -25,12 +25,24 @@
       </div>
 
       <nav>
-        <a href="{% url 'users:dashboard' %}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-        <a href="{% url 'users:office_usage' %}"><i class="fas fa-building"></i> Office Usage</a>
-        <a href="{% url 'users:user_reports' %}"><i class="fas fa-chart-bar"></i> Reports</a>
-        <a href="{% url 'users:user_energy_cost' %}"><i class="fas fa-dollar-sign"></i> Energy Cost</a>
-        <a href="{% url 'users:user_emmision' %}" class="active"><i class="fas fa-leaf"></i> CO2 Emission</a>
-        <a href="{% url 'users:index' %}"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+        <a href="{% url 'users:dashboard' %}"
+          ><i class="fas fa-tachometer-alt"></i> Dashboard</a
+        >
+        <a href="{% url 'users:office_usage' %}"
+          ><i class="fas fa-building"></i> Office Usage</a
+        >
+        <a href="{% url 'users:user_reports' %}"
+          ><i class="fas fa-chart-bar"></i> Reports</a
+        >
+        <a href="{% url 'users:user_energy_cost' %}"
+          ><i class="fas fa-dollar-sign"></i> Energy Cost</a
+        >
+        <a href="{% url 'users:user_emmision' %}" class="active"
+          ><i class="fas fa-leaf"></i> CO2 Emission</a
+        >
+        <a href="{% url 'users:index' %}"
+          ><i class="fas fa-sign-out-alt"></i> Log Out</a
+        >
       </nav>
     </div>
 
@@ -51,8 +63,10 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select>
-          <option>Week</option>
+        <select id="week-select">
+          {% for option in week_options %}
+          <option value="{{ option.value }}" {% if option.value == selected_week %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
         </select>
         <select>
           <option>Month</option>
@@ -67,16 +81,16 @@
         <div class="chart-header">
           <div class="chart-info">
             <div class="info-item">
-              <div class="info-label">{{ previous_month_name }}</div>
-              <div class="info-value">{{ last_month_co2 }} kg</div>
+              <div class="info-label">{{ previous_week_name }}</div>
+              <div class="info-value">{{ last_week_co2 }} kg</div>
             </div>
             <div class="info-item">
-              <div class="info-label">SO FAR THIS MONTH</div>
-              <div class="info-value">{{ current_month_so_far_co2 }} kg</div>
+              <div class="info-label">SO FAR THIS WEEK</div>
+              <div class="info-value">{{ current_week_so_far_co2 }} kg</div>
             </div>
             <div class="info-item">
-              <div class="info-label">PREDICTED THIS MONTH</div>
-              <div class="info-value">{{ predicted_month_co2 }} kg</div>
+              <div class="info-label">PREDICTED THIS WEEK</div>
+              <div class="info-value">{{ predicted_week_co2 }} kg</div>
             </div>
             <div class="info-item">
               <div class="info-label">CHANGE IN EMISSIONS</div>
@@ -104,16 +118,8 @@
           labels: {{ chart_labels|safe }},
           datasets: [
             {
-              label: "Previous Month",
-              data: {{ prev_month_data|safe }},
-              borderColor: "#f0ad4e",
-              borderWidth: 2,
-              fill: false,
-              tension: 0.1,
-            },
-            {
-              label: "Current Month",
-              data: {{ current_month_data|safe }},
+              label: "Current Week",
+              data: {{ week_data|safe }},
               borderColor: "#5cb85c",
               borderWidth: 2,
               fill: false,
@@ -194,6 +200,14 @@
       }
       setInterval(updateTime, 1000);
       updateTime(); // initial call
+
+      // Add event listener for week select
+      document.getElementById('week-select').addEventListener('change', function() {
+        const selectedWeek = this.value;
+        const url = new URL(window.location);
+        url.searchParams.set('week', selectedWeek);
+        window.location.href = url.toString();
+      });
     </script>
   </body>
 </html>
