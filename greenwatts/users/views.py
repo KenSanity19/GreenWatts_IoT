@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import cache_control
 
 def index(request):
     if request.method == 'POST':
@@ -673,6 +674,7 @@ def user_emmision(request):
     }
     return render(request, 'users/userEmmision.html', context)
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def logout(request):
     auth.logout(request)
     messages.info(request, 'You have been logged out.')
