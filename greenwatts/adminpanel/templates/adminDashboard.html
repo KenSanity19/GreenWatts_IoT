@@ -55,8 +55,8 @@
           class="{% if request.resolver_match.url_name == 'admin_setting' %}active{% endif %}"
           ><i class="fas fa-cog"></i> Admin Setting</a
         >
-        <!-- logout goes to login page -->
-        <a href="{% url 'users:index' %}"
+        <!-- logout goes to logout view -->
+        <a href="{% url 'users:logout' %}"
           ><i class="fas fa-sign-out-alt"></i> Log Out</a
         >
       </nav>

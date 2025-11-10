@@ -16,6 +16,7 @@ def index(request):
             return redirect('users:index')
     return render(request, 'index.html')
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def dashboard(request):
     from django.db.models import Sum, Max
@@ -152,6 +153,7 @@ def dashboard(request):
     }
     return render(request, 'users/dashboard.html', context)
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def office_usage(request):
     from django.db.models import Sum, F
@@ -227,6 +229,7 @@ def office_usage(request):
     }
     return render(request, 'users/userUsage.html', context)
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def user_reports(request):
     from django.db.models import Sum, Max, Min
@@ -362,6 +365,7 @@ def user_reports(request):
 
 
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def user_energy_cost(request):
     from django.db.models import Sum, Min
@@ -507,6 +511,7 @@ def user_energy_cost(request):
     }
     return render(request, 'users/userEnergyCost.html', context)
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def user_emmision(request):
     from django.db.models import Sum, Min

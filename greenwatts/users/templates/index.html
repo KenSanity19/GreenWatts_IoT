@@ -73,5 +73,13 @@
         </p>
       </div>
     </div>
+
+    <script>
+      // Prevent back button navigation after logout
+      window.history.replaceState(null, null, window.location.href);
+      window.onpopstate = function() {
+        window.history.pushState(null, null, window.location.href);
+      };
+    </script>
   </body>
 </html>

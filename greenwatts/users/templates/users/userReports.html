@@ -29,8 +29,8 @@
         <a href="{% url 'users:user_reports' %}" class="active"><i class="fas fa-chart-bar"></i> Reports</a>
         <a href="{% url 'users:user_energy_cost' %}"><i class="fas fa-dollar-sign"></i> Energy Cost</a>
         <a href="{% url 'users:user_emmision' %}"><i class="fas fa-leaf"></i> CO2 Emission</a>
-        <!-- logout goes to login page -->
-        <a href="{% url 'users:index' %}"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+        <!-- logout goes to logout view -->
+        <a href="{% url 'users:logout' %}"><i class="fas fa-sign-out-alt"></i> Log Out</a>
       </nav>
     </div>
 
