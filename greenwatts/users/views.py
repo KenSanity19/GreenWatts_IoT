@@ -496,6 +496,7 @@ def user_energy_cost(request):
         current += timedelta(days=1)
 
     context = {
+        'office': office,
         'week_options': week_options,
         'selected_week': selected_week_num,
         'total_energy': f"{total_energy_sum:.2f}",
@@ -664,6 +665,7 @@ def user_emmision(request):
     threshold = 180  # Fixed
 
     context = {
+        'office': request.user,
         'week_options': week_options,
         'selected_week': selected_week_num,
         'previous_week_name': previous_week_name,
