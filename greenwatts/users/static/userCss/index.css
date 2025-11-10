@@ -16,15 +16,37 @@ body {
     padding: 40px;
 }
 
-.left-section h1 {
-    font-size: 90px;
-    margin-bottom: 10px;
-    margin-top: 0;
+.left-section {
+    width: 50%;
+    background: linear-gradient(135deg, #16163f 0%, #16163f 52%, #f1c40f 88%, #f1c40f 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start; /* keeps logo and text aligned left */
+    color: white;
+    padding: 60px;
 }
 
-.left-section p{
-    font-size:  24px;
+.logo {
+    background-image: url(/static/logo1.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: left center;
+    width: 70%;
+    height: 76%;
+    margin-left: 8px;
+    margin-bottom: -235px;
+    margin-top: -265px;
 }
+
+.left-section p {
+    font-size: 38px;
+    margin: 0;
+    margin-left: 40px;
+    font-family: sans-serif;
+}
+
+
 
 .right-section {
     width: 50%;

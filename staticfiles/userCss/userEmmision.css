@@ -10,7 +10,7 @@ body, html {
 
 .main-content {
     padding: 20px 30px;
-    background-color: var(--bg-main);
+    background: linear-gradient(to bottom, #fdedcd, #ffc300);
     min-height: 100vh;
     overflow-y: auto;
 }
@@ -118,8 +118,12 @@ span#live-time {
 .energy-tip {
     margin-top: 20px;
     font-size: 1rem;
-    color: #7ED957;
+    color: white;
     text-align: center;
+}
+
+.energy-tip strong {
+    color: #7ED957;
 }
 
 #co2Chart {
