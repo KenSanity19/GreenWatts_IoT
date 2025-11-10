@@ -6,6 +6,7 @@ body {
     height: 100vh;
 }
 
+/* Left Section */
 .left-section {
     width: 50%;
     background: linear-gradient(135deg, #16163f 0%, #16163f 52%, #f1c40f 88%, #f1c40f 100%);
@@ -46,32 +47,52 @@ body {
     font-family: sans-serif;
 }
 
-
-
+/* Right Section */
 .right-section {
     width: 50%;
-    background: url(/static/citc.jpg) no-repeat center center /cover;
+    background: url(/static/citc.jpg) no-repeat center center / cover;
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.login-box{
-    background: rgb(255, 255, 255, 0.8);
+/* Login Box */
+.login-box {
+    background: rgba(255, 255, 255, 0.8);
     padding: 30px;
     border-radius: 10px;
     width: 355px;
-
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.login-box h2{
+.login-box h2 {
     margin-bottom: 15px;
     font-size: 27px;
     font-weight: 600;
     margin-top: 0px;
+    text-align: center;
 }
 
+/* Messages inside login box */
+.messages {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 20px 0;
+    text-align: center;
+}
+
+.messages li {
+    background: rgba(255, 0, 0, 0.1);
+    color: #d8000c;
+    border: 1px solid #d8000c;
+    border-radius: 5px;
+    padding: 8px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Input Boxes */
 .input-box {
     display: flex;
     align-items: center;
@@ -88,13 +109,6 @@ body {
     font-size: 24px;
 }
 
-.input-label-text {
-    color: #666;
-    margin-right: 10px;
-    font-size: 16px;
-    user-select: none;
-}
-
 .input-box input[type="text"],
 .input-box input[type="password"] {
     border: none;
@@ -104,7 +118,8 @@ body {
     background: transparent;
 }
 
-.login-box button{
+/* Login Button */
+.login-box button {
     width: 100%;
     padding: 10px;
     background: #2c2c6c;
@@ -113,19 +128,17 @@ body {
     border-radius: 5px;
     cursor: pointer;
     margin-top: 20px;
+    transition: background 0.3s ease;
 }
 
-.login-box button:hover{
+.login-box button:hover {
     background: #1b1b50;
 }
 
-.login-box a{
+/* Links */
+.login-box a {
     color: red;
     text-decoration: none;
-}
-
-p.lower-text {
-    margin-top: 40px;
 }
 
 a.admin-login {
@@ -134,4 +147,9 @@ a.admin-login {
     display: flex;
     margin-top: 30px;
     color: #201c41;
+}
+
+p.lower-text {
+    margin-top: 40px;
+    text-align: center;
 }

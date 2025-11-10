@@ -16,24 +16,27 @@
 
   <body>
     <div class="left-section">
-      <div class="logo"></div>
-      <p>Monitor. Reduce. Sustain</p>
-    </div>
+        <div class="logo"></div>
+        <p>Monitor. Reduce. Sustain</p>
+      </div>
 
     <div class="right-section">
-      {% if messages %}
-        <ul class="messages">
-          {% for message in messages %}
-            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
       <div class="login-box">
         <h2>Login to your account</h2>
-          <form method="post">
-            {% csrf_token %}
+
+        {% if messages %}
+          <ul class="messages">
+            {% for message in messages %}
+              <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                {{ message }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
           <div class="input-box">
-            <!--Login Input Box-->
             <span class="material-icons input-icon">person</span>
             <input
               type="text"
@@ -53,16 +56,20 @@
             />
           </div>
 
-          <div class="remember-me"><input type="checkbox" /> Remember Me</div>
+          <div class="remember-me">
+            <input type="checkbox" /> Remember Me
+          </div>
+
           <button type="submit">Login</button>
 
           <a class="admin-login" href="{% url 'adminpanel:admin_login' %}">
-            Administrators Here</a
-          >
+            Administrators Here
+          </a>
         </form>
+
         <p class="lower-text">
           <strong class="forgot-pass">Forgot Your Password?</strong><br /><br />
-          no worries, <a href="#">please click here</a>to reset your password
+          no worries, <a href="#">please click here</a> to reset your password
         </p>
       </div>
     </div>
