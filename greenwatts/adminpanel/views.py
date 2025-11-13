@@ -247,64 +247,72 @@ def office_usage(request):
     from datetime import timedelta, date
     from datetime import datetime as dt
 
+    # Get selected day, month, year from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+
+    # Year options: only 2025
+    year_options = ['2025']
+
+    # Month options: only October
+    month_options = [{'value': '10', 'name': 'October'}]
+
+    # Day options: all 31 days in October 2025, formatted as mm/dd/yyyy
+    from datetime import date, timedelta
+    start_date = date(2025, 10, 1)
+    end_date = date(2025, 10, 31)
+    day_options = []
+    current = start_date
+    while current <= end_date:
+        day_options.append(current.strftime('%m/%d/%Y'))
+        current += timedelta(days=1)
+
+    # Determine filter date range
+    filter_kwargs = {}
+    selected_date = None
+    level = 'day'
+    if selected_day:
+        try:
+            month_str, day_str, year_str = selected_day.split('/')
+            selected_date = date(int(year_str), int(month_str), int(day_str))
+            filter_kwargs = {'date': selected_date}
+            level = 'day'
+            # Set selected_month and selected_year for template selects
+            selected_month = month_str
+            selected_year = year_str
+        except ValueError:
+            selected_date = None
+    elif selected_month and selected_year:
+        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+        level = 'month'
+    elif selected_year:
+        filter_kwargs = {'date__year': int(selected_year)}
+        level = 'year'
+    else:
+        # Default to latest date
+        latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
+        latest_date = latest_date_qs['latest_date']
+        if latest_date:
+            selected_date = latest_date
+            filter_kwargs = {'date': selected_date}
+            level = 'day'
+
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    # Get unique dates from EnergyRecord, last 7 days with data, ordered descending
-    unique_dates_qs = EnergyRecord.objects.filter(
+    # Filter office_data for table and pie chart based on filter_kwargs
+    office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).dates('date', 'day').distinct().order_by('-date')[:7]
-    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
-
-    # Get selected date from request or use latest
-    selected_date_str = request.GET.get('selected_date')
-    selected_date = None
-    if selected_date_str and selected_date_str in day_options:
-        # Parse the selected date (format mm/dd/yyyy)
-        try:
-            month, day, year = map(int, selected_date_str.split('/'))
-            selected_date = date(year, month, day)
-        except ValueError:
-            selected_date = None
-    if not selected_date:
-        # Default to latest date
-        latest_date_qs = EnergyRecord.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).aggregate(latest_date=Max('date'))
-        latest_date = latest_date_qs['latest_date']
-        if latest_date:
-            selected_date = latest_date.date() if hasattr(latest_date, 'date') else latest_date
-
-    # Filter office_data for table and pie chart based on selected date
-    if selected_date:
-        office_data = EnergyRecord.objects.filter(
-            date=selected_date,
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).values(
-            office_name=F('device__office__name')
-        ).annotate(
-            total_energy=Sum('total_energy_kwh'),
-            total_cost=Sum('cost_estimate'),
-            total_co2=Sum('carbon_emission_kgco2')
-        ).order_by('-total_energy')
-    else:
-        office_data = EnergyRecord.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).values(
-            office_name=F('device__office__name')
-        ).annotate(
-            total_energy=Sum('total_energy_kwh'),
-            total_cost=Sum('cost_estimate'),
-            total_co2=Sum('carbon_emission_kgco2')
-        ).order_by('-total_energy')
+    ).values(
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
+    ).order_by('-total_energy')
 
     table_data = []
     for record in office_data:
@@ -434,7 +442,11 @@ def office_usage(request):
         'line_labels': json.dumps(line_labels),
         'line_datasets': json.dumps(line_datasets),
         'day_options': day_options,
-        'selected_date': selected_date_str if selected_date_str else None,
+        'month_options': month_options,
+        'year_options': year_options,
+        'selected_day': selected_day,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
     }
     return render(request, 'officeUsage.html', context)
 
