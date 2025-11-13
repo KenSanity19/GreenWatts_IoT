@@ -55,40 +55,59 @@ def admin_dashboard(request):
     from datetime import date
     from datetime import datetime as dt
 
-    # Get unique dates from EnergyRecord, last 7 days with data, ordered descending
-    unique_dates_qs = EnergyRecord.objects.dates('date', 'day').distinct().order_by('-date')[:7]
-    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
+    # Get selected day, month, year from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
 
-    # Get selected date from request or use latest
-    selected_date_str = request.GET.get('selected_date')
+    # Year options: only 2025
+    year_options = ['2025']
+
+    # Month options: only October
+    month_options = [{'value': '10', 'name': 'October'}]
+
+    # Day options: all 31 days in October 2025, formatted as mm/dd/yyyy
+    from datetime import date, timedelta
+    start_date = date(2025, 10, 1)
+    end_date = date(2025, 10, 31)
+    day_options = []
+    current = start_date
+    while current <= end_date:
+        day_options.append(current.strftime('%m/%d/%Y'))
+        current += timedelta(days=1)
+
+    # Determine filter date range
+    filter_kwargs = {}
     selected_date = None
-    if selected_date_str and selected_date_str in day_options:
-        # Parse the selected date (format mm/dd/yyyy)
+    level = 'day'
+    if selected_day and selected_month and selected_year:
         try:
-            month, day, year = map(int, selected_date_str.split('/'))
-            selected_date = date(year, month, day)
+            selected_date = date(int(selected_year), int(selected_month), int(selected_day))
+            filter_kwargs = {'date': selected_date}
+            level = 'day'
         except ValueError:
             selected_date = None
-    if not selected_date:
+    elif selected_month and selected_year:
+        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+        level = 'month'
+    elif selected_year:
+        filter_kwargs = {'date__year': int(selected_year)}
+        level = 'year'
+    else:
         # Default to latest date
         latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
         latest_date = latest_date_qs['latest_date']
         if latest_date:
             selected_date = latest_date
+            filter_kwargs = {'date': selected_date}
+            level = 'day'
 
-    # Aggregate sums for total energy usage, cost estimate, and carbon emission from selected date
-    if selected_date:
-        aggregates = EnergyRecord.objects.filter(date=selected_date).aggregate(
-            total_energy_usage=Sum('total_energy_kwh'),
-            total_cost_predicted=Sum('cost_estimate'),
-            total_co2_emission=Sum('carbon_emission_kgco2')
-        )
-    else:
-        aggregates = {
-            'total_energy_usage': 0,
-            'total_cost_predicted': 0,
-            'total_co2_emission': 0
-        }
+    # Aggregate sums for total energy usage, cost estimate, and carbon emission from selected filter
+    aggregates = EnergyRecord.objects.filter(**filter_kwargs).aggregate(
+        total_energy_usage=Sum('total_energy_kwh'),
+        total_cost_predicted=Sum('cost_estimate'),
+        total_co2_emission=Sum('carbon_emission_kgco2')
+    )
 
     # Calculate predicted CO2 emission (simple projection: current emission * 10 as example)
     predicted_co2_emission = (aggregates['total_co2_emission'] or 0) * 10
@@ -100,25 +119,21 @@ def admin_dashboard(request):
         current_date = datetime.now().strftime("%B %d, %Y")
     predicted_date = (dt.combine(selected_date, dt.min.time()) + timedelta(days=7)).strftime("%B %d, %Y") if selected_date else (datetime.now() + timedelta(days=7)).strftime("%B %d, %Y")
 
-    # Aggregate energy usage per office from selected date
+    # Aggregate energy usage per office from selected filter
     from django.db.models import F
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    if selected_date:
-        office_energy_qs = EnergyRecord.objects.filter(
-            date=selected_date,
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).values(
-            office_id=F('device__office__office_id'),
-            office_name=F('device__office__name')
-        ).annotate(
-            total_energy=Sum('total_energy_kwh')
-        ).order_by('-total_energy')
-    else:
-        office_energy_qs = []
+    office_energy_qs = EnergyRecord.objects.filter(**filter_kwargs).filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).values(
+        office_id=F('device__office__office_id'),
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh')
+    ).order_by('-total_energy')
 
     # Determine status based on total_energy thresholds
     active_alerts = []
@@ -197,7 +212,12 @@ def admin_dashboard(request):
         'active_alerts': active_alerts,
         'change_data': change_data,
         'day_options': day_options,
-        'selected_date': selected_date_str if selected_date_str else None,
+        'month_options': month_options,
+        'year_options': year_options,
+        'selected_day': selected_day,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'level': level,
     }
     return render(request, 'adminDashboard.html', context)
 
