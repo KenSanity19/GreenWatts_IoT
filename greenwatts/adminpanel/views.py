@@ -80,11 +80,15 @@ def admin_dashboard(request):
     filter_kwargs = {}
     selected_date = None
     level = 'day'
-    if selected_day and selected_month and selected_year:
+    if selected_day:
         try:
-            selected_date = date(int(selected_year), int(selected_month), int(selected_day))
+            month_str, day_str, year_str = selected_day.split('/')
+            selected_date = date(int(year_str), int(month_str), int(day_str))
             filter_kwargs = {'date': selected_date}
             level = 'day'
+            # Set selected_month and selected_year for template selects
+            selected_month = month_str
+            selected_year = year_str
         except ValueError:
             selected_date = None
     elif selected_month and selected_year:
@@ -161,12 +165,18 @@ def admin_dashboard(request):
 
     # Change in cost data - filter consistently
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
-    change_dates_qs = EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).dates('date', 'day').distinct().order_by('-date')[:2]
-    change_dates = list(change_dates_qs)
+    if selected_date:
+        # Compare selected_date and previous day
+        previous_date = selected_date - timedelta(days=1)
+        change_dates = [previous_date, selected_date]
+    else:
+        # Default to last two days with data
+        change_dates_qs = EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').distinct().order_by('-date')[:2]
+        change_dates = list(change_dates_qs)
     change_costs = []
     for d in change_dates:
         cost = EnergyRecord.objects.filter(
@@ -177,8 +187,8 @@ def admin_dashboard(request):
         ).aggregate(total=Sum('cost_estimate'))['total'] or 0
         change_costs.append(cost)
     if len(change_costs) >= 2:
-        latest_cost = change_costs[0]
-        prev_cost = change_costs[1]
+        latest_cost = change_costs[1]  # selected_date or latest
+        prev_cost = change_costs[0]  # previous
         if prev_cost > 0:
             change_percent = ((latest_cost - prev_cost) / prev_cost) * 100
         else:
@@ -189,10 +199,10 @@ def admin_dashboard(request):
         max_cost = max(change_costs)
         heights = [(c / max_cost * 100) if max_cost > 0 else 0 for c in change_costs]
         change_data = {
-            'bar1_label': change_dates[1].strftime('%B %d'),  # previous
-            'bar1_height': heights[1],
-            'bar2_label': change_dates[0].strftime('%B %d'),  # latest
-            'bar2_height': heights[0],
+            'bar1_label': change_dates[0].strftime('%B %d'),  # previous
+            'bar1_height': heights[0],
+            'bar2_label': change_dates[1].strftime('%B %d'),  # selected or latest
+            'bar2_height': heights[1],
             'percent': change_percent_abs,
             'type': 'DECREASE' if is_decrease else 'INCREASE',
             'arrow': 'down' if is_decrease else 'up',
