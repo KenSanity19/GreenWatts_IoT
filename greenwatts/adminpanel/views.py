@@ -2,6 +2,8 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
+from django.views.decorators.cache import cache_control
+from functools import wraps
 from .models import Admin
 from greenwatts.users.models import Office
 from ..sensors.models import Device
@@ -10,9 +12,23 @@ from django.db.models import Sum, F
 from datetime import datetime, timedelta
 import json
 
+def admin_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.session.get('admin_id'):
+            response = redirect('adminpanel:admin_login')
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            return response
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
     return HttpResponse("Hello from Admin app")
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_login(request):
     if request.method == "POST":
         username = request.POST.get("username")
@@ -31,6 +47,8 @@ def admin_login(request):
     return render(request, "adminLogin.html")
 
 
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_dashboard(request):
     from django.db.models import Max
     from django.db.models.functions import TruncDate
@@ -183,11 +201,15 @@ def admin_dashboard(request):
     }
     return render(request, 'adminDashboard.html', context)
 
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_setting(request):
     offices = Office.objects.all()
     devices = Device.objects.select_related('office').all()
     return render(request, 'adminSetting.html', {'offices': offices, 'devices': devices})
 
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def office_usage(request):
     from django.db.models import Max, Min
     from django.db.models.functions import TruncDay
@@ -386,6 +408,8 @@ def office_usage(request):
     }
     return render(request, 'officeUsage.html', context)
 
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_reports(request):
     from django.db.models import Max, Min, Sum
     from django.db.models.functions import TruncDay
@@ -499,6 +523,8 @@ def admin_reports(request):
     }
     return render(request, 'adminReports.html', context)
 
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_costs(request):
     from django.db.models import Sum, Max, Count
     from django.db.models.functions import TruncDate
@@ -668,6 +694,8 @@ def admin_costs(request):
     }
     return render(request, 'adminCosts.html', context)
 
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def carbon_emission(request):
     from django.db.models import Sum, Max
     from django.db.models.functions import TruncDate
@@ -822,7 +850,9 @@ def carbon_emission(request):
     }
     return render(request, 'carbonEmission.html', context)
 
+@admin_required
 @csrf_exempt
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def create_office(request):
     if request.method == "POST":
         try:
@@ -852,7 +882,9 @@ def create_office(request):
     else:
         return JsonResponse({"status": "error", "message": "Invalid request method"})
 
+@admin_required
 @csrf_exempt
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def create_device(request):
     if request.method == "POST":
         try:
@@ -880,7 +912,9 @@ def create_device(request):
     else:
         return JsonResponse({"status": "error", "message": "Invalid request method"})
 
+@admin_required
 @csrf_exempt
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def edit_office(request, id):
     try:
         office = Office.objects.get(office_id=id)
@@ -917,3 +951,12 @@ def edit_office(request, id):
 
     else:
         return JsonResponse({"status": "error", "message": "Invalid request method"})
+
+def admin_logout(request):
+    request.session.flush()  # Clear the session
+    response = redirect('users:index')  # Redirect to the landing page
+    # Add cache control headers to prevent caching and back button navigation
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response

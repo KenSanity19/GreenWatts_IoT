@@ -55,11 +55,19 @@
           ><i class="fas fa-cog"></i> Admin Setting</a
         >
         <!-- logout goes to logout view -->
-        <a href="{% url 'users:logout' %}"
-          ><i class="fas fa-sign-out-alt"></i> Log Out</a
-        >
+        <a href="{% url 'users:logout' %}">
+          <i class="fas fa-sign-out-alt"></i> Log Out
+        </a>
       </nav>
     </div>
+
+    <script>
+      // Prevent back button navigation after logout
+      window.history.replaceState(null, null, window.location.href);
+      window.onpopstate = function () {
+        window.history.pushState(null, null, window.location.href);
+      };
+    </script>
 
     <!-- Main Content -->
     <div class="main-content">
