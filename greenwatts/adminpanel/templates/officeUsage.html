@@ -150,10 +150,11 @@
           </div>
           <div class="chart-box">
             <h3>Energy Usage (kWh)</h3>
-            <select>
-              <option>Week</option>
-              <option>Month</option>
-              <option>Year</option>
+            <select id="week-select">
+              <option value="">Select Week</option>
+              {% for week in week_options %}
+              <option value="{{ week.value }}" {% if selected_week == week.value %}selected{% endif %}>{{ week.name }}</option>
+              {% endfor %}
             </select>
             <canvas id="lineChart"></canvas>
           </div>
@@ -263,24 +264,62 @@
         const daySelect = document.getElementById('day-select');
         const monthSelect = document.getElementById('month-select');
         const yearSelect = document.getElementById('year-select');
+        const weekSelect = document.getElementById('week-select');
 
         function updateFilters() {
           const params = new URLSearchParams();
           const day = daySelect.value;
           const month = monthSelect.value;
           const year = yearSelect.value;
+          const week = weekSelect.value;
 
           if (day) params.append('selected_day', day);
-          if (month) params.append('selected_month', month);
-          if (year) params.append('selected_year', year);
+          else if (month && year) {
+            params.append('selected_month', month);
+            params.append('selected_year', year);
+          } else if (year) params.append('selected_year', year);
+          else if (week) params.append('selected_week', week);
 
           const queryString = params.toString();
           window.location.href = queryString ? `?${queryString}` : '?';
         }
 
-        daySelect.addEventListener('change', updateFilters);
-        monthSelect.addEventListener('change', updateFilters);
-        yearSelect.addEventListener('change', updateFilters);
+        daySelect.addEventListener('change', function() {
+          if (this.value) {
+            monthSelect.value = '';
+            yearSelect.value = '';
+            weekSelect.value = '';
+          }
+          updateFilters();
+        });
+
+        monthSelect.addEventListener('change', function() {
+          weekSelect.value = '';
+          if (this.value && yearSelect.value) {
+            daySelect.value = '';
+          }
+          updateFilters();
+        });
+
+        yearSelect.addEventListener('change', function() {
+          weekSelect.value = '';
+          if (this.value && monthSelect.value) {
+            daySelect.value = '';
+          } else if (this.value && !monthSelect.value) {
+            daySelect.value = '';
+            monthSelect.value = '';
+          }
+          updateFilters();
+        });
+
+        weekSelect.addEventListener('change', function() {
+          if (this.value) {
+            daySelect.value = '';
+            monthSelect.value = '';
+            yearSelect.value = '';
+          }
+          updateFilters();
+        });
       });
     </script>
   </body>

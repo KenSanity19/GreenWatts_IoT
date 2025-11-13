@@ -24,6 +24,16 @@ def admin_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+def get_week_options(valid_office_ids):
+    # Fixed weeks for October 2025
+    week_options = [
+        {'value': '2025-10-01', 'name': 'Week 1'},
+        {'value': '2025-10-08', 'name': 'Week 2'},
+        {'value': '2025-10-15', 'name': 'Week 3'},
+        {'value': '2025-10-22', 'name': 'Week 4'},
+    ]
+    return week_options
+
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
     return HttpResponse("Hello from Admin app")
@@ -55,10 +65,17 @@ def admin_dashboard(request):
     from datetime import date
     from datetime import datetime as dt
 
-    # Get selected day, month, year from request
+    # Get selected day, month, year, week from request
     selected_day = request.GET.get('selected_day')
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
+    selected_week = request.GET.get('selected_week')
+
+    # Get all valid office ids from Office table
+    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+
+    # Week options: fixed weeks for October 2025
+    week_options = get_week_options(valid_office_ids)
 
     # Year options: only 2025
     year_options = ['2025']
@@ -97,6 +114,14 @@ def admin_dashboard(request):
     elif selected_year:
         filter_kwargs = {'date__year': int(selected_year)}
         level = 'year'
+    elif selected_week:
+        try:
+            week_date = date.fromisoformat(selected_week)
+            week_num = week_date.isocalendar()[1]
+            filter_kwargs = {'date__week': week_num, 'date__year': week_date.year}
+            level = 'week'
+        except ValueError:
+            selected_week = None
     else:
         # Default to latest date
         latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
@@ -125,8 +150,6 @@ def admin_dashboard(request):
 
     # Aggregate energy usage per office from selected filter
     from django.db.models import F
-    # Get all valid office ids from Office table
-    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
     office_energy_qs = EnergyRecord.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
@@ -224,9 +247,11 @@ def admin_dashboard(request):
         'day_options': day_options,
         'month_options': month_options,
         'year_options': year_options,
+        'week_options': week_options,
         'selected_day': selected_day,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'selected_week': selected_week,
         'level': level,
     }
     return render(request, 'adminDashboard.html', context)
@@ -247,10 +272,17 @@ def office_usage(request):
     from datetime import timedelta, date
     from datetime import datetime as dt
 
-    # Get selected day, month, year from request
+    # Get selected day, month, year, week from request
     selected_day = request.GET.get('selected_day')
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
+    selected_week = request.GET.get('selected_week')
+
+    # Get all valid office ids from Office table
+    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+
+    # Week options: last 4 weeks with data
+    week_options = get_week_options(valid_office_ids)
 
     # Year options: only 2025
     year_options = ['2025']
@@ -289,6 +321,14 @@ def office_usage(request):
     elif selected_year:
         filter_kwargs = {'date__year': int(selected_year)}
         level = 'year'
+    elif selected_week:
+        try:
+            week_date = date.fromisoformat(selected_week)
+            week_num = week_date.isocalendar()[1]
+            filter_kwargs = {'date__week': week_num, 'date__year': week_date.year}
+            level = 'week'
+        except ValueError:
+            selected_week = None
     else:
         # Default to latest date
         latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
@@ -297,9 +337,6 @@ def office_usage(request):
             selected_date = latest_date
             filter_kwargs = {'date': selected_date}
             level = 'day'
-
-    # Get all valid office ids from Office table
-    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
     # Filter office_data for table and pie chart based on filter_kwargs
     office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
@@ -340,36 +377,25 @@ def office_usage(request):
     pie_labels = [record['office_name'] for record in office_data]
     pie_values = [record['total_energy'] or 0 for record in office_data]
 
-    # Prepare data for line chart (unchanged: based on available data range, weekly)
-    # Get min and max dates from the database
-    date_range = EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).aggregate(
-        min_date=Min('date'),
-        max_date=Max('date')
-    )
-    min_date = date_range['min_date']
-    max_date = date_range['max_date']
-
-    if min_date and max_date:
-        # Ensure they are date objects
-        if isinstance(min_date, timezone.datetime):
-            min_date = min_date.date()
-        if isinstance(max_date, timezone.datetime):
-            max_date = max_date.date()
-        # Use the full range of available data, up to 30 days max for chart readability
-        date_diff = (max_date - min_date).days
-        if date_diff > 30:
-            start_date = max_date - timedelta(days=30)
-        else:
-            start_date = min_date
-        end_date = max_date
+    # Prepare data for line chart (filtered by selected period)
+    import calendar
+    if level == 'day':
+        start_date = selected_date
+        end_date = selected_date
+    elif level == 'month':
+        start_date = date(int(selected_year), int(selected_month), 1)
+        end_date = date(int(selected_year), int(selected_month), calendar.monthrange(int(selected_year), int(selected_month))[1])
+    elif level == 'year':
+        start_date = date(int(selected_year), 1, 1)
+        end_date = date(int(selected_year), 12, 31)
+    elif level == 'week':
+        week_date = date.fromisoformat(selected_week)
+        start_date = week_date
+        end_date = start_date + timedelta(days=6)
     else:
-        # Fallback if no data
-        end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=7)
+        # Default to latest date
+        start_date = selected_date
+        end_date = selected_date
 
     line_data = EnergyRecord.objects.filter(
         date__gte=start_date,
@@ -444,9 +470,11 @@ def office_usage(request):
         'day_options': day_options,
         'month_options': month_options,
         'year_options': year_options,
+        'week_options': week_options,
         'selected_day': selected_day,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'selected_week': selected_week,
     }
     return render(request, 'officeUsage.html', context)
 
