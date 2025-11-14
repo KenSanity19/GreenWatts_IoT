@@ -92,7 +92,7 @@ table thead {
   background: #2c6dfc;
   color: #fff;
   border: none;
-  padding: 6px 12px;
+  padding: 6px 25px;
   margin-right: 6px;
   border-radius: 6px;
   cursor: pointer;
@@ -153,6 +153,16 @@ table thead {
 
 .save-btn {
   background: var(--color-green);
+  color: var(--text-white);
+  border: none;
+  padding: 6px 12px;
+  margin-left: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: var(--color-red);
   color: var(--text-white);
   border: none;
   padding: 6px 12px;

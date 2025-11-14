@@ -479,6 +479,13 @@
                 >
                   Save
                 </button>
+                <button
+                  class="cancel-btn"
+                  id="cancel-energy-btn"
+                  style="display: none"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
 
@@ -532,6 +539,13 @@
                   style="display: none"
                 >
                   Save
+                </button>
+                <button
+                  class="cancel-btn"
+                  id="cancel-co2-btn"
+                  style="display: none"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
@@ -895,6 +909,8 @@
           document.getElementById("edit-energy-btn").style.display = "none";
           document.getElementById("save-energy-btn").style.display =
             "inline-block";
+          document.getElementById("cancel-energy-btn").style.display =
+            "inline-block";
         });
 
       // Save Energy Threshold
@@ -946,6 +962,8 @@
               document.getElementById("edit-energy-btn").style.display =
                 "inline-block";
               document.getElementById("save-energy-btn").style.display = "none";
+              document.getElementById("cancel-energy-btn").style.display =
+                "none";
               loadThresholds(); // Reload to update display fields
             } else {
               alert("Error saving thresholds: " + data.message);
@@ -953,6 +971,23 @@
           } catch (error) {
             alert("Error saving thresholds.");
           }
+        });
+
+      // Cancel Energy Threshold Edit
+      document
+        .getElementById("cancel-energy-btn")
+        .addEventListener("click", function () {
+          document.getElementById("energy_efficient_max").readOnly = true;
+          document.getElementById("energy_moderate_max").readOnly = true;
+          document.getElementById("energy_high_max").readOnly = true;
+          document.getElementById(
+            "energy_efficient_max_display"
+          ).readOnly = true;
+          document.getElementById("edit-energy-btn").style.display =
+            "inline-block";
+          document.getElementById("save-energy-btn").style.display = "none";
+          document.getElementById("cancel-energy-btn").style.display = "none";
+          loadThresholds(); // Reload to revert to original values
         });
 
       // Edit CO2 Threshold
@@ -965,6 +1000,8 @@
           document.getElementById("co2_efficient_max_display").readOnly = false;
           document.getElementById("edit-co2-btn").style.display = "none";
           document.getElementById("save-co2-btn").style.display =
+            "inline-block";
+          document.getElementById("cancel-co2-btn").style.display =
             "inline-block";
         });
 
@@ -1017,6 +1054,7 @@
               document.getElementById("edit-co2-btn").style.display =
                 "inline-block";
               document.getElementById("save-co2-btn").style.display = "none";
+              document.getElementById("cancel-co2-btn").style.display = "none";
               loadThresholds(); // Reload to update display fields
             } else {
               alert("Error saving thresholds: " + data.message);
@@ -1024,6 +1062,21 @@
           } catch (error) {
             alert("Error saving thresholds.");
           }
+        });
+
+      // Cancel CO2 Threshold Edit
+      document
+        .getElementById("cancel-co2-btn")
+        .addEventListener("click", function () {
+          document.getElementById("co2_efficient_max").readOnly = true;
+          document.getElementById("co2_moderate_max").readOnly = true;
+          document.getElementById("co2_high_max").readOnly = true;
+          document.getElementById("co2_efficient_max_display").readOnly = true;
+          document.getElementById("edit-co2-btn").style.display =
+            "inline-block";
+          document.getElementById("save-co2-btn").style.display = "none";
+          document.getElementById("cancel-co2-btn").style.display = "none";
+          loadThresholds(); // Reload to revert to original values
         });
 
       // Load thresholds on page load
