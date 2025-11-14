@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
+from ..adminpanel.models import Threshold
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
@@ -77,12 +78,13 @@ def dashboard(request):
         date=selected_date
     ).select_related('device').values('device__office__name', 'total_energy_kwh')
 
+    threshold = Threshold.objects.first()
     active_alerts = []
     for record in alerts_qs:
         energy = record['total_energy_kwh'] or 0
-        if energy > 20:
+        if energy > threshold.energy_moderate_max:
             status = 'High'
-        elif energy > 10:
+        elif energy > threshold.energy_efficient_max:
             status = 'Moderate'
         else:
             status = 'Efficient'
@@ -200,13 +202,14 @@ def office_usage(request):
         total_co2=Sum('carbon_emission_kgco2')
     ).order_by('-total_energy')
 
+    threshold = Threshold.objects.first()
     table_data = []
     for record in office_data:
         energy = record['total_energy'] or 0
-        if energy > 20:
+        if energy > threshold.energy_moderate_max:
             status = 'HIGH'
             status_class = 'high'
-        elif energy > 10:
+        elif energy > threshold.energy_efficient_max:
             status = 'MODERATE'
             status_class = 'moderate'
         else:
@@ -344,8 +347,9 @@ def user_reports(request):
     else:
         best_performing_day = 'N/A'
 
+    threshold = Threshold.objects.first()
     # Recommendation based on highest usage day
-    if max_energy > 20:
+    if max_energy > threshold.energy_moderate_max:
         recommendation = f"Usage exceeded on {highest_usage_day}. Consider reducing usage during peak hours."
     else:
         recommendation = "Energy usage is within acceptable limits. Keep up the good work!"
@@ -663,7 +667,8 @@ def user_emmision(request):
         labels.append(label)
         week_data.append(date_dict.get(d, 0))
 
-    threshold = 180  # Fixed
+    threshold = Threshold.objects.first()
+    threshold_value = threshold.co2_moderate_max
 
     context = {
         'office': request.user,
@@ -678,7 +683,7 @@ def user_emmision(request):
         'change_class': change_class,
         'chart_labels': json.dumps(labels),
         'week_data': json.dumps(week_data),
-        'threshold': threshold,
+        'threshold': threshold_value,
     }
     return render(request, 'users/userEmmision.html', context)
 

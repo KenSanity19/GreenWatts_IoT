@@ -430,38 +430,109 @@
           <div class="threshold-boxes">
             <div class="threshold-card">
               <h3>Energy Consumption Threshold</h3>
-              <p><span class="efficient">Efficient</span>: less than <</p>
               <p>
-                <span class="moderate">Moderate</span>: between <=
-                <input type="text" value="15kWh" />
+                <span class="efficient">Efficient</span>: less than
+                <input
+                  type="number"
+                  id="energy_efficient_max"
+                  step="0.01"
+                  readonly
+                  value="{{ threshold.energy_efficient_max|default:10.0 }}"
+                />
+                kWh
               </p>
               <p>
-                <span class="high">High</span>: greater than >
-                <input type="text" value="15kWh" />
+                <span class="moderate">Moderate</span>: between
+                <input
+                  type="number"
+                  id="energy_efficient_max_display"
+                  readonly
+                  value="{{ threshold.energy_efficient_max|default:10.0 }}"
+                />
+                and
+                <input
+                  type="number"
+                  id="energy_moderate_max"
+                  step="0.01"
+                  readonly
+                  value="{{ threshold.energy_moderate_max|default:20.0 }}"
+                />
+                kWh
+              </p>
+              <p>
+                <span class="high">High</span>: more than
+                <input
+                  type="number"
+                  id="energy_high_max"
+                  step="0.01"
+                  readonly
+                  value="{{ threshold.energy_high_max|default:30.0 }}"
+                />
+                kWh
               </p>
               <div class="btn-group">
-                <button class="edit-btn">Edit</button>
-                <button class="save-btn">Save</button>
+                <button class="edit-btn" id="edit-energy-btn">Edit</button>
+                <button
+                  class="save-btn"
+                  id="save-energy-btn"
+                  style="display: none"
+                >
+                  Save
+                </button>
               </div>
             </div>
 
             <div class="threshold-card">
               <h3>Carbon Emission Threshold</h3>
               <p>
-                <span class="efficient">Efficient</span>: less than <
-                <input type="text" value="8kg" />
+                <span class="efficient">Efficient</span>: less than
+                <input
+                  type="number"
+                  id="co2_efficient_max"
+                  step="0.01"
+                  readonly
+                  value="{{ threshold.co2_efficient_max|default:8.0 }}"
+                />
+                kg
               </p>
               <p>
-                <span class="moderate">Moderate</span>: between <=
-                <input type="text" value="13kg" />
+                <span class="moderate">Moderate</span>: between
+                <input
+                  type="number"
+                  id="co2_efficient_max_display"
+                  readonly
+                  value="{{ threshold.co2_efficient_max|default:8.0 }}"
+                />
+                and
+                <input
+                  type="number"
+                  id="co2_moderate_max"
+                  step="0.01"
+                  readonly
+                  value="{{ threshold.co2_moderate_max|default:13.0 }}"
+                />
+                kg
               </p>
               <p>
-                <span class="high">High</span>: greater than >
-                <input type="text" value="13kg" />
+                <span class="high">High</span>: more than
+                <input
+                  type="number"
+                  id="co2_high_max"
+                  step="0.01"
+                  readonly
+                  value="{{ threshold.co2_high_max|default:18.0 }}"
+                />
+                kg
               </p>
               <div class="btn-group">
-                <button class="edit-btn">Edit</button>
-                <button class="save-btn">Save</button>
+                <button class="edit-btn" id="edit-co2-btn">Edit</button>
+                <button
+                  class="save-btn"
+                  id="save-co2-btn"
+                  style="display: none"
+                >
+                  Save
+                </button>
               </div>
             </div>
           </div>
@@ -748,6 +819,219 @@
       }
       setInterval(updateTime, 1000);
       updateTime(); // initial call
+
+      // Threshold functionality
+      async function loadThresholds() {
+        try {
+          const response = await fetch(
+            "{% url 'adminpanel:save_thresholds' %}",
+            {
+              method: "GET",
+              headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+              },
+            }
+          );
+          const data = await response.json();
+          if (data.status === "success") {
+            const threshold = data.threshold;
+            document.getElementById("energy_efficient_max").value =
+              threshold.energy_efficient_max;
+            document.getElementById("energy_moderate_max").value =
+              threshold.energy_moderate_max;
+            document.getElementById("energy_high_max").value =
+              threshold.energy_high_max;
+            document.getElementById("energy_efficient_max_display").value =
+              threshold.energy_efficient_max;
+            document.getElementById("co2_efficient_max").value =
+              threshold.co2_efficient_max;
+            document.getElementById("co2_moderate_max").value =
+              threshold.co2_moderate_max;
+            document.getElementById("co2_high_max").value =
+              threshold.co2_high_max;
+            document.getElementById("co2_efficient_max_display").value =
+              threshold.co2_efficient_max;
+            document.getElementById("co2_moderate_max").value =
+              threshold.co2_moderate_max;
+          } else {
+            // If no thresholds set, use defaults
+            document.getElementById("energy_efficient_max").value = 10.0;
+            document.getElementById("energy_moderate_max").value = 20.0;
+            document.getElementById("energy_high_max").value = 30.0;
+            document.getElementById(
+              "energy_efficient_max_display"
+            ).value = 10.0;
+            document.getElementById("co2_efficient_max").value = 8.0;
+            document.getElementById("co2_moderate_max").value = 13.0;
+            document.getElementById("co2_high_max").value = 18.0;
+            document.getElementById("co2_efficient_max_display").value = 8.0;
+          }
+        } catch (error) {
+          console.error("Error loading thresholds:", error);
+          // Fallback to defaults on error
+          document.getElementById("energy_efficient_max").value = 10.0;
+          document.getElementById("energy_moderate_max").value = 20.0;
+          document.getElementById("energy_high_max").value = 30.0;
+          document.getElementById("energy_efficient_max_display").value = 10.0;
+          document.getElementById("energy_moderate_max_display").value = 20.0;
+          document.getElementById("co2_efficient_max").value = 8.0;
+          document.getElementById("co2_moderate_max").value = 13.0;
+          document.getElementById("co2_high_max").value = 18.0;
+          document.getElementById("co2_efficient_max_display").value = 8.0;
+          document.getElementById("co2_moderate_max_display").value = 13.0;
+        }
+      }
+
+      // Edit Energy Threshold
+      document
+        .getElementById("edit-energy-btn")
+        .addEventListener("click", function () {
+          document.getElementById("energy_efficient_max").readOnly = false;
+          document.getElementById("energy_moderate_max").readOnly = false;
+          document.getElementById("energy_high_max").readOnly = false;
+          document.getElementById(
+            "energy_efficient_max_display"
+          ).readOnly = false;
+          document.getElementById("edit-energy-btn").style.display = "none";
+          document.getElementById("save-energy-btn").style.display =
+            "inline-block";
+        });
+
+      // Save Energy Threshold
+      document
+        .getElementById("save-energy-btn")
+        .addEventListener("click", async function () {
+          const energyEfficientMax = parseFloat(
+            document.getElementById("energy_efficient_max").value
+          );
+          const energyModerateMax = parseFloat(
+            document.getElementById("energy_moderate_max").value
+          );
+          const energyHighMax = parseFloat(
+            document.getElementById("energy_high_max").value
+          );
+          if (energyEfficientMax >= energyModerateMax) {
+            alert("Efficient max must be less than Moderate max.");
+            return;
+          }
+          if (energyModerateMax >= energyHighMax) {
+            alert("Moderate max must be less than High max.");
+            return;
+          }
+          try {
+            const response = await fetch(
+              "{% url 'adminpanel:save_thresholds' %}",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: JSON.stringify({
+                  energy_efficient_max: energyEfficientMax,
+                  energy_moderate_max: energyModerateMax,
+                  energy_high_max: energyHighMax,
+                }),
+              }
+            );
+            const data = await response.json();
+            if (data.status === "success") {
+              alert("Energy thresholds saved successfully!");
+              document.getElementById("energy_efficient_max").readOnly = true;
+              document.getElementById("energy_moderate_max").readOnly = true;
+              document.getElementById("energy_high_max").readOnly = true;
+              document.getElementById(
+                "energy_efficient_max_display"
+              ).readOnly = true;
+              document.getElementById("edit-energy-btn").style.display =
+                "inline-block";
+              document.getElementById("save-energy-btn").style.display = "none";
+              loadThresholds(); // Reload to update display fields
+            } else {
+              alert("Error saving thresholds: " + data.message);
+            }
+          } catch (error) {
+            alert("Error saving thresholds.");
+          }
+        });
+
+      // Edit CO2 Threshold
+      document
+        .getElementById("edit-co2-btn")
+        .addEventListener("click", function () {
+          document.getElementById("co2_efficient_max").readOnly = false;
+          document.getElementById("co2_moderate_max").readOnly = false;
+          document.getElementById("co2_high_max").readOnly = false;
+          document.getElementById("co2_efficient_max_display").readOnly = false;
+          document.getElementById("co2_moderate_max").readOnly = false;
+          document.getElementById("edit-co2-btn").style.display = "none";
+          document.getElementById("save-co2-btn").style.display =
+            "inline-block";
+        });
+
+      // Save CO2 Threshold
+      document
+        .getElementById("save-co2-btn")
+        .addEventListener("click", async function () {
+          const co2EfficientMax = parseFloat(
+            document.getElementById("co2_efficient_max").value
+          );
+          const co2ModerateMax = parseFloat(
+            document.getElementById("co2_moderate_max").value
+          );
+          const co2HighMax = parseFloat(
+            document.getElementById("co2_high_max").value
+          );
+          if (co2EfficientMax >= co2ModerateMax) {
+            alert("Efficient max must be less than Moderate max.");
+            return;
+          }
+          if (co2ModerateMax >= co2HighMax) {
+            alert("Moderate max must be less than High max.");
+            return;
+          }
+          try {
+            const response = await fetch(
+              "{% url 'adminpanel:save_thresholds' %}",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: JSON.stringify({
+                  co2_efficient_max: co2EfficientMax,
+                  co2_moderate_max: co2ModerateMax,
+                  co2_high_max: co2HighMax,
+                }),
+              }
+            );
+            const data = await response.json();
+            if (data.status === "success") {
+              alert("CO2 thresholds saved successfully!");
+              document.getElementById("co2_efficient_max").readOnly = true;
+              document.getElementById("co2_moderate_max").readOnly = true;
+              document.getElementById("co2_high_max").readOnly = true;
+              document.getElementById(
+                "co2_efficient_max_display"
+              ).readOnly = true;
+              document.getElementById(
+                "co2_moderate_max_display"
+              ).readOnly = true;
+              document.getElementById("edit-co2-btn").style.display =
+                "inline-block";
+              document.getElementById("save-co2-btn").style.display = "none";
+              loadThresholds(); // Reload to update display fields
+            } else {
+              alert("Error saving thresholds: " + data.message);
+            }
+          } catch (error) {
+            alert("Error saving thresholds.");
+          }
+        });
+
+      // Load thresholds on page load
+      document.addEventListener("DOMContentLoaded", loadThresholds);
     </script>
   </body>
 </html>

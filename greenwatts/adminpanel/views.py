@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.views.decorators.cache import cache_control
 from functools import wraps
-from .models import Admin
+from .models import Admin, Threshold
 from greenwatts.users.models import Office
 from ..sensors.models import Device
 from ..sensors.models import EnergyRecord
@@ -162,6 +162,16 @@ def admin_dashboard(request):
         total_energy=Sum('total_energy_kwh')
     ).order_by('-total_energy')
 
+    # Get thresholds from DB
+    try:
+        threshold = Threshold.objects.get(threshold_id=1)
+        energy_efficient_max = threshold.energy_efficient_max
+        energy_moderate_max = threshold.energy_moderate_max
+    except Threshold.DoesNotExist:
+        # Default values if not set
+        energy_efficient_max = 10.0
+        energy_moderate_max = 20.0
+
     # Determine status based on total_energy thresholds
     active_alerts = []
     for record in office_energy_qs:
@@ -169,9 +179,9 @@ def admin_dashboard(request):
         if record['office_name'] == 'DS' or not record['office_name']:
             continue
         energy = record['total_energy'] or 0
-        if energy > 20:
+        if energy > energy_moderate_max:
             status = 'High'
-        elif energy > 10:
+        elif energy > energy_efficient_max:
             status = 'Moderate'
         else:
             status = 'Efficient'
@@ -261,7 +271,11 @@ def admin_dashboard(request):
 def admin_setting(request):
     offices = Office.objects.all()
     devices = Device.objects.select_related('office').all()
-    return render(request, 'adminSetting.html', {'offices': offices, 'devices': devices})
+    try:
+        threshold = Threshold.objects.get(threshold_id=1)
+    except Threshold.DoesNotExist:
+        threshold = None
+    return render(request, 'adminSetting.html', {'offices': offices, 'devices': devices, 'threshold': threshold})
 
 @admin_required
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
@@ -351,13 +365,23 @@ def office_usage(request):
         total_co2=Sum('carbon_emission_kgco2')
     ).order_by('-total_energy')
 
+    # Get thresholds from DB
+    try:
+        threshold = Threshold.objects.get(threshold_id=1)
+        energy_efficient_max = threshold.energy_efficient_max
+        energy_moderate_max = threshold.energy_moderate_max
+    except Threshold.DoesNotExist:
+        # Default values if not set
+        energy_efficient_max = 10.0
+        energy_moderate_max = 20.0
+
     table_data = []
     for record in office_data:
         energy = record['total_energy'] or 0
-        if energy > 20:
+        if energy > energy_moderate_max:
             status = 'HIGH'
             status_class = 'high'
-        elif energy > 10:
+        elif energy > energy_efficient_max:
             status = 'MODERATE'
             status_class = 'moderate'
         else:
@@ -556,15 +580,31 @@ def admin_reports(request):
     inactive_offices = list(all_offices - active_offices)
     inactive_offices_str = ', '.join(inactive_offices) if inactive_offices else 'NONE'
 
-    # Best Performing Office (lowest energy, assuming Efficient <10)
+    # Get thresholds from DB
+    try:
+        threshold = Threshold.objects.get(threshold_id=1)
+        energy_efficient_max = threshold.energy_efficient_max
+    except Threshold.DoesNotExist:
+        energy_efficient_max = 10.0
+
+    # Best Performing Office (lowest energy, assuming Efficient < energy_efficient_max)
     best_office = None
     min_energy = float('inf')
     for record in office_data:
         energy = record['total_energy'] or 0
-        if energy < min_energy and energy <= 10:  # Efficient threshold
+        if energy < min_energy and energy <= energy_efficient_max:
             min_energy = energy
             best_office = record['office_name']
     best_performing_office = best_office if best_office else 'NONE'
+
+    # Get thresholds from DB
+    try:
+        threshold = Threshold.objects.get(threshold_id=1)
+        energy_efficient_max = threshold.energy_efficient_max
+        energy_moderate_max = threshold.energy_moderate_max
+    except Threshold.DoesNotExist:
+        energy_efficient_max = 10.0
+        energy_moderate_max = 20.0
 
     # Chart data: labels and values for bar chart
     chart_labels = [record['office_name'] for record in office_data]
@@ -573,9 +613,9 @@ def admin_reports(request):
     colors = []
     for record in office_data:
         energy = record['total_energy'] or 0
-        if energy > 20:
+        if energy > energy_moderate_max:
             colors.append('#d9534f')  # red
-        elif energy > 10:
+        elif energy > energy_efficient_max:
             colors.append('#f0ad4e')  # yellow
         else:
             colors.append('#5cb85c')  # green
@@ -899,7 +939,12 @@ def carbon_emission(request):
     prev_month_data = prev_month_data[-12:]
     current_month_data = current_month_data[-12:]
 
-    threshold = 180  # Fixed
+    # Get CO2 threshold from DB
+    try:
+        threshold_obj = Threshold.objects.get(threshold_id=1)
+        threshold = threshold_obj.co2_efficient_max
+    except Threshold.DoesNotExist:
+        threshold = 180.0  # Default value if not set
 
     context = {
         'total_energy_kwh': round(total_energy_kwh, 1),
@@ -1021,6 +1066,80 @@ def edit_office(request, id):
 
     else:
         return JsonResponse({"status": "error", "message": "Invalid request method"})
+
+@admin_required
+@csrf_exempt
+def save_thresholds(request):
+    if request.method == 'GET':
+        try:
+            threshold = Threshold.objects.get(threshold_id=1)
+            return JsonResponse({
+                'status': 'success',
+                'threshold': {
+                    'energy_efficient_max': threshold.energy_efficient_max,
+                    'energy_moderate_max': threshold.energy_moderate_max,
+                    'energy_high_max': threshold.energy_high_max,
+                    'co2_efficient_max': threshold.co2_efficient_max,
+                    'co2_moderate_max': threshold.co2_moderate_max,
+                    'co2_high_max': threshold.co2_high_max,
+                }
+            })
+        except Threshold.DoesNotExist:
+            return JsonResponse({
+                'status': 'success',
+                'threshold': {
+                    'energy_efficient_max': 10.0,
+                    'energy_moderate_max': 20.0,
+                    'energy_high_max': 30.0,
+                    'co2_efficient_max': 8.0,
+                    'co2_moderate_max': 13.0,
+                    'co2_high_max': 18.0,
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    elif request.method == 'POST':
+        try:
+            # Try to parse as JSON first
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                # If not JSON, assume form data
+                data = request.POST.dict()
+
+            # Get or create the threshold instance (assuming single row)
+            threshold, created = Threshold.objects.get_or_create(
+                threshold_id=1,  # Use a fixed ID for single threshold record
+                defaults={
+                    'energy_efficient_max': 10.0,
+                    'energy_moderate_max': 20.0,
+                    'energy_high_max': 30.0,
+                    'co2_efficient_max': 8.0,
+                    'co2_moderate_max': 13.0,
+                    'co2_high_max': 18.0,
+                }
+            )
+
+            # Update only the provided fields
+            if 'energy_efficient_max' in data and data['energy_efficient_max']:
+                threshold.energy_efficient_max = float(data['energy_efficient_max'])
+            if 'energy_moderate_max' in data and data['energy_moderate_max']:
+                threshold.energy_moderate_max = float(data['energy_moderate_max'])
+            if 'energy_high_max' in data and data['energy_high_max']:
+                threshold.energy_high_max = float(data['energy_high_max'])
+            if 'co2_efficient_max' in data and data['co2_efficient_max']:
+                threshold.co2_efficient_max = float(data['co2_efficient_max'])
+            if 'co2_moderate_max' in data and data['co2_moderate_max']:
+                threshold.co2_moderate_max = float(data['co2_moderate_max'])
+            if 'co2_high_max' in data and data['co2_high_max']:
+                threshold.co2_high_max = float(data['co2_high_max'])
+
+            threshold.save()
+
+            return JsonResponse({'status': 'success', 'message': 'Thresholds updated successfully'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 def admin_logout(request):
     request.session.flush()  # Clear the session

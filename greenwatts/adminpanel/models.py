@@ -22,3 +22,20 @@ class Admin(models.Model):
 
     def __str__(self):
         return self.username
+
+class Threshold(models.Model):
+    threshold_id = models.AutoField(primary_key=True)
+    energy_efficient_max = models.FloatField(default=10.0)  # Max for Efficient (e.g., <=10)
+    energy_moderate_max = models.FloatField(default=20.0)   # Max for Moderate (e.g., >10 and <=20)
+    energy_high_max = models.FloatField(default=30.0)       # Max for High (e.g., >20 and <=30)
+    co2_efficient_max = models.FloatField(default=8.0)      # Max for Efficient CO2
+    co2_moderate_max = models.FloatField(default=13.0)      # Max for Moderate CO2
+    co2_high_max = models.FloatField(default=18.0)          # Max for High CO2
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "tbl_threshold"
+
+    def __str__(self):
+        return f"Thresholds: Energy Eff<{self.energy_efficient_max}, Mod<{self.energy_moderate_max}; CO2 Eff<{self.co2_efficient_max}, Mod<{self.co2_moderate_max}"
