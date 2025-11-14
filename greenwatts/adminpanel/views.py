@@ -512,60 +512,65 @@ def admin_reports(request):
     from datetime import datetime as dt
     from django.db.models import F
 
+    # Get selected day, month, year from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    # Get unique dates from EnergyRecord, last 7 days with data, ordered descending
-    unique_dates_qs = EnergyRecord.objects.filter(
+    # Year options: only 2025
+    year_options = ['2025']
+
+    # Month options: only October
+    month_options = [{'value': '10', 'name': 'October'}]
+
+    # Day options: all 31 days in October 2025, formatted as mm/dd/yyyy
+    from datetime import date, timedelta
+    start_date = date(2025, 10, 1)
+    end_date = date(2025, 10, 31)
+    day_options = []
+    current = start_date
+    while current <= end_date:
+        day_options.append(current.strftime('%m/%d/%Y'))
+        current += timedelta(days=1)
+
+    # Determine filter date range
+    filter_kwargs = {}
+    selected_date = None
+    if selected_day:
+        try:
+            month_str, day_str, year_str = selected_day.split('/')
+            selected_date = date(int(year_str), int(month_str), int(day_str))
+            filter_kwargs = {'date': selected_date}
+            # Set selected_month and selected_year for template selects
+            selected_month = month_str
+            selected_year = year_str
+        except ValueError:
+            selected_date = None
+    elif selected_month and selected_year:
+        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+    elif selected_year:
+        filter_kwargs = {'date__year': int(selected_year)}
+    else:
+        # Default to latest date
+        latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
+        latest_date = latest_date_qs['latest_date']
+        if latest_date:
+            selected_date = latest_date
+            filter_kwargs = {'date': selected_date}
+
+    # Filter data for selected filter
+    office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).dates('date', 'day').distinct().order_by('-date')[:7]
-    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
-
-    # Get selected date from request or use latest
-    selected_date_str = request.GET.get('selected_date')
-    selected_date = None
-    if selected_date_str and selected_date_str in day_options:
-        # Parse the selected date (format mm/dd/yyyy)
-        try:
-            month, day, year = map(int, selected_date_str.split('/'))
-            selected_date = date(year, month, day)
-        except ValueError:
-            selected_date = None
-    if not selected_date:
-        # Default to latest date
-        latest_date_qs = EnergyRecord.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).aggregate(latest_date=Max('date'))
-        latest_date = latest_date_qs['latest_date']
-        if latest_date:
-            selected_date = latest_date.date() if hasattr(latest_date, 'date') else latest_date
-
-    # Filter data for selected date
-    if selected_date:
-        office_data = EnergyRecord.objects.filter(
-            date=selected_date,
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).values(
-            office_name=F('device__office__name')
-        ).annotate(
-            total_energy=Sum('total_energy_kwh')
-        ).order_by('-total_energy')
-    else:
-        office_data = EnergyRecord.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).values(
-            office_name=F('device__office__name')
-        ).annotate(
-            total_energy=Sum('total_energy_kwh')
-        ).order_by('-total_energy')
+    ).values(
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh')
+    ).order_by('-total_energy')
 
     # Total Energy Usage
     total_energy_usage = sum(record['total_energy'] or 0 for record in office_data)
@@ -611,14 +616,18 @@ def admin_reports(request):
     chart_values = [record['total_energy'] or 0 for record in office_data]
     # Colors based on status (High red, Moderate yellow, Efficient green)
     colors = []
+    statuses = []
     for record in office_data:
         energy = record['total_energy'] or 0
         if energy > energy_moderate_max:
             colors.append('#d9534f')  # red
+            statuses.append('Above Threshold')
         elif energy > energy_efficient_max:
             colors.append('#f0ad4e')  # yellow
+            statuses.append('Within Threshold')
         else:
             colors.append('#5cb85c')  # green
+            statuses.append('Below Threshold')
 
     context = {
         'total_energy_usage': total_energy_usage,
@@ -628,8 +637,13 @@ def admin_reports(request):
         'chart_labels': json.dumps(chart_labels),
         'chart_values': json.dumps(chart_values),
         'chart_colors': json.dumps(colors),
+        'statuses': json.dumps(statuses),
         'day_options': day_options,
-        'selected_date': selected_date_str if selected_date_str else None,
+        'month_options': month_options,
+        'year_options': year_options,
+        'selected_day': selected_day,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
     }
     return render(request, 'adminReports.html', context)
 
