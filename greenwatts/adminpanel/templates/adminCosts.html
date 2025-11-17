@@ -89,14 +89,23 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select>
-          <option>Week</option>
+        <select id="day-select">
+          <option value="">Day</option>
+          {% for day in day_options %}
+          <option value="{{ day }}" {% if selected_day == day %}selected{% endif %}>{{ day }}</option>
+          {% endfor %}
         </select>
-        <select>
-          <option>Month</option>
+        <select id="month-select">
+          <option value="">Month</option>
+          {% for month in month_options %}
+          <option value="{{ month.value }}" {% if selected_month == month.value %}selected{% endif %}>{{ month.name }}</option>
+          {% endfor %}
         </select>
-        <select>
-          <option>Year</option>
+        <select id="year-select">
+          <option value="">Year</option>
+          {% for year in year_options %}
+          <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
         </select>
       </div>
 
@@ -230,6 +239,54 @@
       }
       setInterval(updateTime, 1000);
       updateTime(); // initial call
+
+      // Handle filter dropdown changes
+      document.addEventListener('DOMContentLoaded', function() {
+        const daySelect = document.getElementById('day-select');
+        const monthSelect = document.getElementById('month-select');
+        const yearSelect = document.getElementById('year-select');
+
+        function updateFilters() {
+          const params = new URLSearchParams();
+          const day = daySelect.value;
+          const month = monthSelect.value;
+          const year = yearSelect.value;
+
+          if (day) params.append('selected_day', day);
+          else if (month && year) {
+            params.append('selected_month', month);
+            params.append('selected_year', year);
+          } else if (year) params.append('selected_year', year);
+
+          const queryString = params.toString();
+          window.location.href = queryString ? `?${queryString}` : '?';
+        }
+
+        daySelect.addEventListener('change', function() {
+          if (this.value) {
+            monthSelect.value = '';
+            yearSelect.value = '';
+          }
+          updateFilters();
+        });
+
+        monthSelect.addEventListener('change', function() {
+          if (this.value && yearSelect.value) {
+            daySelect.value = '';
+          }
+          updateFilters();
+        });
+
+        yearSelect.addEventListener('change', function() {
+          if (this.value && monthSelect.value) {
+            daySelect.value = '';
+          } else if (this.value && !monthSelect.value) {
+            daySelect.value = '';
+            monthSelect.value = '';
+          }
+          updateFilters();
+        });
+      });
     </script>
   </body>
 </html>
