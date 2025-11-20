@@ -1293,9 +1293,15 @@ def carbon_emission(request):
     # Get CO2 threshold from DB
     try:
         threshold_obj = Threshold.objects.get(threshold_id=1)
-        threshold = threshold_obj.co2_efficient_max
+        threshold = threshold_obj.co2_high_max
+        co2_efficient_max = threshold_obj.co2_efficient_max
+        co2_moderate_max = threshold_obj.co2_moderate_max
+        co2_high_max = threshold_obj.co2_high_max
     except Threshold.DoesNotExist:
         threshold = 180.0  # Default value if not set
+        co2_efficient_max = 8.0
+        co2_moderate_max = 13.0
+        co2_high_max = 18.0
 
     context = {
         'total_energy_kwh': round(total_energy_kwh, 1),
@@ -1315,6 +1321,9 @@ def carbon_emission(request):
         'prev_month_data': json.dumps(prev_month_data),
         'current_month_data': json.dumps(current_month_data),
         'threshold': threshold,
+        'co2_efficient_max': co2_efficient_max,
+        'co2_moderate_max': co2_moderate_max,
+        'co2_high_max': co2_high_max,
         'week_options': week_options,
         'month_options': month_options,
         'year_options': year_options,
