@@ -959,7 +959,10 @@ def admin_costs(request):
         period_label = f"{period_start.strftime('%B %d, %Y')}"
 
     so_far_label = f"So Far This {level.capitalize()} ({period_label})"
-    predicted_label = f"Predicted This {level.capitalize()} ({period_label})"
+    if level == 'week':
+        predicted_label = f"Predicted This {level.capitalize()}"
+    else:
+        predicted_label = f"Predicted This {level.capitalize()} ({period_label})"
     savings_label = "Estimated Savings"
 
     context = {
@@ -1123,7 +1126,7 @@ def carbon_emission(request):
         prev_start = period_start - timedelta(days=7)
         prev_end = period_end - timedelta(days=7)
         previous_label = f"Previous Week ({prev_start.strftime('%B %d')} - {prev_end.strftime('%d, %Y')})"
-        period_label = f"Week ({period_start.strftime('%B %d')} - {period_end.strftime('%d, %Y')})"
+        period_label = f"{period_start.strftime('%B %d')} - {period_end.strftime('%d, %Y')}"
     elif level == 'month':
         period_start = date(int(selected_year or now.year), int(selected_month or now.month), 1)
         _, last_day = monthrange(int(selected_year or now.year), int(selected_month or now.month))
@@ -1306,6 +1309,12 @@ def carbon_emission(request):
     total_co2 = aggregates['total_co2'] or 0
     avg_daily_co2 = total_co2 / num_days if num_days > 0 else 0
 
+    so_far_label = f"So Far This {level.capitalize()} ({period_label})"
+    if level == 'week':
+        predicted_label = f"Predicted This {level.capitalize()}"
+    else:
+        predicted_label = f"Predicted This {level.capitalize()} ({period_label})"
+
     context = {
         'total_energy_kwh': round(total_energy_kwh, 1),
         'total_co2': f"{total_co2:.1f}",
@@ -1313,9 +1322,9 @@ def carbon_emission(request):
         'highest_co2_office': highest_co2_office,
         'previous_label': previous_label,
         'prev_co2': f"{prev_co2:.1f}",
-        'so_far_label': f"So Far This {level.capitalize()} ({period_label})",
+        'so_far_label': so_far_label,
         'so_far_co2': f"{so_far_co2:.1f}",
-        'predicted_label': f"Predicted This {level.capitalize()} ({period_label})",
+        'predicted_label': predicted_label,
         'predicted_co2': f"{predicted_co2:.0f}",
         'change_percent': f"{abs(change_percent):.2f}%",
         'change_direction': change_direction,
