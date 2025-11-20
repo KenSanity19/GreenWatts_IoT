@@ -1303,10 +1303,13 @@ def carbon_emission(request):
         co2_moderate_max = 13.0
         co2_high_max = 18.0
 
+    total_co2 = aggregates['total_co2'] or 0
+    avg_daily_co2 = total_co2 / num_days if num_days > 0 else 0
+
     context = {
         'total_energy_kwh': round(total_energy_kwh, 1),
-        'total_cost': f"{total_cost:.2f}",
-        'avg_daily_cost': f"{avg_daily_cost:.2f}",
+        'total_co2': f"{total_co2:.1f}",
+        'avg_daily_co2': f"{avg_daily_co2:.1f}",
         'highest_co2_office': highest_co2_office,
         'previous_label': previous_label,
         'prev_co2': f"{prev_co2:.1f}",
