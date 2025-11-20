@@ -999,28 +999,88 @@ def carbon_emission(request):
     from django.utils import timezone
     import json
 
+    # Get selected day, month, year, week from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+    selected_week = request.GET.get('selected_week')
+
     # Get all valid office ids from Office table
     from greenwatts.users.models import Office
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
+    # Week options: dynamic from database
+    week_options = get_week_options(valid_office_ids)
+
+    # Year options: only 2025
+    year_options = ['2025']
+
+    # Month options: only October
+    month_options = [{'value': '10', 'name': 'October'}]
+
+    # Day options: all 31 days in October 2025, formatted as mm/dd/yyyy
+    from datetime import date, timedelta
+    start_date = date(2025, 10, 1)
+    end_date = date(2025, 10, 31)
+    day_options = []
+    current = start_date
+    while current <= end_date:
+        day_options.append(current.strftime('%m/%d/%Y'))
+        current += timedelta(days=1)
+
+    # Determine filter date range
+    filter_kwargs = {}
+    selected_date = None
+    level = 'month'  # Default to month for CO2
     now = timezone.now().date()
-    current_month = now.month
-    current_year = now.year
-    days_so_far = now.day
+    if selected_day:
+        try:
+            month_str, day_str, year_str = selected_day.split('/')
+            selected_date = date(int(year_str), int(month_str), int(day_str))
+            filter_kwargs = {'date': selected_date}
+            level = 'day'
+            # Set selected_month and selected_year for template selects
+            selected_month = month_str
+            selected_year = year_str
+        except ValueError:
+            selected_date = None
+    elif selected_month and selected_year:
+        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+        level = 'month'
+    elif selected_year:
+        filter_kwargs = {'date__year': int(selected_year)}
+        level = 'year'
+    elif selected_week:
+        try:
+            week_date = date.fromisoformat(selected_week)
+            week_num = week_date.isocalendar()[1]
+            filter_kwargs = {'date__week': week_num, 'date__year': week_date.year}
+            level = 'week'
+        except ValueError:
+            selected_week = None
+    else:
+        # Default to latest date
+        latest_date_qs = EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).aggregate(latest_date=Max('date'))
+        latest_date = latest_date_qs['latest_date']
+        if latest_date:
+            selected_date = latest_date.date() if hasattr(latest_date, 'date') else latest_date
+            filter_kwargs = {'date': selected_date}
+            level = 'day'
+            selected_month = str(selected_date.month)
+            selected_year = str(selected_date.year)
+        else:
+            # Fallback to current month if no data
+            filter_kwargs = {'date__year': now.year, 'date__month': now.month}
+            level = 'month'
+            selected_month = str(now.month)
+            selected_year = str(now.year)
 
-    # Previous month
-    prev_month = current_month - 1 if current_month > 1 else 12
-    prev_year = current_year if current_month > 1 else current_year - 1
-    previous_month_name = date(prev_year, prev_month, 1).strftime('%B %Y')
-
-    # Days in current month
-    days_in_month = monthrange(current_year, current_month)[1]
-
-    # Aggregates for current month so far
-    current_month_aggregates = EnergyRecord.objects.filter(
-        date__year=current_year,
-        date__month=current_month,
-        date__lte=now,
+    # Aggregates for selected filter
+    aggregates = EnergyRecord.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
@@ -1030,15 +1090,18 @@ def carbon_emission(request):
         total_co2=Sum('carbon_emission_kgco2')
     )
 
-    total_energy_kwh = current_month_aggregates['total_energy'] or 0
-    total_cost = current_month_aggregates['total_cost'] or 0
-    avg_daily_cost = total_cost / days_so_far if days_so_far > 0 else 0
+    num_days = EnergyRecord.objects.filter(**filter_kwargs).filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).dates('date', 'day').distinct().count() or 1
 
-    # Highest CO2 emission office (current month)
-    highest_office_data = EnergyRecord.objects.filter(
-        date__year=current_year,
-        date__month=current_month,
-        date__lte=now,
+    total_energy_kwh = aggregates['total_energy'] or 0
+    total_cost = aggregates['total_cost'] or 0
+    avg_daily_cost = total_cost / num_days if num_days > 0 else 0
+
+    # Highest CO2 emission office
+    highest_office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
@@ -1048,81 +1111,184 @@ def carbon_emission(request):
         total_co2=Sum('carbon_emission_kgco2')
     ).order_by('-total_co2')
 
-    highest_co2_office = highest_office_data.first()['office_name'] if highest_office_data else 'NONE'
+    highest_co2_office = highest_office_data.first()['office_name'] if highest_office_data and highest_office_data.first()['total_co2'] else 'NONE'
 
-    # Last month total CO2
-    last_month_total_co2 = EnergyRecord.objects.filter(
-        date__year=prev_year,
-        date__month=prev_month,
+    # Determine previous period for comparison
+    if level == 'week':
+        if selected_week:
+            period_start = date.fromisoformat(selected_week)
+        else:
+            period_start = now - timedelta(days=now.weekday())
+        period_end = period_start + timedelta(days=6)
+        prev_start = period_start - timedelta(days=7)
+        prev_end = period_end - timedelta(days=7)
+        previous_label = f"Previous Week ({prev_start.strftime('%B %d')} - {prev_end.strftime('%d, %Y')})"
+        period_label = f"Week ({period_start.strftime('%B %d')} - {period_end.strftime('%d, %Y')})"
+    elif level == 'month':
+        period_start = date(int(selected_year or now.year), int(selected_month or now.month), 1)
+        _, last_day = monthrange(int(selected_year or now.year), int(selected_month or now.month))
+        period_end = date(int(selected_year or now.year), int(selected_month or now.month), last_day)
+        prev_year = int(selected_year or now.year)
+        prev_month = int(selected_month or now.month) - 1
+        if prev_month == 0:
+            prev_month = 12
+            prev_year -= 1
+        prev_start = date(prev_year, prev_month, 1)
+        _, last_day_prev = monthrange(prev_year, prev_month)
+        prev_end = date(prev_year, prev_month, last_day_prev)
+        previous_label = f"{prev_start.strftime('%B %Y')} Total"
+        period_label = f"{period_start.strftime('%B %Y')}"
+    elif level == 'year':
+        period_start = date(int(selected_year or now.year), 1, 1)
+        period_end = date(int(selected_year or now.year), 12, 31)
+        prev_start = date(int(selected_year or now.year) - 1, 1, 1)
+        prev_end = date(int(selected_year or now.year) - 1, 12, 31)
+        previous_label = f"{prev_start.year} Total"
+        period_label = f"{selected_year or now.year}"
+    else:  # day
+        period_start = selected_date or now
+        period_end = selected_date or now
+        prev_start = period_start - timedelta(days=1)
+        prev_end = period_end - timedelta(days=1)
+        prev_month = prev_start.month
+        prev_year = prev_start.year
+        previous_label = f"{prev_start.strftime('%B %d, %Y')} Total"
+        period_label = f"{period_start.strftime('%B %d, %Y')}"
+
+    # Previous CO2
+    prev_co2 = EnergyRecord.objects.filter(
+        date__gte=prev_start,
+        date__lte=prev_end,
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
     ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
-    # Current month so far CO2
-    current_month_so_far_co2 = current_month_aggregates['total_co2'] or 0
-
-    # Predicted this month CO2
-    avg_daily_co2 = current_month_so_far_co2 / days_so_far if days_so_far > 0 else 0
-    predicted_month_co2 = avg_daily_co2 * days_in_month
-
-    # Change in emissions
-    if last_month_total_co2 > 0:
-        change_percent = ((current_month_so_far_co2 - last_month_total_co2) / last_month_total_co2) * 100
-    else:
-        change_percent = 0
-    change_direction = '▲' if change_percent > 0 else '▼'
-    change_class = 'red-arrow' if change_percent > 0 else 'green-arrow'  # Assume red for increase
-
-    # Chart data: Last 40 days to cover two months
-    end_date = now
-    start_date = end_date - timedelta(days=40)
-    daily_data = EnergyRecord.objects.filter(
-        date__gte=start_date,
-        date__lte=end_date,
+    # So far CO2
+    so_far_end = min(period_end, now)
+    so_far_co2 = EnergyRecord.objects.filter(
+        date__gte=period_start,
+        date__lte=so_far_end,
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).annotate(
-        day_date=TruncDate('date')
-    ).values(
-        'day_date'
-    ).annotate(
-        total_co2=Sum('carbon_emission_kgco2')
-    ).order_by('day_date')
+    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
-    # Generate full date range
-    date_range = []
-    current = start_date
-    while current <= end_date:
-        date_range.append(current)
-        current += timedelta(days=1)
+    # Predicted CO2
+    total_days = (period_end - period_start).days + 1
+    days_so_far = (so_far_end - period_start).days + 1 if so_far_end >= period_start else 0
+    if days_so_far > 0 and period_end > now:
+        avg_daily_co2 = so_far_co2 / days_so_far
+        predicted_co2 = avg_daily_co2 * total_days
+    else:
+        predicted_co2 = so_far_co2
 
-    # Map data
-    date_dict = {item['day_date']: item['total_co2'] or 0 for item in daily_data}
-    daily_co2 = [date_dict.get(d, 0) for d in date_range]
+    # Change in emissions
+    if prev_co2 > 0:
+        change_percent = ((so_far_co2 - prev_co2) / prev_co2) * 100
+    else:
+        change_percent = 0
+    change_direction = '▲' if change_percent > 0 else '▼'
+    change_class = 'red-arrow' if change_percent > 0 else 'green-arrow'
 
-    # Split into previous and current month data
-    prev_month_data = []
-    current_month_data = []
-    labels = []
-    for d in date_range:
-        month_name = d.strftime('%B')
-        label = f"{month_name} {d.day}"
-        labels.append(label)
-
-        if d.month == prev_month and d.year == prev_year:
-            prev_month_data.append(date_dict.get(d, 0))
-            current_month_data.append(0)
-        else:
-            prev_month_data.append(0)
-            current_month_data.append(date_dict.get(d, 0))
-
-    # Pad to 12 points if needed, but use actual
-    # For now, use up to 12 recent points
-    labels = labels[-12:]
-    prev_month_data = prev_month_data[-12:]
-    current_month_data = current_month_data[-12:]
+    # Chart data based on level
+    if level == 'week':
+        week_date = date.fromisoformat(selected_week)
+        start_date = week_date
+        end_date = start_date + timedelta(days=6)
+        chart_dates = [start_date + timedelta(days=i) for i in range(7)]
+        labels = [f"{d.strftime('%a')}\n{d.strftime('%B %d')}" for d in chart_dates]
+        prev_month_data = []
+        current_month_data = []
+        for d in chart_dates:
+            co2 = EnergyRecord.objects.filter(
+                date=d,
+                device__office__office_id__in=valid_office_ids
+            ).exclude(
+                device__office__name='DS'
+            ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
+            # For week, assume current is the selected week, prev is previous week
+            if d >= prev_start and d <= prev_end:
+                prev_month_data.append(co2)
+                current_month_data.append(0)
+            else:
+                prev_month_data.append(0)
+                current_month_data.append(co2)
+    elif level == 'month':
+        start_date = date(int(selected_year or now.year), int(selected_month or now.month), 1)
+        _, last_day = monthrange(int(selected_year or now.year), int(selected_month or now.month))
+        end_date = date(int(selected_year or now.year), int(selected_month or now.month), last_day)
+        chart_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+        labels = [d.strftime('%d') for d in chart_dates]
+        prev_month_data = []
+        current_month_data = []
+        for d in chart_dates:
+            co2 = EnergyRecord.objects.filter(
+                date=d,
+                device__office__office_id__in=valid_office_ids
+            ).exclude(
+                device__office__name='DS'
+            ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
+            if d.month == prev_month and d.year == prev_year:
+                prev_month_data.append(co2)
+                current_month_data.append(0)
+            else:
+                prev_month_data.append(0)
+                current_month_data.append(co2)
+    elif level == 'year':
+        # Aggregate by month
+        monthly_data = EnergyRecord.objects.filter(
+            date__year=int(selected_year or now.year),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).annotate(
+            month=ExtractMonth('date')
+        ).values('month').annotate(
+            total_co2=Sum('carbon_emission_kgco2')
+        ).order_by('month')
+        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        prev_month_data = [0] * 12
+        current_month_data = [0] * 12
+        for item in monthly_data:
+            current_month_data[item['month'] - 1] = item['total_co2'] or 0
+        # For year, prev is previous year
+        prev_year_data = EnergyRecord.objects.filter(
+            date__year=int(selected_year or now.year) - 1,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).annotate(
+            month=ExtractMonth('date')
+        ).values('month').annotate(
+            total_co2=Sum('carbon_emission_kgco2')
+        ).order_by('month')
+        for item in prev_year_data:
+            prev_month_data[item['month'] - 1] = item['total_co2'] or 0
+    else:  # day
+        # Default to last 12 days
+        chart_dates_desc = EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').distinct().order_by('-date')[:12]
+        chart_dates = list(reversed(chart_dates_desc))
+        labels = [d.strftime('%B %d') for d in chart_dates]
+        prev_month_data = []
+        current_month_data = []
+        for d in chart_dates:
+            co2 = EnergyRecord.objects.filter(
+                date=d,
+                device__office__office_id__in=valid_office_ids
+            ).exclude(
+                device__office__name='DS'
+            ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
+            if d.month == prev_month and d.year == prev_year:
+                prev_month_data.append(co2)
+                current_month_data.append(0)
+            else:
+                prev_month_data.append(0)
+                current_month_data.append(co2)
 
     # Get CO2 threshold from DB
     try:
@@ -1136,9 +1302,12 @@ def carbon_emission(request):
         'total_cost': f"{total_cost:.2f}",
         'avg_daily_cost': f"{avg_daily_cost:.2f}",
         'highest_co2_office': highest_co2_office,
-        'last_month_co2': f"{last_month_total_co2:.1f}",
-        'current_month_so_far_co2': f"{current_month_so_far_co2:.1f}",
-        'predicted_month_co2': f"{predicted_month_co2:.0f}",
+        'previous_label': previous_label,
+        'prev_co2': f"{prev_co2:.1f}",
+        'so_far_label': f"So Far This {level.capitalize()} ({period_label})",
+        'so_far_co2': f"{so_far_co2:.1f}",
+        'predicted_label': f"Predicted This {level.capitalize()} ({period_label})",
+        'predicted_co2': f"{predicted_co2:.0f}",
         'change_percent': f"{abs(change_percent):.2f}%",
         'change_direction': change_direction,
         'change_class': change_class,
@@ -1146,7 +1315,14 @@ def carbon_emission(request):
         'prev_month_data': json.dumps(prev_month_data),
         'current_month_data': json.dumps(current_month_data),
         'threshold': threshold,
-        'previous_month_name': previous_month_name,
+        'week_options': week_options,
+        'month_options': month_options,
+        'year_options': year_options,
+        'day_options': day_options,
+        'selected_day': selected_day,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'selected_week': selected_week,
     }
     return render(request, 'carbonEmission.html', context)
 

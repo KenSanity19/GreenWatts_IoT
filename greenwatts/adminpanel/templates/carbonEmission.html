@@ -87,14 +87,23 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select>
-          <option>Week</option>
+        <select id="week-select">
+          <option value="">Week</option>
+          {% for week in week_options %}
+          <option value="{{ week.value }}" {% if selected_week == week.value %}selected{% endif %}>{{ week.name }}</option>
+          {% endfor %}
         </select>
-        <select>
-          <option>Month</option>
+        <select id="month-select">
+          <option value="">Month</option>
+          {% for month in month_options %}
+          <option value="{{ month.value }}" {% if selected_month == month.value %}selected{% endif %}>{{ month.name }}</option>
+          {% endfor %}
         </select>
-        <select>
-          <option>Year</option>
+        <select id="year-select">
+          <option value="">Year</option>
+          {% for year in year_options %}
+          <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
         </select>
       </div>
 
@@ -122,16 +131,16 @@
         <div class="chart-header">
           <div class="chart-info">
             <div class="info-item">
-              <div class="info-label">{{ previous_month_name }}</div>
-              <div class="info-value">{{ last_month_co2 }} kg</div>
+              <div class="info-label">{{ previous_label }}</div>
+              <div class="info-value">{{ prev_co2 }} kg</div>
             </div>
             <div class="info-item">
-              <div class="info-label">SO FAR THIS MONTH</div>
-              <div class="info-value">{{ current_month_so_far_co2 }} kg</div>
+              <div class="info-label">{{ so_far_label }}</div>
+              <div class="info-value">{{ so_far_co2 }} kg</div>
             </div>
             <div class="info-item">
-              <div class="info-label">PREDICTED THIS MONTH</div>
-              <div class="info-value">{{ predicted_month_co2 }} kg</div>
+              <div class="info-label">{{ predicted_label }}</div>
+              <div class="info-value">{{ predicted_co2 }} kg</div>
             </div>
             <div class="info-item">
               <div class="info-label">CHANGE IN EMISSIONS</div>
@@ -208,13 +217,24 @@
               ctx.fillText("THRESHOLD", rightX + 5, thresholdY - 5);
               ctx.restore();
             },
+            afterBuildTicks: function(chart) {
+              const yScale = chart.scales.y;
+              yScale.ticks = [
+                { value: 0 },
+                { value: 50 },
+                { value: 100 },
+                { value: 170 },
+                { value: 250 },
+                { value: 320 },
+                { value: 400 },
+              ];
+            },
           },
           scales: {
             y: {
               beginAtZero: true,
-              max: 230,
+              max: 400,
               ticks: {
-                stepSize: 46,
                 callback: function (value) {
                   return value + " kg";
                 },
@@ -249,6 +269,36 @@
       }
       setInterval(updateTime, 1000);
       updateTime(); // initial call
+
+      // Handle filter dropdown changes
+      document.addEventListener('DOMContentLoaded', function() {
+        const weekSelect = document.getElementById('week-select');
+        const monthSelect = document.getElementById('month-select');
+        const yearSelect = document.getElementById('year-select');
+
+        function updateFilters() {
+          const params = new URLSearchParams();
+          const week = weekSelect.value;
+          const month = monthSelect.value;
+          const year = yearSelect.value;
+
+          if (week) {
+            params.append('selected_week', week);
+          } else if (month && year) {
+            params.append('selected_month', month);
+            params.append('selected_year', year);
+          } else if (year) {
+            params.append('selected_year', year);
+          }
+
+          const queryString = params.toString();
+          window.location.href = queryString ? `?${queryString}` : '?';
+        }
+
+        weekSelect.addEventListener('change', updateFilters);
+        monthSelect.addEventListener('change', updateFilters);
+        yearSelect.addEventListener('change', updateFilters);
+      });
     </script>
   </body>
 </html>

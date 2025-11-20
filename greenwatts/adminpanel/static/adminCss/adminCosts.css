@@ -145,3 +145,18 @@
   text-align: center;
   flex: 1;
 }
+
+/* Filters dropdown styles */
+.main-content .filters select {
+  color: #fff !important;
+  background-color: #16163f !important;
+  border: 1px solid #444;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.main-content .filters select option {
+  color: #fff !important;
+  background-color: #16163f !important;
+}
