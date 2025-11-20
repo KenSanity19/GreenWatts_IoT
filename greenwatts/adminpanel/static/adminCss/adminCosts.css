@@ -124,3 +124,24 @@
 .total {  background: #527e4c; }     /* Green */
 .highest { background: #dc3545; }   /* Red */
 .inactive { background: #214574; }  /* Blue */
+
+.week-dates {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  color: #fff;
+}
+
+.days, .dates {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+.days span, .dates span {
+  font-size: 0.8rem;
+  text-align: center;
+  flex: 1;
+}

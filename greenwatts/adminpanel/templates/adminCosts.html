@@ -89,10 +89,10 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select id="day-select">
-          <option value="">Day</option>
-          {% for day in day_options %}
-          <option value="{{ day }}" {% if selected_day == day %}selected{% endif %}>{{ day }}</option>
+        <select id="week-select">
+          <option value="">Week</option>
+          {% for week in week_options %}
+          <option value="{{ week.value }}" {% if selected_week == week.value %}selected{% endif %}>{{ week.name }}</option>
           {% endfor %}
         </select>
         <select id="month-select">
@@ -136,26 +136,27 @@
           <div class="chart-header">
             <div class="chart-info">
               <div class="info-item">
-                <div class="info-label">June</div>
-                <div class="info-value">₱{{ june_cost|floatformat:2 }}</div>
+                <div class="info-label">{{ previous_label }}</div>
+                <div class="info-value">₱{{ prev_cost|floatformat:2 }}</div>
               </div>
               <div class="info-item">
-                <div class="info-label">So far this month</div>
+                <div class="info-label">{{ so_far_label }}</div>
                 <div class="info-value">₱{{ so_far_cost|floatformat:2 }}</div>
               </div>
               <div class="info-item">
-                <div class="info-label">Predicted this month</div>
+                <div class="info-label">{{ predicted_label }}</div>
                 <div class="info-value">
                   ₱{{ predicted_cost|floatformat:2 }}
                 </div>
               </div>
               <div class="info-item">
-                <div class="info-label">Estimate savings</div>
+                <div class="info-label">{{ savings_label }}</div>
                 <div class="info-value">₱{{ savings|floatformat:2 }}</div>
               </div>
             </div>
           </div>
           <canvas id="energyChart"></canvas>
+
           <!-- Energy Tip -->
           <div class="energy-tip">
             <p>
@@ -242,50 +243,32 @@
 
       // Handle filter dropdown changes
       document.addEventListener('DOMContentLoaded', function() {
-        const daySelect = document.getElementById('day-select');
+        const weekSelect = document.getElementById('week-select');
         const monthSelect = document.getElementById('month-select');
         const yearSelect = document.getElementById('year-select');
 
         function updateFilters() {
           const params = new URLSearchParams();
-          const day = daySelect.value;
+          const week = weekSelect.value;
           const month = monthSelect.value;
           const year = yearSelect.value;
 
-          if (day) params.append('selected_day', day);
-          else if (month && year) {
+          if (week) {
+            params.append('selected_week', week);
+          } else if (month && year) {
             params.append('selected_month', month);
             params.append('selected_year', year);
-          } else if (year) params.append('selected_year', year);
+          } else if (year) {
+            params.append('selected_year', year);
+          }
 
           const queryString = params.toString();
           window.location.href = queryString ? `?${queryString}` : '?';
         }
 
-        daySelect.addEventListener('change', function() {
-          if (this.value) {
-            monthSelect.value = '';
-            yearSelect.value = '';
-          }
-          updateFilters();
-        });
-
-        monthSelect.addEventListener('change', function() {
-          if (this.value && yearSelect.value) {
-            daySelect.value = '';
-          }
-          updateFilters();
-        });
-
-        yearSelect.addEventListener('change', function() {
-          if (this.value && monthSelect.value) {
-            daySelect.value = '';
-          } else if (this.value && !monthSelect.value) {
-            daySelect.value = '';
-            monthSelect.value = '';
-          }
-          updateFilters();
-        });
+        weekSelect.addEventListener('change', updateFilters);
+        monthSelect.addEventListener('change', updateFilters);
+        yearSelect.addEventListener('change', updateFilters);
       });
     </script>
   </body>
