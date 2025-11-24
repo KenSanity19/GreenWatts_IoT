@@ -23,11 +23,11 @@ const char *ssid = "PLDTLANG";
 const char *password = "Successed@123";
 
 // Server Configuration
-const char *serverUrl = "http://localhost:8000/api/sensor-data"; // Update with your server URL
+const char *serverUrl = "https://greenwatts-iot.onrender.com/api/sensor-data";
 const char *apiKey = "YOUR_API_KEY";
 
 // Device Configuration
-const int deviceId = 1; // Update with your device ID from GreenWatts
+const int deviceId = 2; // Update with your device ID from GreenWatts
 
 // PZEM-004T Configuration
 #define PZEM_RX_PIN 16

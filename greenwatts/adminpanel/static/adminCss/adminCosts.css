@@ -7,6 +7,19 @@
   width: 100%;
 }
 
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .bottom-section {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 600px) {
+  .bottom-section {
+    padding: 10px;
+  }
+}
+
 /* Chart section for energy cost - large prominent like Figma */
 .change-cost {
     background-color: #16163f;

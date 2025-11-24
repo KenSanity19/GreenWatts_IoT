@@ -177,3 +177,20 @@ span#live-time {
         width: 100%;
     }
 }
+
+@media (max-width: 600px) {
+    .filters {
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .filters select {
+        min-width: 100px;
+        padding: 6px 10px;
+    }
+    .summary-cards {
+        gap: 10px;
+    }
+    .main-content {
+        padding: 15px;
+    }
+}

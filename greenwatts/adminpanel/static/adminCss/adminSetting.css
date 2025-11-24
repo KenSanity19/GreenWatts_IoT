@@ -662,3 +662,57 @@ button.deactivate-device-btn:hover {
   background-color: #1e1f47;
   color: #eee;
 }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  header {
+    flex-direction: column;
+  }
+
+  .office-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .office-header input {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .device-header {
+    flex-direction: column;
+  }
+
+  .device-header input[type="text"] {
+    max-width: 100%;
+  }
+
+  .device-header button.add-device-btn {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .threshold-boxes {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .threshold-card {
+    width: 100%;
+  }
+
+  .modal-content {
+    width: 90%;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .device-table {
+    overflow-x: auto;
+  }
+
+  .office-table {
+    overflow-x: auto;
+  }
+}

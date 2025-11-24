@@ -11,6 +11,36 @@ header h1 {
   margin: 5px 0;
 }
 
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .filters {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .report-cards {
+    flex-direction: column;
+  }
+
+  .bottom-section {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 600px) {
+  .filters {
+    width: 100%;
+  }
+
+  .report-cards {
+    gap: 10px;
+  }
+
+  .bottom-section {
+    padding: 10px;
+  }
+}
+
 .red-text {
   color: var(--color-red);
   font-weight: bold;

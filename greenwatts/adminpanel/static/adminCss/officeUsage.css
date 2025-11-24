@@ -193,3 +193,28 @@ span.green-text {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .charts {
+    flex-direction: column;
+  }
+
+  .chart-box {
+    max-width: 100%;
+    padding-right: 20px;
+    margin-bottom: 20px;
+  }
+
+  .chart-box:nth-child(2) {
+    flex-grow: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .chart-box select {
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 9px 15px;
+  }
+}
