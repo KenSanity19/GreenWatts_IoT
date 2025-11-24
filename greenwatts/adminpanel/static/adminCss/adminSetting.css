@@ -115,6 +115,26 @@ table thead {
   margin-top: 20px;
   border-radius: 8px;
   text-align: center;
+  overflow-x: auto; /* enable horizontal scroll for overflow */
+}
+
+.threshold-boxes {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  max-width: 100%; /* prevent exceeding container */
+  box-sizing: border-box;
+  overflow-x: auto; /* horizontal scroll if needed */
+  padding-bottom: 10px;
+}
+
+@media (max-width: 900px) {
+  .threshold-boxes {
+    flex-direction: column;
+    max-width: 100%;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
 }
 
 .thresholds h2 {
