@@ -684,6 +684,13 @@ button.deactivate-device-btn:hover {
 }
 
 /* Responsive adjustments */
+.thresholds-device-container {
+  display: flex;
+  gap: 20px;
+  flex-direction: row; /* default horizontal */
+  width: 100%;
+}
+
 @media (max-width: 900px) {
   header {
     flex-direction: column;
@@ -724,6 +731,11 @@ button.deactivate-device-btn:hover {
   .modal-content {
     width: 90%;
     padding: 20px;
+  }
+
+  /* Stack thresholds and device vertically on mobile */
+  .thresholds-device-container {
+    flex-direction: column;
   }
 }
 
