@@ -182,30 +182,39 @@ span.green-text {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
 
-  /* Responsive adjustments */
-  @media (max-width: 900px) {
-    .filters {
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .report-cards {
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .card {
-      width: 100%;
-    }
+@media (max-width: 768px) {
+  .report-cards {
+    flex-direction: column;
+    gap: 10px;
   }
-
-  @media (max-width: 600px) {
-    .filters {
-      width: 100%;
-    }
-
-    .report-cards {
-      gap: 10px;
-    }
+  
+  .chart-frame {
+    padding: 15px;
   }
+  
+  .chart-inner {
+    padding: 5px;
+  }
+  
+  .chart-inner canvas {
+    max-width: 100% !important;
+    height: 300px !important;
+  }
+  
+  .chart-inner {
+    margin-bottom: 20px;
+  }
+  
+  .chart-recommendation {
+    padding: 15px;
+    font-size: 14px;
+    margin-top: 20px;
+    clear: both;
+  }
+  
+  .export-btn {
+    width: 100%;
+    margin: 10px 0;
+  }
+}
   

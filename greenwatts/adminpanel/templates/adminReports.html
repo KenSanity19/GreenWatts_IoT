@@ -168,13 +168,13 @@
         afterDraw: (chart) => {
           const ctx = chart.ctx;
           ctx.save();
-          ctx.font = 'bold 12px Arial';
+          ctx.font = window.innerWidth <= 768 ? 'bold 10px Arial' : 'bold 12px Arial';
           ctx.fillStyle = '#333';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
 
           const xScale = chart.scales.x;
-          const bottom = xScale.bottom + 25; // Position below x-scale (ticks + padding)
+          const bottom = xScale.bottom + (window.innerWidth <= 768 ? 35 : 25);
 
           statuses.forEach((status, index) => {
             const x = xScale.getPixelForValue(index);
@@ -206,7 +206,7 @@
           maintainAspectRatio: false,
           layout: {
             padding: {
-              bottom: 60
+              bottom: 80
             }
           },
           plugins: { 
@@ -229,9 +229,9 @@
               ticks: {
                 maxRotation: 45,
                 minRotation: 0,
-                padding: 20,
+                padding: 30,
                 font: {
-                  size: 12
+                  size: window.innerWidth <= 768 ? 10 : 12
                 }
               }
             }

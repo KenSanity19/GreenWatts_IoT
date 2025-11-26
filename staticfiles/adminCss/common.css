@@ -122,4 +122,28 @@ body {
   .sidebar-toggle {
     display: inline-block;
   }
+  
+  /* Universal filter layout for all admin pages */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .filters select {
+    min-width: 100px;
+    flex: 1;
+  }
+  
+  header {
+    position: relative;
+  }
+  
+  .date-time {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 12px;
+    text-align: right;
+  }
 }

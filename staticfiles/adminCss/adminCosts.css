@@ -173,3 +173,34 @@
   color: #fff !important;
   background-color: #16163f !important;
 }
+
+@media (max-width: 768px) {
+  .report-cards {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .change-cost {
+    height: auto;
+    min-height: 500px;
+    padding: 15px;
+  }
+  
+  .change-cost canvas {
+    height: 400px !important;
+  }
+  
+  .chart-info {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .info-item {
+    flex: none;
+  }
+  
+  .info-value {
+    font-size: 1rem;
+    margin-bottom: 15px;
+  }
+}
