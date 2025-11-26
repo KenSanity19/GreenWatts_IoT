@@ -174,23 +174,33 @@ span#live-time {
     }
     .card {
         min-width: auto;
-        width: 100%;
     }
 }
 
-@media (max-width: 600px) {
-    .filters {
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-    .filters select {
-        min-width: 100px;
-        padding: 6px 10px;
-    }
-    .summary-cards {
+@media (max-width: 768px) {
+    .report-cards {
+        flex-direction: column;
         gap: 10px;
     }
-    .main-content {
+    
+    .chart-section {
         padding: 15px;
+    }
+    
+    .chart-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .info-item {
+        flex: none;
+    }
+    
+    .info-value {
+        font-size: 1.2rem;
+    }
+    
+    #co2Chart {
+        height: 250px !important;
     }
 }
