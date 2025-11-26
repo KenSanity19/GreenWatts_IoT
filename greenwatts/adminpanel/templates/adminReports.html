@@ -89,6 +89,8 @@
         </div>
       </header>
 
+      <button class="export-btn">⬆️ Export</button>
+      
       <!-- Filters -->
       <div class="filters">
         <select id="day-select">
@@ -109,7 +111,6 @@
           <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
           {% endfor %}
         </select>
-        <button class="export-btn">⬆️ Export</button>
       </div>
 
       <!-- Top Report Cards -->

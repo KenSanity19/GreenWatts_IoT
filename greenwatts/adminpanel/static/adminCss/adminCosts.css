@@ -26,14 +26,12 @@
     color: #fff;
     padding: 20px;
     border-radius: 8px;
-    margin-top: 20px;
+    margin: 20px 0;
     height: 825px;
     display: flex;
     flex-direction: column;
     width: 100%;
     flex-grow: 1;
-    margin-left: 0px;
-    margin-right: 0px;
 }
 
 .change-cost h3 {
@@ -109,8 +107,7 @@
   display: flex;
   justify-content: space-between;
   gap: 15px;
-  margin: 20px 0px 0px;
-
+  margin: 20px 0;
 }
 
 .card {
