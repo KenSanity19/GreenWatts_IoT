@@ -185,6 +185,18 @@ span.green-text {
   }
 
 @media (max-width: 768px) {
+  .filters {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 8px;
+    overflow-x: auto;
+  }
+  
+  .filters select {
+    min-width: 80px;
+    flex: 1;
+  }
+  
   .report-cards {
     flex-direction: column;
     gap: 10px;

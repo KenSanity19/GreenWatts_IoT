@@ -177,19 +177,23 @@
   }
   
   .report-cards {
+    margin-bottom: 5px;
+  }
+  
+  .report-cards {
     flex-direction: column;
     gap: 10px;
     margin: 20px 0;
   }
   
   .change-cost {
-    height: auto;
-    min-height: 500px;
-    padding: 15px;
-    margin: 20px 0;
-    width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
+    height: auto !important;
+    min-height: 500px !important;
+    padding: 10px !important;
+    margin: 5px 0px !important;
+    width: calc(100% - 14px) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   
   .change-cost canvas {
