@@ -336,6 +336,9 @@ footer .tip span {
   padding: 20px;
   border-radius: 8px;
   color: #eee;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Device header */
@@ -379,11 +382,15 @@ footer .tip span {
   color: black;
   border-radius: 8px;
   overflow: hidden;
-  display: block;
+  display: table;
 }
 
 .device-table thead, .device-table tbody {
-  display: block;
+  display: table-header-group;
+}
+
+.device-table tbody {
+  display: table-row-group;
 }
 
 .device-table tbody {
@@ -393,24 +400,23 @@ footer .tip span {
 }
 
 .device-table th, .device-table td {
-  width: 25%;
-  box-sizing: border-box;
   padding: 12px;
   text-align: left;
-  display: inline-block;
+  display: table-cell;
   vertical-align: top;
 }
 
+.device-table th:nth-child(4), .device-table td:nth-child(4) {
+  width: 10%;
+}
+
 .device-table thead tr {
-  width: 100%;
-  display: flex;
   background-color: #004080;
   color: white;
 }
 
 .device-table tbody tr {
-  display: flex;
-  width: 100%;
+  display: table-row;
 }
 
 .device-table tr:nth-child(even) {
@@ -454,87 +460,47 @@ button.edit-device-btn {
   align-items: center;
 }
 
-button.deactivate-device-btn {
-  background-color:  #d2691e;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  margin-right: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background-color 0.3s ease;
-}
-
 button.edit-device-btn:hover {
   background-color: #0056b3;
 }
 
-button.deactivate-device-btn:hover {
-  background-color: #cc0000;
+/* Office table container */
+.office-table-container {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
 }
 
 /* Office table */
 .office-table {
-  background-color: white;
-  color: black;
   width: 100%;
   border-collapse: collapse;
-  border-radius: 8px;
-  overflow: hidden;
-  display: block;
-}
-
-.office-table thead, .office-table tbody {
-  display: block;
-}
-
-.office-table tbody {
-  height: 240px;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.office-table th, .office-table td {
-  width: 20%;
-  box-sizing: border-box;
-  padding: 10px;
-  text-align: left;
-  display: inline-block;
-  vertical-align: top;
-}
-
-.office-table thead tr {
-  width: 100%;
-  display: flex;
   background-color: white;
   color: black;
-  border-bottom: 1px solid #ccc;
-}
-
-.office-table tbody tr {
-  display: flex;
-  width: 100%;
-  border-bottom: 1px solid #ccc;
-}
-
-.office-table td:first-child {
-  font-weight: bold;
+  margin: 0;
 }
 
 .office-table th {
-  padding: 10px;
-  border-bottom: 1px solid #ccc;
-  background-color: white;
-  color: black;
+  background-color: #111338;
+  color: white;
+  padding: 12px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .office-table td {
-  padding: 10px;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
 }
 
-.office-table tbody tr {
-  border-bottom: 1px solid #ccc;
+.office-table tbody tr:hover {
+  background-color: #f5f5f5;
 }
 
 .office-table td:first-child {
@@ -697,26 +663,33 @@ button.deactivate-device-btn:hover {
   }
 
   .office-header {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    gap: 10px;
   }
 
   .office-header input {
-    width: 100%;
-    margin-bottom: 8px;
+    flex: 1;
+    max-width: 60%;
+  }
+  
+  .add-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .device-header {
-    flex-direction: column;
+    flex-direction: row;
+    gap: 10px;
   }
 
   .device-header input[type="text"] {
-    max-width: 100%;
+    flex: 1;
+    max-width: 60%;
   }
 
   .device-header button.add-device-btn {
-    width: 100%;
-    margin-top: 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .threshold-boxes {
@@ -739,12 +712,82 @@ button.deactivate-device-btn:hover {
   }
 }
 
-@media (max-width: 600px) {
-  .device-table {
+@media (max-width: 768px) {
+  .office-section {
+    padding: 15px;
+  }
+  
+  .office-table-container {
     overflow-x: auto;
   }
-
+  
   .office-table {
+    min-width: 600px;
+    font-size: 14px;
+  }
+  
+  .office-table th,
+  .office-table td {
+    padding: 10px 8px;
+    white-space: nowrap;
+  }
+  
+  .office-table th:nth-child(1),
+  .office-table td:nth-child(1) {
+    min-width: 120px;
+  }
+  
+  .office-table th:nth-child(2),
+  .office-table td:nth-child(2) {
+    min-width: 100px;
+  }
+  
+  .office-table th:nth-child(3),
+  .office-table td:nth-child(3) {
+    min-width: 180px;
+  }
+  
+  .office-table th:nth-child(4),
+  .office-table td:nth-child(4) {
+    min-width: 80px;
+  }
+  
+  .office-table th:nth-child(5),
+  .office-table td:nth-child(5) {
+    min-width: 80px;
+    text-align: center;
+  }
+  
+  .device-section .table-wrapper {
+    padding: 15px;
     overflow-x: auto;
+  }
+  
+  .device-table {
+    width: auto;
+    font-size: 12px;
+  }
+  
+  .device-table th,
+  .device-table td {
+    padding: 8px 4px;
+    width: auto;
+    min-width: 80px;
+  }
+  
+  .device-table th:nth-child(4),
+  .device-table td:nth-child(4) {
+    width: 60px;
+    min-width: 60px;
+  }
+  
+  .threshold-card {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  
+  .threshold-card input {
+    width: 50px;
   }
 }
