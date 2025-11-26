@@ -13,11 +13,6 @@ header h1 {
 
 /* Responsive adjustments */
 @media (max-width: 900px) {
-  .filters {
-    flex-direction: column;
-    gap: 10px;
-  }
-
   .report-cards {
     flex-direction: column;
   }
