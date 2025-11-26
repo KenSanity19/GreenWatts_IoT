@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
 
-  <body>
+    <body>
     <!-- Sidebar -->
     <div class="sidebar">
       <h2 class="logo">GreenWatts</h2>
@@ -76,6 +76,9 @@
     <!-- Main Content -->
     <div class="main-content">
       <header>
+        <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
         <h1>Energy Cost</h1>
         <p class="note">
           <span class="red-text">Noted!</span> The data will be captured every
@@ -224,6 +227,7 @@
         },
       });
     </script>
+    <script src="{% static 'adminJs/sidebarToggle.js' %}"></script>
     <script>
       function updateTime() {
         const now = new Date();

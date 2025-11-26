@@ -1,8 +1,6 @@
 /*
- * GreenWatts ESP32 PZEM-004T Energy Meter Reader
- *
- * This sketch reads voltage and current data from a PZEM-004T energy meter
- * connected via Modbus RTU protocol and sends it to the GreenWatts server.
+ * ESP32 PZEM-004T Energy Meter to Supabase (With Offline Queue)
+ * ESP32 PZEM-004T Energy Meter to Supabase
  *
  * Hardware Connections:
  * PZEM-004T RX -> ESP32 GPIO 16 (RX2)
@@ -13,402 +11,340 @@
 
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include <ArduinoJson.h>
+#include <PZEM004Tv30.h>
 #include <time.h>
-#include <sys/time.h>
 #include <SPIFFS.h>
 
-// WiFi Configuration
+// ------------------ WiFi Settings ------------------
 const char *ssid = "PLDTLANG";
 const char *password = "Successed@123";
 
-// Server Configuration
-const char *serverUrl = "https://greenwatts-iot.onrender.com/api/sensor-data";
-const char *apiKey = "YOUR_API_KEY";
+// ------------------ Supabase Settings ------------------
+const char *supabaseUrl = "https://sfweuxojewjwxyzomyal.supabase.co/rest/v1/tbl_energy_record";
+const char *supabaseApiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmd2V1eG9qZXdqd3h5em9teWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwMjA0ODEsImV4cCI6MjA3NTU5NjQ4MX0.DiA1tj4Z66oLbiWo0fxGgKEFep-RE_wrybWp_LVwLT0";
 
-// Device Configuration
-const int deviceId = 2; // Update with your device ID from GreenWatts
+// ------------------ Device Settings ------------------
+const char *deviceId = "1";
 
-// PZEM-004T Configuration
-#define PZEM_RX_PIN 16
-#define PZEM_TX_PIN 17
-#define PZEM_SERIAL Serial2
+// ------------------ PZEM Settings ------------------
+#define PZEM_RX 16
+#define PZEM_TX 17
 #define PZEM_BAUD 9600
-#define PZEM_SLAVE_ID 1
+HardwareSerial pzemSerial(1);
+PZEM004Tv30 pzem(pzemSerial, PZEM_RX, PZEM_TX);
 
-// Reading interval (milliseconds)
-#define READ_INTERVAL 10000 // Read every 10 seconds
-
-// NTP Server for time synchronization
-const char *ntpServer = "pool.ntp.org";
-const long gmtOffset_sec = 28800; // UTC+8 (Philippines) - change for your timezone
-const int daylightOffset_sec = 0; // Daylight saving offset in seconds
-
-// File storage
-#define DATA_FILE "/readings.json"
-
-// Global variables
+// ------------------ Reading Interval ------------------
+const unsigned long READ_INTERVAL = 60000; // 1 minute
 unsigned long lastReadTime = 0;
-float voltage = 0.0;
-float current = 0.0;
-bool dataSentToday = false;
-time_t lastSendTime = 0;
-int readingCount = 0;
 
-// Synchronize time with NTP server
-void syncTime()
-{
-  Serial.println("Synchronizing time with NTP server...");
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+// ------------------ Accumulators ------------------
+float totalEnergy = 0;
+float peakPower = 0;
+float totalCarbon = 0;
+float totalCost = 0;
+bool sentToday = false;
 
-  time_t now = time(nullptr);
-  int attempts = 0;
-  while (now < 24 * 3600 && attempts < 20)
-  {
-    delay(500);
-    Serial.print(".");
-    now = time(nullptr);
-    attempts++;
-  }
-  Serial.println();
+// ------------------ NTP Settings ------------------
+const char *ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = 28800;
+const int daylightOffset_sec = 0;
 
-  struct tm timeinfo = *localtime(&now);
-  Serial.print("Current time: ");
-  Serial.println(asctime(&timeinfo));
-}
-
-// Check if it's midnight (12:00 AM)
-bool isMidnight()
-{
-  time_t now = time(nullptr);
-  struct tm *timeinfo = localtime(&now);
-
-  // Check if hour is 0 (midnight) and we haven't sent data yet today
-  if (timeinfo->tm_hour == 0 && !dataSentToday)
-  {
-    return true;
-  }
-
-  // Reset flag when it's not midnight anymore
-  if (timeinfo->tm_hour != 0)
-  {
-    dataSentToday = false;
-  }
-
-  return false;
-}
-
-// Modbus CRC calculation
-uint16_t calculateCRC(uint8_t *data, uint8_t length)
-{
-  uint16_t crc = 0xFFFF;
-  for (uint8_t i = 0; i < length; i++)
-  {
-    crc ^= data[i];
-    for (uint8_t j = 0; j < 8; j++)
-    {
-      if (crc & 0x0001)
-      {
-        crc = (crc >> 1) ^ 0xA001;
-      }
-      else
-      {
-        crc >>= 1;
-      }
-    }
-  }
-  return crc;
-}
-
-// Read data from PZEM-004T using Modbus RTU
-bool readPZEMData()
-{
-  // Modbus RTU request: Read Input Registers (Function Code 04)
-  // Request format: [Slave ID][Function Code][Start Address High][Start Address Low][Quantity High][Quantity Low][CRC Low][CRC High]
-  uint8_t request[] = {PZEM_SLAVE_ID, 0x04, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00};
-
-  // Calculate CRC
-  uint16_t crc = calculateCRC(request, 6);
-  request[6] = crc & 0xFF;
-  request[7] = (crc >> 8) & 0xFF;
-
-  // Clear serial buffer
-  while (PZEM_SERIAL.available())
-  {
-    PZEM_SERIAL.read();
-  }
-
-  // Send request
-  PZEM_SERIAL.write(request, 8);
-  PZEM_SERIAL.flush();
-
-  // Wait for response
-  unsigned long startTime = millis();
-  uint8_t response[25];
-  uint8_t responseIndex = 0;
-
-  while (millis() - startTime < 1000)
-  {
-    if (PZEM_SERIAL.available())
-    {
-      response[responseIndex++] = PZEM_SERIAL.read();
-      if (responseIndex >= 25)
-        break;
-    }
-  }
-
-  if (responseIndex < 25)
-  {
-    Serial.println("ERROR: Incomplete response from PZEM-004T");
-    return false;
-  }
-
-  // Verify CRC
-  uint16_t receivedCRC = (response[24] << 8) | response[23];
-  uint16_t calculatedCRC = calculateCRC(response, 23);
-
-  if (receivedCRC != calculatedCRC)
-  {
-    Serial.println("ERROR: CRC mismatch");
-    return false;
-  }
-
-  // Parse response data
-  // Response format: [Slave ID][Function Code][Byte Count][Data...][CRC Low][CRC High]
-  // Data: Voltage(2 bytes), Current(2 bytes), Power(2), Energy(2), Frequency(1), Power Factor(1)
-
-  // Extract voltage (bytes 3-4) - in 0.1V units
-  voltage = ((response[3] << 8) | response[4]) / 10.0;
-
-  // Extract current (bytes 5-6) - in 0.001A units
-  current = ((response[5] << 8) | response[6]) / 1000.0;
-
-  return true;
-}
-
-// Store reading to file
-void storeReading(float volt, float curr)
-{
-  if (!SPIFFS.begin(true))
-  {
-    Serial.println("SPIFFS Mount Failed");
-    return;
-  }
-
-  // Read existing data
-  DynamicJsonDocument doc(8192);
-  File file = SPIFFS.open(DATA_FILE, "r");
-
-  if (file && file.size() > 0)
-  {
-    deserializeJson(doc, file);
-    file.close();
-  }
-  else if (file)
-  {
-    file.close();
-    // Create new readings array if file is empty
-    doc.createNestedArray("readings");
-  }
-  else
-  {
-    // Create new readings array if file doesn't exist
-    doc.createNestedArray("readings");
-  }
-
-  // Get or create readings array
-  JsonArray readingsArray;
-  if (doc.containsKey("readings"))
-  {
-    readingsArray = doc["readings"];
-  }
-  else
-  {
-    readingsArray = doc.createNestedArray("readings");
-  }
-
-  // Add new reading to array
-  JsonObject reading = readingsArray.createNestedObject();
-  reading["voltage"] = volt;
-  reading["current"] = curr;
-  reading["timestamp"] = (long)time(nullptr);
-
-  // Write back to file
-  file = SPIFFS.open(DATA_FILE, "w");
-  serializeJson(doc, file);
-  file.close();
-
-  readingCount++;
-  Serial.print("Reading stored. Total: ");
-  Serial.println(readingCount);
-}
-
-// Send all collected data to GreenWatts server
-void sendDailyDataToServer()
+// =========================================================
+// WIFI AUTO-RECONNECT
+// =========================================================
+void ensureWiFiConnected()
 {
   if (WiFi.status() != WL_CONNECTED)
   {
-    Serial.println("WiFi not connected");
-    return;
-  }
+    Serial.println("WiFi lost! Reconnecting...");
 
-  if (!SPIFFS.begin(true))
+    WiFi.disconnect();
+    WiFi.begin(ssid, password);
+
+    int retries = 0;
+    while (WiFi.status() != WL_CONNECTED && retries < 20)
+    {
+      delay(500);
+      Serial.print(".");
+      retries++;
+    }
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      Serial.println("\nWiFi reconnected!");
+    }
+    else
+    {
+      Serial.println("\nWiFi reconnect failed!");
+    }
+  }
+}
+
+// =========================================================
+// NTP TIME SYNC
+// =========================================================
+void syncTime()
+{
+  Serial.println("Synchronizing time with NTP...");
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  struct tm timeinfo;
+  int attempts = 0;
+  while (!getLocalTime(&timeinfo) && attempts < 20)
   {
-    Serial.println("SPIFFS Mount Failed");
-    return;
+    delay(500);
+    Serial.print(".");
+    attempts++;
   }
+  Serial.println("\nTime synchronized.");
+}
 
-  File file = SPIFFS.open(DATA_FILE, "r");
-  if (!file || file.size() == 0)
+// =========================================================
+// SAVE FAILED PAYLOAD TO QUEUE (SPIFFS)
+// =========================================================
+void saveToQueue(String payload)
+{
+  File f = SPIFFS.open("/queue.txt", FILE_APPEND);
+  if (!f)
   {
-    Serial.println("No data to send");
-    if (file)
-      file.close();
+    Serial.println("ERROR: Failed to open queue file!");
     return;
   }
+  f.println(payload);
+  f.close();
+  Serial.println("Saved unsent data to queue.");
+}
 
-  Serial.print("Sending ");
-  Serial.print(readingCount);
-  Serial.println(" readings to server...");
+// =========================================================
+// RESEND QUEUED DATA
+// =========================================================
+void resendQueue()
+{
+  if (!SPIFFS.exists("/queue.txt"))
+    return;
 
-  // Read data from file
-  DynamicJsonDocument fileDoc(4096);
-  deserializeJson(fileDoc, file);
-  file.close();
+  File f = SPIFFS.open("/queue.txt", FILE_READ);
+  if (!f)
+    return;
 
-  // Create payload for server
-  DynamicJsonDocument payload(4096);
-  payload["device_id"] = deviceId;
-  payload["reading_count"] = readingCount;
-  payload["readings"] = fileDoc["readings"];
-
-  String jsonString;
-  serializeJson(payload, jsonString);
-
-  Serial.println("Sending data to server:");
-  Serial.println(jsonString);
+  Serial.println("\nTrying to resend queued data...");
 
   HTTPClient http;
-  http.begin(serverUrl);
+  http.begin(supabaseUrl);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", supabaseApiKey);
+  http.addHeader("Authorization", String("Bearer ") + supabaseApiKey);
 
-  int httpResponseCode = http.POST(jsonString);
+  bool allSuccess = true;
 
-  if (httpResponseCode > 0)
+  while (f.available())
   {
-    Serial.print("HTTP Response code: ");
-    Serial.println(httpResponseCode);
+    String line = f.readStringUntil('\n');
+    if (line.length() < 5)
+      continue;
 
-    if (httpResponseCode == 200)
+    Serial.print("Re-sending: ");
+    Serial.println(line);
+
+    int code = http.POST(line);
+
+    if (code == 201)
     {
-      Serial.println("Data sent successfully!");
-      // Clear file after successful send
-      SPIFFS.remove(DATA_FILE);
-      readingCount = 0;
-      dataSentToday = true;
-      lastSendTime = time(nullptr);
+      Serial.println("Re-uploaded successfully!");
     }
+    else
+    {
+      Serial.print("Failed again: ");
+      Serial.println(code);
+      allSuccess = false;
+      break;
+    }
+  }
+
+  f.close();
+  http.end();
+
+  if (allSuccess)
+  {
+    SPIFFS.remove("/queue.txt");
+    Serial.println("Queue cleared.");
   }
   else
   {
-    Serial.print("Error code: ");
-    Serial.println(httpResponseCode);
+    Serial.println("Keeping remaining data in queue.");
+  }
+}
+
+// =========================================================
+// SEND TO SUPABASE (WITH DEBUG + FAIL QUEUE)
+// =========================================================
+void sendToSupabase(float energy_kwh, float peak_power_w, float carbon_kg, float cost_php)
+{
+  // Get timestamp
+  struct tm timeinfo;
+  time_t now = time(nullptr);
+  localtime_r(&now, &timeinfo);
+  char buf[25];
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+
+  // Build JSON payload
+  String payload = "{";
+  payload += "\"date\":\"" + String(buf) + "\","; 
+  payload += "\"total_energy_kwh\":" + String(energy_kwh, 3) + ",";
+  payload += "\"peak_power_w\":" + String(peak_power_w, 2) + ",";
+  payload += "\"carbon_emission_kgco2\":" + String(carbon_kg, 3) + ",";
+  payload += "\"cost_estimate\":" + String(cost_php, 2) + ",";
+  payload += "\"device_id\":\"" + String(deviceId) + "\"";
+  payload += "}";
+
+  // Debug print
+  Serial.println("\n=== JSON Payload ===");
+  Serial.println(payload);
+  Serial.println("====================");
+
+  // If WiFi is down → save to queue
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("WiFi is offline — saving data to queue.");
+    saveToQueue(payload);
+    return;
+  }
+
+  // Send to Supabase
+  HTTPClient http;
+  http.begin(supabaseUrl);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", supabaseApiKey);
+  http.addHeader("Authorization", String("Bearer ") + supabaseApiKey);
+
+  int httpCode = http.POST(payload);
+
+  Serial.print("Supabase HTTP Response: ");
+  Serial.println(httpCode);
+
+  if (httpCode != 201)
+  {
+    Serial.println("Send failed — saving to queue.");
+    saveToQueue(payload);
+  }
+  else
+  {
+    Serial.println("Upload success!");
   }
 
   http.end();
 }
 
-// WiFi connection handler
-void connectToWiFi()
-{
-  Serial.print("Connecting to WiFi: ");
-  Serial.println(ssid);
-
-  WiFi.begin(ssid, password);
-
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20)
-  {
-    delay(500);
-    Serial.print(".");
-    attempts++;
-  }
-
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    Serial.println("\nWiFi connected!");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-  }
-  else
-  {
-    Serial.println("\nFailed to connect to WiFi");
-  }
-}
-
+// =========================================================
+// SETUP
+// =========================================================
 void setup()
 {
   Serial.begin(115200);
   delay(1000);
+  Serial.println("ESP32 PZEM-004T Energy Meter -> Supabase with Offline Queue");
 
-  Serial.println("\n\nGreenWatts ESP32 PZEM-004T Reader - Daily Data Collection");
-  Serial.println("=========================================================");
-
-  // Initialize SPIFFS for file storage
+  // Init SPIFFS
   if (!SPIFFS.begin(true))
   {
-    Serial.println("SPIFFS Mount Failed");
+    Serial.println("SPIFFS Mount Failed!");
   }
-  else
+
+  // Init PZEM serial
+  pzemSerial.begin(PZEM_BAUD, SERIAL_8N1, PZEM_RX, PZEM_TX);
+
+  // Connect WiFi
+  Serial.print("Connecting to WiFi");
+  WiFi.begin(ssid, password);
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
+
+  while (WiFi.status() != WL_CONNECTED)
   {
-    Serial.println("SPIFFS initialized successfully");
+    delay(500);
+    Serial.print(".");
   }
+  Serial.println("\nWiFi connected! IP: " + WiFi.localIP().toString());
 
-  // Initialize PZEM serial connection
-  PZEM_SERIAL.begin(PZEM_BAUD, SERIAL_8N1, PZEM_RX_PIN, PZEM_TX_PIN);
-
-  // Connect to WiFi
-  connectToWiFi();
-
-  // Synchronize time with NTP server
-  delay(2000);
   syncTime();
 
-  Serial.println("System ready. Collecting data throughout the day...");
-  Serial.println("Data will be sent at 12:00 AM (midnight)");
+  // Try resending old data on boot
+  resendQueue();
 }
 
+// =========================================================
+// LOOP
+// =========================================================
 void loop()
 {
-  unsigned long currentTime = millis();
+  ensureWiFiConnected();
 
-  // Read PZEM data at regular intervals
-  if (currentTime - lastReadTime >= READ_INTERVAL)
-  {
-    lastReadTime = currentTime;
+  unsigned long currentMillis = millis();
 
-    if (readPZEMData())
-    {
-      Serial.println("\n--- PZEM-004T Data ---");
-      Serial.print("Voltage: ");
-      Serial.print(voltage);
-      Serial.println(" V");
-      Serial.print("Current: ");
-      Serial.print(current);
-      Serial.println(" A");
+  // Read PZEM every 1 minute and accumulate data
+if (currentMillis - lastReadTime >= READ_INTERVAL)
+{
+    lastReadTime = currentMillis;
 
-      // Store the reading
-      storeReading(voltage, current);
+    static float lastEnergy = 0;
+
+    float voltage = pzem.voltage();
+    float current = pzem.current();
+    float power = pzem.power();
+    float currentEnergy = pzem.energy() / 1000.0; // kWh (total since first power-up)
+
+    // Calculate only the change since last reading
+    if (currentEnergy >= lastEnergy) {
+        float deltaEnergy = currentEnergy - lastEnergy;
+        totalEnergy += deltaEnergy;
+        totalCarbon += deltaEnergy * 0.475;
+        totalCost += deltaEnergy * 12.0;
     }
-  }
 
-  // Check if it's midnight and send all collected data
-  if (isMidnight())
+    lastEnergy = currentEnergy;
+
+    if (power > peakPower) peakPower = power;
+
+    // Debug
+    Serial.println("\n--- Accumulated PZEM Reading ---");
+    Serial.print("Voltage: "); Serial.println(voltage);
+    Serial.print("Current: "); Serial.println(current);
+    Serial.print("Power: "); Serial.println(power);
+    Serial.print("Today's Total Energy: "); Serial.println(totalEnergy);
+    Serial.print("Peak Power: "); Serial.println(peakPower);
+}
+
+  // Get current time
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo))
   {
-    Serial.println("\n========== MIDNIGHT - SENDING DAILY DATA ==========");
-    sendDailyDataToServer();
-    Serial.println("====================================================\n");
+    delay(1000);
+    return;
   }
 
-  delay(100);
+  // Send daily summary at 12:00 AM
+  if (timeinfo.tm_hour == 0 && timeinfo.tm_min == 0 && !sentToday)
+  {
+    Serial.println("\n--- Sending Daily Summary at 12:00 AM ---");
+    sendToSupabase(totalEnergy, peakPower, totalCarbon, totalCost);
+
+    // Reset accumulators for next day
+    totalEnergy = 0;
+    peakPower = 0;
+    totalCarbon = 0;
+    totalCost = 0;
+
+    sentToday = true;
+  }
+  else if (timeinfo.tm_hour != 0 || timeinfo.tm_min != 0)
+  {
+    sentToday = false; // Reset flag after midnight
+  }
+
+  // Resend queued data if WiFi is connected
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    resendQueue();
+  }
+
+  delay(1000); // loop every second
 }

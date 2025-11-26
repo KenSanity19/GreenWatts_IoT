@@ -60,7 +60,8 @@
         </a>
       </nav>
     </div>
-
+    
+    <script src="{% static 'adminJs/sidebarToggle.js' %}"></script>
     <script>
       // Prevent back button navigation after logout
       window.history.replaceState(null, null, window.location.href);
@@ -72,6 +73,9 @@
     <!-- Main Content -->
     <div class="main-content">
       <header>
+        <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
         <div class="header-left">
           <h1>Admin Reports</h1>
           <p class="note">
@@ -147,7 +151,7 @@
           </p>
         </div>
       </div>
-
+    
     </div>
 
     <!-- Chart Script -->

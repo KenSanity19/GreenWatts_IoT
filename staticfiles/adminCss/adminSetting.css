@@ -92,7 +92,7 @@ table thead {
   background: #2c6dfc;
   color: #fff;
   border: none;
-  padding: 6px 12px;
+  padding: 6px 25px;
   margin-right: 6px;
   border-radius: 6px;
   cursor: pointer;
@@ -115,6 +115,26 @@ table thead {
   margin-top: 20px;
   border-radius: 8px;
   text-align: center;
+  overflow-x: auto; /* enable horizontal scroll for overflow */
+}
+
+.threshold-boxes {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  max-width: 100%; /* prevent exceeding container */
+  box-sizing: border-box;
+  overflow-x: auto; /* horizontal scroll if needed */
+  padding-bottom: 10px;
+}
+
+@media (max-width: 900px) {
+  .threshold-boxes {
+    flex-direction: column;
+    max-width: 100%;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
 }
 
 .thresholds h2 {
@@ -153,6 +173,16 @@ table thead {
 
 .save-btn {
   background: var(--color-green);
+  color: var(--text-white);
+  border: none;
+  padding: 6px 12px;
+  margin-left: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: var(--color-red);
   color: var(--text-white);
   border: none;
   padding: 6px 12px;
@@ -651,4 +681,70 @@ button.deactivate-device-btn:hover {
   border-radius: 8px;
   background-color: #1e1f47;
   color: #eee;
+}
+
+/* Responsive adjustments */
+.thresholds-device-container {
+  display: flex;
+  gap: 20px;
+  flex-direction: row; /* default horizontal */
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  header {
+    flex-direction: column;
+  }
+
+  .office-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .office-header input {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .device-header {
+    flex-direction: column;
+  }
+
+  .device-header input[type="text"] {
+    max-width: 100%;
+  }
+
+  .device-header button.add-device-btn {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .threshold-boxes {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .threshold-card {
+    width: 100%;
+  }
+
+  .modal-content {
+    width: 90%;
+    padding: 20px;
+  }
+
+  /* Stack thresholds and device vertically on mobile */
+  .thresholds-device-container {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 600px) {
+  .device-table {
+    overflow-x: auto;
+  }
+
+  .office-table {
+    overflow-x: auto;
+  }
 }

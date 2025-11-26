@@ -181,4 +181,31 @@ span.green-text {
     font-weight: 500;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
+
+  /* Responsive adjustments */
+  @media (max-width: 900px) {
+    .filters {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .report-cards {
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .card {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .filters {
+      width: 100%;
+    }
+
+    .report-cards {
+      gap: 10px;
+    }
+  }
   

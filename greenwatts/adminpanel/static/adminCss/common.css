@@ -38,11 +38,14 @@ body {
 
 .sidebar {
   width: 220px;
-  background: #16163f;;
+  background: #16163f;
   color: var(--text-white);
   height: 100%;
   padding: 20px 15px;
   overflow-y: auto;
+  transition: transform 0.3s ease;
+  position: relative;
+  z-index: 1000;
 }
 
 .logo {
@@ -75,73 +78,48 @@ body {
   flex: 1;
   padding: 20px 30px;
   overflow-y: auto;
+  transition: margin-left 0.3s ease;
 }
 
-@media (max-width: 900px) {
-  .sidebar {
-    position: fixed;
-    z-index: 1000;
-    height: 100%;
-    left: 0;
-    top: 0;
-    width: 220px;
-    background: #16163f;
-    color: var(--text-white);
-    padding: 20px 15px;
-    overflow-y: auto;
-    transition: transform 0.3s ease;
-  }
-
-  .sidebar.sidebar-hidden {
-    transform: translateX(-100%);
-  }
-
-  body.sidebar-active {
-    overflow: hidden;
-  }
-
-  .main-content {
-    margin-left: 0;
-    padding: 20px;
-  }
-
-  /* Sidebar toggle button */
-  .sidebar-toggle {
-    background: transparent;
-    border: none;
-    color: var(--text-white);
-    font-size: 28px;
-    cursor: pointer;
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    z-index: 1100;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px;
-    border-radius: 4px;
-  }
-}
-
-@media (max-width: 600px) {
-  .sidebar {
-    width: 180px;
-  }
-
-  .main-content {
-    padding: 15px 10px;
-  }
-
-  /* Show toggle button */
-  .sidebar-toggle {
-    font-size: 26px;
-    left: 8px;
-    top: 8px;
-  }
-}
-
-/* Hide toggle button on larger screens */
 .sidebar-toggle {
   display: none;
+  background: var(--bg-sidebar);
+  color: var(--text-white);
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 18px;
+  margin-right: 15px;
+}
+
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+  
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .sidebar-toggle {
+    display: inline-block;
+  }
 }

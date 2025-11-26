@@ -7,6 +7,19 @@
   width: 100%;
 }
 
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .bottom-section {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 600px) {
+  .bottom-section {
+    padding: 10px;
+  }
+}
+
 /* Chart section for energy cost - large prominent like Figma */
 .change-cost {
     background-color: #16163f;
@@ -124,3 +137,39 @@
 .total {  background: #527e4c; }     /* Green */
 .highest { background: #dc3545; }   /* Red */
 .inactive { background: #214574; }  /* Blue */
+
+.week-dates {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  color: #fff;
+}
+
+.days, .dates {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+.days span, .dates span {
+  font-size: 0.8rem;
+  text-align: center;
+  flex: 1;
+}
+
+/* Filters dropdown styles */
+.main-content .filters select {
+  color: #fff !important;
+  background-color: #16163f !important;
+  border: 1px solid #444;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.main-content .filters select option {
+  color: #fff !important;
+  background-color: #16163f !important;
+}

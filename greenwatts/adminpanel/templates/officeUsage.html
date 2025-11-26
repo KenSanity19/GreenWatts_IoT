@@ -74,6 +74,9 @@
     <!-- Main Content -->
     <div class="main-content">
       <header>
+        <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
         <h1>Office Usage</h1>
         <p class="note">
           <span class="red-text">Noted!</span> The data will be captured every
@@ -190,6 +193,9 @@
           ],
         },
         options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 1,
           plugins: {
             legend: {
               position: "bottom",
@@ -214,12 +220,31 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20
+            }
+          },
+          elements: {
+            point: {
+              radius: 4,
+              hoverRadius: 6
+            },
+            line: {
+              borderWidth: 3
+            }
+          },
           plugins: {
             legend: {
-              position: "right",
+              position: window.innerWidth <= 768 ? "bottom" : "right",
               labels: {
-                boxWidth: 20,
-                padding: 60,
+                boxWidth: 15,
+                padding: window.innerWidth <= 768 ? 15 : 60,
+                font: {
+                  size: window.innerWidth <= 768 ? 11 : 12
+                }
               },
             },
           },
@@ -234,14 +259,23 @@
                   return label;
                 },
                 font: {
-                  size: 12,
+                  size: window.innerWidth <= 768 ? 10 : 12,
                 },
               },
             },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                font: {
+                  size: window.innerWidth <= 768 ? 10 : 12,
+                }
+              }
+            }
           },
         },
       });
     </script>
+    <script src="{% static 'adminJs/sidebarToggle.js' %}"></script>
     <script>
       function updateTime() {
         const now = new Date();
