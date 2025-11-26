@@ -464,6 +464,7 @@ span.green-text {
   }
   
   .filters {
+    display: flex;
     flex-wrap: wrap;
     gap: 10px;
   }
@@ -471,5 +472,6 @@ span.green-text {
   .filters select {
     min-width: 100px;
     flex: 1;
+    max-width: 120px;
   }
 }
