@@ -17,12 +17,7 @@ header h1 {
   font-weight: bold;
 }
 
-.date-time {
-  font-size: var(--font-size-sm);
-  color: #111;
-  font-weight: bold;
-  text-align: right;
-}
+
 
 /* Filters */
 .filters {
@@ -229,3 +224,46 @@ header h1 {
 .highest { background: #dc3545; }   /* Red */
 .inactive { background: #214574; }  /* Blue */
 .best { background: #ffc107; }      /* Yellow */
+
+@media (max-width: 900px) {
+  .filters {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .filters select {
+    min-width: 100px;
+    flex: 1;
+  }
+
+  .report-cards {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .change-cost {
+    height: auto;
+    padding: 15px;
+  }
+
+  .change-cost canvas {
+    height: 400px !important;
+  }
+
+  .chart-info {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .info-item {
+    flex: none;
+  }
+
+  .info-label {
+    font-size: 0.7rem;
+  }
+
+  .info-value {
+    font-size: 1rem;
+  }
+}

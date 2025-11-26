@@ -4,23 +4,10 @@
 .main-content {
   background: linear-gradient(to bottom, #fdedcd, #ffc300);
   min-height: 100vh;
-  padding: 0 30px 20px 30px;
+  padding: 20px 30px;
 }
 
 /* Header */
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-
-.header-left {
-  display: flex;
-  flex-direction: column;
-}
-
 header h1 {
   margin: 0;
   font-size: var(--font-size-xl);
@@ -29,7 +16,7 @@ header h1 {
 
 .note {
   font-size: var(--font-size-sm);
-  margin: 5px 0 0 0;
+  margin: 5px 0;
 }
 
 .red-text {
@@ -37,13 +24,7 @@ header h1 {
   font-weight: bold;
 }
 
-.date-time {
-  text-align: right;
-  font-weight: bold;
-  font-size: var(--font-size-sm);
-  color: #111;
-  margin-left: auto;
-}
+
 
 /* Filters */
 .filters {
@@ -73,8 +54,6 @@ header h1 {
   border-radius: 10px;
   overflow: hidden;
   color: var(--text-black);
-  max-height: 400px;
-  overflow-y: auto;
 }
 
 .usage-table {
@@ -92,11 +71,8 @@ header h1 {
 }
 
 .usage-table th {
-  background-color: var(--bg-sidebar);
-  color: var(--text-white);
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  background-color: var(--text-white);
+  color: var(--text-black);
 }
 
 /* Row Status Colors */
@@ -131,89 +107,39 @@ tr.moderate td {
   font-weight: bold;
 }
 
-/* Sidebar */
-.sidebar {
-  width: 220px;
-  background: var(--bg-sidebar);
-  color: var(--text-white);
-  height: 100vh;
-  padding: 20px 15px;
-  position: fixed;
-  overflow-y: auto;
-}
 
-.sidebar .logo {
-  font-size: var(--font-size-lg);
-  text-align: center;
-  margin-bottom: 20px;
-}
 
-.admin-section {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.admin-icon {
-  font-size: var(--font-size-xxl);
-  margin-bottom: 5px;
-}
-
-.sidebar nav {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sidebar nav a {
-  display: block;
-  padding: 12px;
-  margin: 0px 0;
-  text-decoration: none;
-  color: var(--text-white);
-  border-radius: 5px;
-  transition: background 0.3s ease;
-}
-
-.sidebar nav a:hover,
-.sidebar nav a.active {
-  background: var(--color-accent);
-  color: var(--text-black);
-  font-weight: bold;
-}
-
-/* Responsive Design */
 @media (max-width: 768px) {
-  header {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
   .filters {
     flex-wrap: wrap;
     gap: 10px;
   }
-  
+
   .filters select {
     min-width: 100px;
     flex: 1;
   }
-  
+
   .usage-table-container {
     overflow-x: auto;
   }
-  
+
   .usage-table {
     min-width: 600px;
-    font-size: 14px;
+    font-size: 12px;
   }
-  
+
   .usage-table th,
   .usage-table td {
     padding: 8px 6px;
-    white-space: nowrap;
   }
-  
+
+  header h1 {
+    font-size: 24px;
+  }
+
   .energy-tip {
-    margin-top: 20px;
+    margin-top: 30px;
+    font-size: 12px;
   }
 }

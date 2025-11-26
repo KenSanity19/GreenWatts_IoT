@@ -53,6 +53,10 @@
     <!-- Main Content -->
     <div class="main-content">
       <header style="padding-top: 20px">
+        <!-- Sidebar toggle button -->
+        <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
         <h1>Office Usage</h1>
         <p class="note">
           <span class="red-text">Noted!</span> The data will be captured every
@@ -156,5 +160,6 @@
         });
       });
     </script>
+    <script src="{% static 'userJs/sidebarToggle.js' %}"></script>
   </body>
 </html>

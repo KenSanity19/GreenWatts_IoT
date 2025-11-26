@@ -50,6 +50,10 @@
     <!-- Main Content -->
     <div class="main-content carbon-emission-content">
       <header class="carbon-header">
+        <!-- Sidebar toggle button -->
+        <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
         <h1>CO2 Emissions</h1>
         <div class="timestamp">
           <i class="fas fa-calendar-alt"></i>
@@ -210,5 +214,6 @@
         window.location.href = url.toString();
       });
     </script>
+    <script src="{% static 'userJs/sidebarToggle.js' %}"></script>
   </body>
 </html>

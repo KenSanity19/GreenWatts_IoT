@@ -4,8 +4,7 @@
 .main-content {
   background: linear-gradient(to bottom, #fdedcd, #ffc300);
   min-height: 100vh;
-  padding: 0 30px 20px 30px;
-  margin-left: 250px; /* ensure sidebar doesn't overlap */
+  padding: 20px 30px;
 }
 
 /* Header */
@@ -25,13 +24,7 @@ header h1 {
   font-weight: bold;
 }
 
-.date-time {
-  text-align: right;
-  font-weight: bold;
-  font-size: var(--font-size-sm);
-  color: #111;
-  margin-bottom: 15px;
-}
+
 
 /* Filters */
 .filters {
@@ -114,52 +107,39 @@ tr.moderate td {
   font-weight: bold;
 }
 
-/* Sidebar */
-.sidebar {
-  width: 220px;
-  background: var(--bg-sidebar);
-  color: var(--text-white);
-  height: 100vh;
-  padding: 20px 15px;
-  position: fixed;
-  overflow-y: auto;
-}
 
-.sidebar .logo {
-  font-size: var(--font-size-lg);
-  text-align: center;
-  margin-bottom: 20px;
-}
 
-.admin-section {
-  text-align: center;
-  margin-bottom: 30px;
-}
+@media (max-width: 768px) {
+  .filters {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 
-.admin-icon {
-  font-size: var(--font-size-xxl);
-  margin-bottom: 5px;
-}
+  .filters select {
+    min-width: 100px;
+    flex: 1;
+  }
 
-.sidebar nav {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+  .usage-table-container {
+    overflow-x: auto;
+  }
 
-.sidebar nav a {
-  display: block;
-  padding: 12px;
-  margin: 0px 0;
-  text-decoration: none;
-  color: var(--text-white);
-  border-radius: 5px;
-  transition: background 0.3s ease;
-}
+  .usage-table {
+    min-width: 600px;
+    font-size: 12px;
+  }
 
-.sidebar nav a:hover,
-.sidebar nav a.active {
-  background: var(--color-accent);
-  color: var(--text-black);
-  font-weight: bold;
+  .usage-table th,
+  .usage-table td {
+    padding: 8px 6px;
+  }
+
+  header h1 {
+    font-size: 24px;
+  }
+
+  .energy-tip {
+    margin-top: 30px;
+    font-size: 12px;
+  }
 }

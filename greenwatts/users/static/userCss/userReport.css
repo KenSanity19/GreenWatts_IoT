@@ -15,12 +15,7 @@ header h1 {
   font-weight: bold;
 }
 
-.date-time {
-  font-size: 14px;
-  font-weight: bold;
-  text-align: right;
-  color: #111;
-}
+
 
 /* Filters (Day/Month/Year dropdowns) */
 .filters {
@@ -181,3 +176,54 @@ span.green-text {
     font-weight: 500;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
+
+@media (max-width: 900px) {
+  .filters {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .filters select {
+    min-width: 100px;
+    flex: 1;
+  }
+
+  .export-btn {
+    margin-left: 0;
+    margin-top: 10px;
+    width: 100%;
+  }
+
+  .report-cards {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .chart-frame {
+    padding: 15px;
+  }
+
+  .chart-container {
+    padding: 15px;
+  }
+
+  .chart-title {
+    font-size: 18px;
+  }
+
+  .chart-inner {
+    padding: 5px;
+  }
+
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .header-left h1 {
+    font-size: 24px;
+  }
+
+
+}

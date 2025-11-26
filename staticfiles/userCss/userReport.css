@@ -1,18 +1,5 @@
 @import url('common.css');
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-
-.header-left {
-  display: flex;
-  flex-direction: column;
-}
-
 header h1 {
   margin: 0;
   font-size: 28px;
@@ -20,7 +7,7 @@ header h1 {
 
 .note {
   font-size: 14px;
-  margin: 5px 0 0 0;
+  margin: 5px 0;
 }
 
 .red-text {
@@ -28,13 +15,7 @@ header h1 {
   font-weight: bold;
 }
 
-.date-time {
-  font-size: 14px;
-  font-weight: bold;
-  text-align: right;
-  color: #111;
-  margin-left: auto;
-}
+
 
 /* Filters (Day/Month/Year dropdowns) */
 .filters {
@@ -196,43 +177,53 @@ span.green-text {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  header {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
+@media (max-width: 900px) {
   .filters {
     flex-wrap: wrap;
     gap: 10px;
   }
-  
+
   .filters select {
     min-width: 100px;
     flex: 1;
   }
-  
+
   .export-btn {
     margin-left: 0;
     margin-top: 10px;
+    width: 100%;
   }
-  
+
   .report-cards {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .chart-frame {
     padding: 15px;
   }
-  
+
+  .chart-container {
+    padding: 15px;
+  }
+
+  .chart-title {
+    font-size: 18px;
+  }
+
   .chart-inner {
     padding: 5px;
   }
-  
-  .chart-legend {
-    flex-wrap: wrap;
+
+  header {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 10px;
   }
+
+  .header-left h1 {
+    font-size: 24px;
+  }
+
+
 }
