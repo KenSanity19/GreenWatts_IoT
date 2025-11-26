@@ -42,7 +42,8 @@ header h1 {
     padding: 8px 15px;
     border-radius: 6px;
     cursor: pointer;
-    margin-left: auto;
+    margin: 10px 0;
+    display: inline-block;
   }
 
   /* Report Cards */
@@ -188,11 +189,7 @@ span.green-text {
     flex: 1;
   }
 
-  .export-btn {
-    margin-left: 0;
-    margin-top: 10px;
-    width: 100%;
-  }
+
 
   .report-cards {
     flex-direction: column;
