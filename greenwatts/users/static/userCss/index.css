@@ -153,3 +153,40 @@ p.lower-text {
     margin-top: 40px;
     text-align: center;
 }
+
+.forgot-pass {
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.remember-me {
+    font-size: 14px;
+    color: #000;
+}
+
+@media (max-width: 900px) {
+    .left-section, .right-section {
+        width: 100%;
+        padding: 20px;
+    }
+
+    .left-section {
+        align-items: center;
+        text-align: center;
+    }
+
+    .logo {
+        margin: 0 auto -200px auto;
+        width: 50%;
+        height: auto;
+    }
+
+    .left-section p {
+        font-size: 24px;
+        margin-left: 0;
+    }
+
+    .right-section {
+        justify-content: flex-start;
+    }
+}
