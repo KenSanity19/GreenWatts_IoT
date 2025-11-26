@@ -126,13 +126,15 @@ body {
   /* Universal filter layout for all admin pages */
   .filters {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
   }
   
   .filters select {
-    min-width: 100px;
+    min-width: 80px;
     flex: 1;
+    white-space: nowrap;
   }
   
   header {

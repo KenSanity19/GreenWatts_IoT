@@ -175,19 +175,32 @@
 }
 
 @media (max-width: 768px) {
+  .main-content {
+    padding: 20px 15px;
+  }
+  
   .report-cards {
     flex-direction: column;
     gap: 10px;
+    margin: 20px 0;
   }
   
   .change-cost {
     height: auto;
     min-height: 500px;
     padding: 15px;
+    margin: 20px 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
   
   .change-cost canvas {
     height: 400px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0;
+    display: block;
   }
   
   .chart-info {
