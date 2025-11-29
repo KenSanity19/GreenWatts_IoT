@@ -116,9 +116,9 @@ def admin_login(request):
                 messages.error(request, "Account locked for 5 minutes due to multiple failed attempts.")
             elif attempts >= 2:
                 remaining = 5 - attempts
-                messages.error(request, f"User does not exist. {remaining} attempts remaining.")
+                messages.error(request, f"Invalid password. {remaining} attempts remaining.")
             else:
-                messages.error(request, "User does not exist")
+                messages.error(request, "Invalid password")
 
     return render(request, "adminLogin.html")
 
