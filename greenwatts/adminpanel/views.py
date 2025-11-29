@@ -8,9 +8,23 @@ from .models import Admin, Threshold
 from greenwatts.users.models import Office
 from ..sensors.models import Device
 from ..sensors.models import EnergyRecord
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Max
 from datetime import datetime, timedelta
 import json
+
+def get_latest_date_filter():
+    """Get the latest date from EnergyRecord as default filter"""
+    latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
+    latest_date = latest_date_qs['latest_date']
+    if latest_date:
+        return {
+            'filter_kwargs': {'date': latest_date},
+            'selected_date': latest_date,
+            'selected_day': latest_date.strftime('%m/%d/%Y'),
+            'selected_month': str(latest_date.month),
+            'selected_year': str(latest_date.year)
+        }
+    return {'filter_kwargs': {}}
 
 def admin_required(view_func):
     @wraps(view_func)
@@ -205,11 +219,13 @@ def admin_dashboard(request):
             selected_week = None
     else:
         # Default to latest date
-        latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
-        latest_date = latest_date_qs['latest_date']
-        if latest_date:
-            selected_date = latest_date
-            filter_kwargs = {'date': selected_date}
+        latest_data = get_latest_date_filter()
+        filter_kwargs = latest_data['filter_kwargs']
+        if filter_kwargs:
+            selected_date = latest_data['selected_date']
+            selected_day = latest_data['selected_day']
+            selected_month = latest_data['selected_month']
+            selected_year = latest_data['selected_year']
             level = 'day'
 
     # Aggregate sums for total energy usage, cost estimate, and carbon emission from selected filter
@@ -441,17 +457,17 @@ def office_usage(request):
             selected_week = None
     else:
         # Default to latest date
-        latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
-        latest_date = latest_date_qs['latest_date']
-        if latest_date:
-            selected_date = latest_date
-            filter_kwargs = {'date': selected_date}
+        latest_data = get_latest_date_filter()
+        filter_kwargs = latest_data['filter_kwargs']
+        if filter_kwargs:
+            selected_date = latest_data['selected_date']
+            selected_day = latest_data['selected_day']
+            selected_month = latest_data['selected_month']
+            selected_year = latest_data['selected_year']
             level = 'day'
 
-
-    
     # Filter office_data for table and pie chart based on filter_kwargs
-    office_data = EnergyRecord.objects.filter(**office_filter).filter(
+    office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
@@ -668,11 +684,13 @@ def admin_reports(request):
         filter_kwargs = {'date__year': int(selected_year)}
     else:
         # Default to latest date
-        latest_date_qs = EnergyRecord.objects.aggregate(latest_date=Max('date'))
-        latest_date = latest_date_qs['latest_date']
-        if latest_date:
-            selected_date = latest_date
-            filter_kwargs = {'date': selected_date}
+        latest_data = get_latest_date_filter()
+        filter_kwargs = latest_data['filter_kwargs']
+        if filter_kwargs:
+            selected_date = latest_data['selected_date']
+            selected_day = latest_data['selected_day']
+            selected_month = latest_data['selected_month']
+            selected_year = latest_data['selected_year']
 
     # Filter data for selected filter
     office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
@@ -844,15 +862,13 @@ def admin_costs(request):
             selected_week = None
     else:
         # Default to latest date
-        latest_date_qs = EnergyRecord.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).aggregate(latest_date=Max('date'))
-        latest_date = latest_date_qs['latest_date']
-        if latest_date:
-            selected_date = latest_date.date() if hasattr(latest_date, 'date') else latest_date
-            filter_kwargs = {'date': selected_date}
+        latest_data = get_latest_date_filter()
+        filter_kwargs = latest_data['filter_kwargs']
+        if filter_kwargs:
+            selected_date = latest_data['selected_date']
+            selected_day = latest_data['selected_day']
+            selected_month = latest_data['selected_month']
+            selected_year = latest_data['selected_year']
             level = 'day'
 
     # Aggregate totals for selected filter
@@ -1169,18 +1185,14 @@ def carbon_emission(request):
             selected_week = None
     else:
         # Default to latest date
-        latest_date_qs = EnergyRecord.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).aggregate(latest_date=Max('date'))
-        latest_date = latest_date_qs['latest_date']
-        if latest_date:
-            selected_date = latest_date.date() if hasattr(latest_date, 'date') else latest_date
-            filter_kwargs = {'date': selected_date}
+        latest_data = get_latest_date_filter()
+        filter_kwargs = latest_data['filter_kwargs']
+        if filter_kwargs:
+            selected_date = latest_data['selected_date']
+            selected_day = latest_data['selected_day']
+            selected_month = latest_data['selected_month']
+            selected_year = latest_data['selected_year']
             level = 'day'
-            selected_month = str(selected_date.month)
-            selected_year = str(selected_date.year)
         else:
             # Fallback to current month if no data
             filter_kwargs = {'date__year': now.year, 'date__month': now.month}
