@@ -448,12 +448,7 @@ def office_usage(request):
             filter_kwargs = {'date': selected_date}
             level = 'day'
 
-    # Determine filter for office data
-    if selected_month:
-        year = int(selected_year) if selected_year else dt.now().year
-        office_filter = {'date__year': year, 'date__month': int(selected_month)}
-    else:
-        office_filter = filter_kwargs
+
     
     # Filter office_data for table and pie chart based on filter_kwargs
     office_data = EnergyRecord.objects.filter(**office_filter).filter(
@@ -831,9 +826,11 @@ def admin_costs(request):
             selected_year = year_str
         except ValueError:
             selected_date = None
-    elif selected_month and selected_year:
-        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+    elif selected_month:
+        year = int(selected_year) if selected_year else datetime.now().year
+        filter_kwargs = {'date__year': year, 'date__month': int(selected_month)}
         level = 'month'
+        selected_year = str(year)
     elif selected_year:
         filter_kwargs = {'date__year': int(selected_year)}
         level = 'year'
@@ -858,15 +855,8 @@ def admin_costs(request):
             filter_kwargs = {'date': selected_date}
             level = 'day'
 
-    # Determine filter for aggregates
-    if selected_month:
-        year = int(selected_year) if selected_year else datetime.now().year
-        cost_filter = {'date__year': year, 'date__month': int(selected_month)}
-    else:
-        cost_filter = filter_kwargs
-    
     # Aggregate totals for selected filter
-    aggregates = EnergyRecord.objects.filter(**cost_filter).filter(
+    aggregates = EnergyRecord.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
@@ -908,10 +898,12 @@ def admin_costs(request):
             period_start = now - timedelta(days=now.weekday())
         period_end = period_start + timedelta(days=6)
     elif level == 'month':
-        period_start = date(int(selected_year), int(selected_month), 1)
+        year = int(selected_year) if selected_year else datetime.now().year
+        month = int(selected_month) if selected_month else datetime.now().month
+        period_start = date(year, month, 1)
         from calendar import monthrange
-        _, last_day = monthrange(int(selected_year), int(selected_month))
-        period_end = date(int(selected_year), int(selected_month), last_day)
+        _, last_day = monthrange(year, month)
+        period_end = date(year, month, last_day)
     elif level == 'year':
         period_start = date(int(selected_year), 1, 1)
         period_end = date(int(selected_year), 12, 31)
@@ -924,8 +916,10 @@ def admin_costs(request):
         prev_start = period_start - timedelta(days=7)
         prev_end = period_end - timedelta(days=7)
     elif level == 'month':
-        prev_year = int(selected_year)
-        prev_month = int(selected_month) - 1
+        year = int(selected_year) if selected_year else datetime.now().year
+        month = int(selected_month) if selected_month else datetime.now().month
+        prev_year = year
+        prev_month = month - 1
         if prev_month == 0:
             prev_month = 12
             prev_year -= 1
@@ -990,9 +984,11 @@ def admin_costs(request):
             ).aggregate(total=Sum('cost_estimate'))['total'] or 0
             chart_data.append(cost)
     elif level == 'month':
-        start_date = date(int(selected_year), int(selected_month), 1)
-        _, last_day = monthrange(int(selected_year), int(selected_month))
-        end_date = date(int(selected_year), int(selected_month), last_day)
+        year = int(selected_year) if selected_year else datetime.now().year
+        month = int(selected_month) if selected_month else datetime.now().month
+        start_date = date(year, month, 1)
+        _, last_day = monthrange(year, month)
+        end_date = date(year, month, last_day)
         chart_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
         chart_labels = [d.strftime('%d') for d in chart_dates]  # Day numbers
         chart_data = []
