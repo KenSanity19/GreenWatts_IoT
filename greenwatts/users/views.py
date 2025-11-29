@@ -6,15 +6,42 @@ from ..adminpanel.models import Threshold
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
+    from ..adminpanel.login_attempts import is_locked_out, record_failed_attempt, clear_attempts, get_lockout_time_remaining
+    
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        user = auth.authenticate(username=username, password=password)
-        if user is not None:
-            auth.login(request, user)
-            return redirect('users:dashboard')
-        else:
-            messages.error(request, 'Invalid username or password.')
+        
+        if is_locked_out(username, 'user'):
+            messages.error(request, "Account locked. Try again in 5 minutes.")
+            return render(request, 'index.html')
+        
+        try:
+            from .models import Office
+            office = Office.objects.get(username=username)
+            user = auth.authenticate(username=username, password=password)
+            if user is not None:
+                clear_attempts(username, 'user')
+                auth.login(request, user)
+                return redirect('users:dashboard')
+            else:
+                attempts = record_failed_attempt(username, 'user')
+                if attempts >= 5:
+                    messages.error(request, 'Account locked for 5 minutes due to multiple failed attempts.')
+                elif attempts >= 2:
+                    remaining = 5 - attempts
+                    messages.error(request, f'Invalid password. {remaining} attempts remaining.')
+                else:
+                    messages.error(request, 'Invalid password')
+        except Office.DoesNotExist:
+            attempts = record_failed_attempt(username, 'user')
+            if attempts >= 5:
+                messages.error(request, 'Account locked for 5 minutes due to multiple failed attempts.')
+            elif attempts >= 2:
+                remaining = 5 - attempts
+                messages.error(request, f'User does not exist. {remaining} attempts remaining.')
+            else:
+                messages.error(request, 'User does not exist')
             return redirect('users:index')
     return render(request, 'index.html')
 

@@ -30,6 +30,16 @@
         <h2>Login to your account</h2>
         <p class="subtitle">Administrative Page</p>
 
+        {% if messages %}
+          <ul class="messages">
+            {% for message in messages %}
+              <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                {{ message }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
         <!-- Updated Form -->
         <form method="POST" action="{% url 'adminpanel:admin_login'  %}">
           {% csrf_token %}
@@ -58,15 +68,6 @@
           </div>
           <button type="submit">Login</button>
         </form>
-
-        <!-- Error messages -->
-        {% if messages %}
-        <div class="messages">
-          {% for message in messages %}
-          <p class="error">{{ message }}</p>
-          {% endfor %}
-        </div>
-        {% endif %}
 
         <p class="lower-text">
           <strong class="forgot-pass">Forgot Your Password?</strong><br /><br />

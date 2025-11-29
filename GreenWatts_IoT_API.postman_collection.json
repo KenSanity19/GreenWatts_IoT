@@ -1,0 +1,588 @@
+{
+  "info": {
+    "name": "GreenWatts IoT API",
+    "description": "Complete API collection for GreenWatts IoT Energy Monitoring System. This collection includes all endpoints for sensor data submission, device management, energy records, and analytics.\n\n## Quick Start\n1. Set the `baseUrl` variable to your server URL\n2. Test with 'Submit Single Sensor Reading' endpoint\n3. For admin endpoints, login first using Django admin\n\n## Variables\n- `baseUrl`: Your API base URL (e.g., http://localhost:8000/api)\n- `deviceId`: Test device ID (default: 1)\n- `timestamp`: Current Unix timestamp\n\n## Authentication\n- Public endpoints: No auth required\n- Admin endpoints: Django session authentication required",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "greenwatts-iot-api-v1",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api",
+      "type": "string",
+      "description": "Base URL for the GreenWatts IoT API"
+    },
+    {
+      "key": "deviceId",
+      "value": "1",
+      "type": "string",
+      "description": "Test device ID"
+    },
+    {
+      "key": "timestamp",
+      "value": "{{$timestamp}}",
+      "type": "string",
+      "description": "Current Unix timestamp"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔌 Sensor Data Collection",
+      "description": "Endpoints for ESP32 devices to submit energy readings",
+      "item": [
+        {
+          "name": "Submit Single Sensor Reading",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": {{deviceId}},\n  \"voltage\": 230.5,\n  \"current\": 2.45,\n  \"timestamp\": {{timestamp}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sensor-data/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sensor-data", ""]
+            },
+            "description": "Submit a single energy reading from ESP32 device. This is the primary endpoint for real-time data collection.\n\n**Use Case**: ESP32 sends voltage and current readings every 10 seconds.\n\n**Parameters**:\n- device_id: Must exist in database\n- voltage: 0-300V range\n- current: 0-50A range\n- timestamp: Unix timestamp"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_id\": 1,\n  \"voltage\": 230.5,\n  \"current\": 2.45,\n  \"timestamp\": 1698345600\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/sensor-data/",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["sensor-data", ""]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Sensor data received successfully\",\n  \"device_id\": 1,\n  \"readings_stored\": 1,\n  \"timestamp\": \"2024-01-15T10:30:00Z\"\n}"
+            },
+            {
+              "name": "Device Not Found Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_id\": 999,\n  \"voltage\": 230.5,\n  \"current\": 2.45,\n  \"timestamp\": 1698345600\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/sensor-data/",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["sensor-data", ""]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"error\",\n  \"message\": \"Device with ID 999 not found\",\n  \"error_code\": \"DEVICE_NOT_FOUND\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Submit Batch Sensor Readings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": {{deviceId}},\n  \"reading_count\": 3,\n  \"readings\": [\n    {\n      \"voltage\": 230.5,\n      \"current\": 2.45,\n      \"timestamp\": {{timestamp}}\n    },\n    {\n      \"voltage\": 231.0,\n      \"current\": 2.50,\n      \"timestamp\": {{$timestamp}}\n    },\n    {\n      \"voltage\": 229.8,\n      \"current\": 2.40,\n      \"timestamp\": {{$timestamp}}\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sensor-data/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sensor-data", ""]
+            },
+            "description": "Submit multiple energy readings in a single request. Useful for offline data queuing and bulk data transmission.\n\n**Use Case**: ESP32 accumulates readings and sends daily batch at midnight.\n\n**Benefits**:\n- Reduces HTTP requests\n- Handles offline scenarios\n- Efficient data transmission"
+          },
+          "response": [
+            {
+              "name": "Batch Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"device_id\": 1,\n  \"reading_count\": 3,\n  \"readings\": [\n    {\n      \"voltage\": 230.5,\n      \"current\": 2.45,\n      \"timestamp\": 1698345600\n    },\n    {\n      \"voltage\": 231.0,\n      \"current\": 2.50,\n      \"timestamp\": 1698345610\n    },\n    {\n      \"voltage\": 229.8,\n      \"current\": 2.40,\n      \"timestamp\": 1698345620\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/sensor-data/",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["sensor-data", ""]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"success\",\n  \"message\": \"Sensor data received successfully\",\n  \"device_id\": 1,\n  \"readings_stored\": 3,\n  \"timestamp\": \"2024-01-15T10:30:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📱 Device Management",
+      "description": "Endpoints for managing IoT devices (Admin access required)",
+      "item": [
+        {
+          "name": "Get All Devices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/devices/",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices", ""]
+            },
+            "description": "Retrieve list of all registered devices with their status and basic information.\n\n**Authentication**: Admin required\n**Use Case**: Dashboard device overview, system monitoring"
+          },
+          "response": [
+            {
+              "name": "Devices List Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/devices/",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["devices", ""]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"success\",\n  \"devices\": [\n    {\n      \"device_id\": 1,\n      \"installed_date\": \"2024-01-15\",\n      \"status\": \"Active\",\n      \"office_id\": 1,\n      \"office_name\": \"Main Office\",\n      \"last_reading\": \"2024-01-15T10:30:00Z\"\n    },\n    {\n      \"device_id\": 2,\n      \"installed_date\": \"2024-01-10\",\n      \"status\": \"Active\",\n      \"office_id\": 2,\n      \"office_name\": \"Branch Office\",\n      \"last_reading\": \"2024-01-15T10:25:00Z\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Device Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/devices/{{deviceId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices", "{{deviceId}}", ""]
+            },
+            "description": "Get detailed information about a specific device including total readings and last activity.\n\n**Parameters**: device_id (path parameter)\n**Use Case**: Device diagnostics, detailed monitoring"
+          },
+          "response": [
+            {
+              "name": "Device Details Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/devices/1/",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["devices", "1", ""]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"success\",\n  \"device\": {\n    \"device_id\": 1,\n    \"installed_date\": \"2024-01-15\",\n    \"status\": \"Active\",\n    \"office_id\": 1,\n    \"office_name\": \"Main Office\",\n    \"total_readings\": 8640,\n    \"last_reading\": \"2024-01-15T10:30:00Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "⚡ Energy Records",
+      "description": "Endpoints for retrieving energy consumption data and analytics",
+      "item": [
+        {
+          "name": "Get Energy Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/energy-records/?device_id={{deviceId}}&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["energy-records", ""],
+              "query": [
+                {
+                  "key": "device_id",
+                  "value": "{{deviceId}}",
+                  "description": "Filter by device ID"
+                },
+                {
+                  "key": "start_date",
+                  "value": "2024-01-01",
+                  "description": "Start date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "end_date",
+                  "value": "2024-01-31",
+                  "description": "End date (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of records to return"
+                }
+              ]
+            },
+            "description": "Retrieve energy consumption records with filtering options.\n\n**Query Parameters**:\n- device_id: Filter by specific device\n- start_date: Filter from date (YYYY-MM-DD)\n- end_date: Filter to date (YYYY-MM-DD)\n- limit: Number of records (default: 100)\n\n**Use Case**: Generate reports, analyze consumption patterns"
+          },
+          "response": [
+            {
+              "name": "Energy Records Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/energy-records/?device_id=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["energy-records", ""],
+                  "query": [
+                    {
+                      "key": "device_id",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"success\",\n  \"records\": [\n    {\n      \"record_id\": 1,\n      \"device_id\": 1,\n      \"date\": \"2024-01-15\",\n      \"total_energy_kwh\": 25.5,\n      \"peak_power_w\": 1500.0,\n      \"carbon_emission_kgco2\": 12.75,\n      \"cost_estimate\": 318.75,\n      \"reading_count\": 8640\n    }\n  ],\n  \"total_records\": 1,\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"has_next\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Daily Energy Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/energy-records/daily/{{deviceId}}/2024-01-15/",
+              "host": ["{{baseUrl}}"],
+              "path": ["energy-records", "daily", "{{deviceId}}", "2024-01-15", ""]
+            },
+            "description": "Get detailed daily energy summary including hourly breakdown for a specific device and date.\n\n**Parameters**:\n- device_id: Device identifier\n- date: Date in YYYY-MM-DD format\n\n**Use Case**: Detailed daily analysis, hourly consumption patterns"
+          },
+          "response": [
+            {
+              "name": "Daily Summary Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/energy-records/daily/1/2024-01-15/",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["energy-records", "daily", "1", "2024-01-15", ""]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"success\",\n  \"summary\": {\n    \"device_id\": 1,\n    \"date\": \"2024-01-15\",\n    \"total_energy_kwh\": 25.5,\n    \"peak_power_w\": 1500.0,\n    \"average_power_w\": 1062.5,\n    \"carbon_emission_kgco2\": 12.75,\n    \"cost_estimate\": 318.75,\n    \"reading_count\": 8640,\n    \"hourly_breakdown\": [\n      {\n        \"hour\": 0,\n        \"energy_kwh\": 1.2,\n        \"avg_power_w\": 1200\n      },\n      {\n        \"hour\": 1,\n        \"energy_kwh\": 1.1,\n        \"avg_power_w\": 1100\n      }\n    ]\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🏢 Office Management",
+      "description": "Endpoints for managing office locations and multi-tenant operations",
+      "item": [
+        {
+          "name": "Get All Offices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/offices/",
+              "host": ["{{baseUrl}}"],
+              "path": ["offices", ""]
+            },
+            "description": "Retrieve list of all offices with device counts and energy summaries.\n\n**Authentication**: Admin required\n**Use Case**: Multi-office management, system overview"
+          },
+          "response": [
+            {
+              "name": "Offices List Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/offices/",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["offices", ""]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"success\",\n  \"offices\": [\n    {\n      \"office_id\": 1,\n      \"office_name\": \"Main Office\",\n      \"device_count\": 3,\n      \"total_energy_today\": 45.2,\n      \"status\": \"Active\"\n    },\n    {\n      \"office_id\": 2,\n      \"office_name\": \"Branch Office\",\n      \"device_count\": 2,\n      \"total_energy_today\": 28.7,\n      \"status\": \"Active\"\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📊 Analytics",
+      "description": "Endpoints for energy analytics and system-wide statistics",
+      "item": [
+        {
+          "name": "Get Energy Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/stats/?period=daily",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "stats", ""],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "daily",
+                  "description": "Period: daily, weekly, monthly"
+                },
+                {
+                  "key": "office_id",
+                  "value": "1",
+                  "description": "Filter by office ID",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get system-wide energy statistics and analytics.\n\n**Query Parameters**:\n- period: \"daily\", \"weekly\", \"monthly\" (default: \"daily\")\n- office_id: Filter by specific office (optional)\n\n**Use Case**: Executive dashboards, system monitoring, reporting"
+          },
+          "response": [
+            {
+              "name": "Statistics Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/analytics/stats/?period=daily",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["analytics", "stats", ""],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "daily"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"success\",\n  \"stats\": {\n    \"total_energy_kwh\": 150.5,\n    \"total_cost\": 1881.25,\n    \"total_carbon_kgco2\": 75.25,\n    \"device_count\": 5,\n    \"active_devices\": 4,\n    \"period\": \"daily\",\n    \"date_range\": {\n      \"start\": \"2024-01-15\",\n      \"end\": \"2024-01-15\"\n    }\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🧪 Testing & Examples",
+      "description": "Pre-configured requests for testing and learning the API",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", ""]
+            },
+            "description": "Simple health check endpoint to verify API connectivity.\n\n**Use Case**: System monitoring, deployment verification"
+          },
+          "response": [
+            {
+              "name": "Health Check Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health/",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["health", ""]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"healthy\",\n  \"timestamp\": \"2024-01-15T10:30:00Z\",\n  \"version\": \"1.0\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Test Data Generator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": {{deviceId}},\n  \"voltage\": {{$randomInt}},\n  \"current\": {{$randomInt}},\n  \"timestamp\": {{$timestamp}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sensor-data/",
+              "host": ["{{baseUrl}}"],
+              "path": ["sensor-data", ""]
+            },
+            "description": "Generate random test data for development and testing.\n\n**Features**:\n- Uses Postman dynamic variables\n- Generates realistic sensor values\n- Perfect for load testing\n\n**Usage**: Run multiple times to generate test dataset"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set dynamic timestamp for all requests",
+          "pm.globals.set('timestamp', Math.floor(Date.now() / 1000));"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script for all requests",
+          "pm.test('Response time is less than 2000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "});",
+          "",
+          "pm.test('Response has valid JSON', function () {",
+          "    pm.response.to.have.jsonBody();",
+          "});",
+          "",
+          "pm.test('Response has status field', function () {",
+          "    pm.expect(pm.response.json()).to.have.property('status');",
+          "});"
+        ]
+      }
+    }
+  ]
+}

@@ -14,7 +14,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: flex-start; /* keeps logo and text aligned left */
+    align-items: flex-start;
     color: white;
     padding: 60px;
 }
@@ -97,6 +97,23 @@ body {
     margin-top: -10px;
     margin-bottom: 20px;
     color: #333;
+}
+
+.messages {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 20px 0;
+    text-align: center;
+}
+
+.messages li {
+    background: rgba(255, 0, 0, 0.1);
+    color: #d8000c;
+    border: 1px solid #d8000c;
+    border-radius: 5px;
+    padding: 8px;
+    font-size: 14px;
+    font-weight: bold;
 }
 
 .login-box button {

@@ -85,19 +85,40 @@ def index(request):
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_login(request):
+    from .login_attempts import is_locked_out, record_failed_attempt, clear_attempts, get_lockout_time_remaining
+    
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
 
+        if is_locked_out(username, 'admin'):
+            messages.error(request, "Account locked. Try again in 5 minutes.")
+            return render(request, "adminLogin.html")
+
         try:
             admin = Admin.objects.get(username=username)
             if admin.password == password:  # 
+                clear_attempts(username, 'admin')
                 request.session["admin_id"] = admin.admin_id
                 return redirect("adminpanel:admin_dashboard")  
             else:
-                messages.error(request, "Invalid password")
+                attempts = record_failed_attempt(username, 'admin')
+                if attempts >= 5:
+                    messages.error(request, "Account locked for 5 minutes due to multiple failed attempts.")
+                elif attempts >= 2:
+                    remaining = 5 - attempts
+                    messages.error(request, f"Invalid password. {remaining} attempts remaining.")
+                else:
+                    messages.error(request, "Invalid password")
         except Admin.DoesNotExist:
-            messages.error(request, "User does not exist")
+            attempts = record_failed_attempt(username, 'admin')
+            if attempts >= 5:
+                messages.error(request, "Account locked for 5 minutes due to multiple failed attempts.")
+            elif attempts >= 2:
+                remaining = 5 - attempts
+                messages.error(request, f"User does not exist. {remaining} attempts remaining.")
+            else:
+                messages.error(request, "User does not exist")
 
     return render(request, "adminLogin.html")
 

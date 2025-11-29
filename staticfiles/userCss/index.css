@@ -23,7 +23,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: flex-start; /* keeps logo and text aligned left */
+    align-items: flex-start;
     color: white;
     padding: 60px;
 }
