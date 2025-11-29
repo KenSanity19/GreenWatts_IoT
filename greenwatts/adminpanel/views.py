@@ -127,7 +127,7 @@ def admin_login(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_dashboard(request):
     from django.db.models import Max
-    from django.db.models.functions import TruncDate
+    from django.db.models.functions import TruncDate, ExtractYear, ExtractMonth
     from datetime import date
     from datetime import datetime as dt
 
@@ -136,28 +136,43 @@ def admin_dashboard(request):
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
     selected_week = request.GET.get('selected_week')
+    
+    # Force month filtering when month is selected
+    if selected_month and not selected_day and not selected_week:
+        if not selected_year:
+            selected_year = str(dt.now().year)
 
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    # Week options: fixed weeks for October 2025
+    # Week options
     week_options = get_week_options(valid_office_ids)
 
-    # Year options: only 2025
-    year_options = ['2025']
+    # Year options: all years with data
+    years_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
 
-    # Month options: only October
-    month_options = [{'value': '10', 'name': 'October'}]
+    # Month options: all months with data
+    months_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all 31 days in October 2025, formatted as mm/dd/yyyy
-    from datetime import date, timedelta
-    start_date = date(2025, 10, 1)
-    end_date = date(2025, 10, 31)
-    day_options = []
-    current = start_date
-    while current <= end_date:
-        day_options.append(current.strftime('%m/%d/%Y'))
-        current += timedelta(days=1)
+    # Day options: all days with data
+    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
     filter_kwargs = {}
@@ -347,7 +362,7 @@ def admin_setting(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def office_usage(request):
     from django.db.models import Max, Min
-    from django.db.models.functions import TruncDay
+    from django.db.models.functions import TruncDay, ExtractYear, ExtractMonth
     from django.utils import timezone
     from datetime import timedelta, date
     from datetime import datetime as dt
@@ -357,28 +372,43 @@ def office_usage(request):
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
     selected_week = request.GET.get('selected_week')
+    
+    # Force month filtering when month is selected
+    if selected_month and not selected_day and not selected_week:
+        if not selected_year:
+            selected_year = str(dt.now().year)
 
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    # Week options: last 4 weeks with data
+    # Week options
     week_options = get_week_options(valid_office_ids)
 
-    # Year options: only 2025
-    year_options = ['2025']
+    # Year options: all years with data
+    years_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
 
-    # Month options: only October
-    month_options = [{'value': '10', 'name': 'October'}]
+    # Month options: all months with data
+    months_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all 31 days in October 2025, formatted as mm/dd/yyyy
-    from datetime import date, timedelta
-    start_date = date(2025, 10, 1)
-    end_date = date(2025, 10, 31)
-    day_options = []
-    current = start_date
-    while current <= end_date:
-        day_options.append(current.strftime('%m/%d/%Y'))
-        current += timedelta(days=1)
+    # Day options: all days with data
+    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
     filter_kwargs = {}
@@ -418,8 +448,15 @@ def office_usage(request):
             filter_kwargs = {'date': selected_date}
             level = 'day'
 
+    # Determine filter for office data
+    if selected_month:
+        year = int(selected_year) if selected_year else dt.now().year
+        office_filter = {'date__year': year, 'date__month': int(selected_month)}
+    else:
+        office_filter = filter_kwargs
+    
     # Filter office_data for table and pie chart based on filter_kwargs
-    office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
+    office_data = EnergyRecord.objects.filter(**office_filter).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
@@ -572,7 +609,7 @@ def office_usage(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_reports(request):
     from django.db.models import Max, Min, Sum
-    from django.db.models.functions import TruncDay
+    from django.db.models.functions import TruncDay, ExtractYear, ExtractMonth
     from django.utils import timezone
     from datetime import timedelta, date
     from datetime import datetime as dt
@@ -582,25 +619,40 @@ def admin_reports(request):
     selected_day = request.GET.get('selected_day')
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
+    
+    # Force month filtering when month is selected
+    if selected_month and not selected_day:
+        if not selected_year:
+            selected_year = str(dt.now().year)
 
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    # Year options: only 2025
-    year_options = ['2025']
+    # Year options: all years with data
+    years_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
 
-    # Month options: only October
-    month_options = [{'value': '10', 'name': 'October'}]
+    # Month options: all months with data
+    months_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all 31 days in October 2025, formatted as mm/dd/yyyy
-    from datetime import date, timedelta
-    start_date = date(2025, 10, 1)
-    end_date = date(2025, 10, 31)
-    day_options = []
-    current = start_date
-    while current <= end_date:
-        day_options.append(current.strftime('%m/%d/%Y'))
-        current += timedelta(days=1)
+    # Day options: all days with data
+    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
     filter_kwargs = {}
@@ -717,7 +769,7 @@ def admin_reports(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_costs(request):
     from django.db.models import Sum, Max, Count
-    from django.db.models.functions import TruncDate
+    from django.db.models.functions import TruncDate, ExtractYear, ExtractMonth
     from datetime import datetime, timedelta, date
     from django.utils import timezone
 
@@ -726,6 +778,11 @@ def admin_costs(request):
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
     selected_week = request.GET.get('selected_week')
+    
+    # Force month filtering when month is selected
+    if selected_month and not selected_day and not selected_week:
+        if not selected_year:
+            selected_year = str(datetime.now().year)
 
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
@@ -733,21 +790,31 @@ def admin_costs(request):
     # Week options: dynamic from database
     week_options = get_week_options(valid_office_ids)
 
-    # Year options: only 2025
-    year_options = ['2025']
+    # Year options: all years with data
+    years_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
 
-    # Month options: only October
-    month_options = [{'value': '10', 'name': 'October'}]
+    # Month options: all months with data
+    months_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all 31 days in October 2025, formatted as mm/dd/yyyy
-    from datetime import date, timedelta
-    start_date = date(2025, 10, 1)
-    end_date = date(2025, 10, 31)
-    day_options = []
-    current = start_date
-    while current <= end_date:
-        day_options.append(current.strftime('%m/%d/%Y'))
-        current += timedelta(days=1)
+    # Day options: all days with data
+    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
     filter_kwargs = {}
@@ -791,8 +858,15 @@ def admin_costs(request):
             filter_kwargs = {'date': selected_date}
             level = 'day'
 
+    # Determine filter for aggregates
+    if selected_month:
+        year = int(selected_year) if selected_year else datetime.now().year
+        cost_filter = {'date__year': year, 'date__month': int(selected_month)}
+    else:
+        cost_filter = filter_kwargs
+    
     # Aggregate totals for selected filter
-    aggregates = EnergyRecord.objects.filter(**filter_kwargs).filter(
+    aggregates = EnergyRecord.objects.filter(**cost_filter).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
@@ -1017,7 +1091,7 @@ def admin_costs(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def carbon_emission(request):
     from django.db.models import Sum, Max
-    from django.db.models.functions import TruncDate
+    from django.db.models.functions import TruncDate, ExtractYear, ExtractMonth
     from datetime import datetime, timedelta, date
     from calendar import monthrange
     from django.utils import timezone
@@ -1028,6 +1102,11 @@ def carbon_emission(request):
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
     selected_week = request.GET.get('selected_week')
+    
+    # Force month filtering when month is selected
+    if selected_month and not selected_day and not selected_week:
+        if not selected_year:
+            selected_year = str(datetime.now().year)
 
     # Get all valid office ids from Office table
     from greenwatts.users.models import Office
@@ -1036,21 +1115,31 @@ def carbon_emission(request):
     # Week options: dynamic from database
     week_options = get_week_options(valid_office_ids)
 
-    # Year options: only 2025
-    year_options = ['2025']
+    # Year options: all years with data
+    years_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
 
-    # Month options: only October
-    month_options = [{'value': '10', 'name': 'October'}]
+    # Month options: all months with data
+    months_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all 31 days in October 2025, formatted as mm/dd/yyyy
-    from datetime import date, timedelta
-    start_date = date(2025, 10, 1)
-    end_date = date(2025, 10, 31)
-    day_options = []
-    current = start_date
-    while current <= end_date:
-        day_options.append(current.strftime('%m/%d/%Y'))
-        current += timedelta(days=1)
+    # Day options: all days with data
+    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
     filter_kwargs = {}
