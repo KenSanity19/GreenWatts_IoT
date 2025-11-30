@@ -265,9 +265,9 @@
 
         function updateFilters() {
           const params = new URLSearchParams();
-          const day = daySelect.value;
-          const month = monthSelect.value;
-          const year = yearSelect.value;
+          const day = daySelect ? daySelect.value : '';
+          const month = monthSelect ? monthSelect.value : '';
+          const year = yearSelect ? yearSelect.value : '';
 
           if (day) params.append('selected_day', day);
           if (month) params.append('selected_month', month);
@@ -277,9 +277,31 @@
           window.location.href = queryString ? `?${queryString}` : '?';
         }
 
-        daySelect.addEventListener('change', updateFilters);
-        monthSelect.addEventListener('change', updateFilters);
-        yearSelect.addEventListener('change', updateFilters);
+        // Add event listeners only if elements exist
+        if (daySelect) {
+          daySelect.addEventListener('change', function() {
+            // Clear month and year when day is selected
+            if (monthSelect) monthSelect.value = '';
+            if (yearSelect) yearSelect.value = '';
+            updateFilters();
+          });
+        }
+        
+        if (monthSelect) {
+          monthSelect.addEventListener('change', function() {
+            // Clear day when month is selected
+            if (daySelect) daySelect.value = '';
+            updateFilters();
+          });
+        }
+        
+        if (yearSelect) {
+          yearSelect.addEventListener('change', function() {
+            // Clear day when year is selected
+            if (daySelect) daySelect.value = '';
+            updateFilters();
+          });
+        }
       });
     </script>
   </body>

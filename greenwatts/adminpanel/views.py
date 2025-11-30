@@ -235,15 +235,43 @@ def admin_dashboard(request):
         total_co2_emission=Sum('carbon_emission_kgco2')
     )
 
-    # Calculate predicted CO2 emission (simple projection: current emission * 10 as example)
-    predicted_co2_emission = (aggregates['total_co2_emission'] or 0) * 10
+    # Calculate predicted CO2 emission based on filter level
+    if level == 'month':
+        # For month: predict based on current month's daily average
+        current_year = int(selected_year)
+        current_month = int(selected_month)
+        from calendar import monthrange
+        _, days_in_month = monthrange(current_year, current_month)
+        
+        # Get days with data so far in the month
+        days_with_data = EnergyRecord.objects.filter(
+            date__year=current_year, date__month=current_month,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(device__office__name='DS').dates('date', 'day').count()
+        
+        if days_with_data > 0:
+            daily_avg = (aggregates['total_co2_emission'] or 0) / days_with_data
+            predicted_co2_emission = daily_avg * days_in_month
+        else:
+            predicted_co2_emission = aggregates['total_co2_emission'] or 0
+    else:
+        # Default prediction for other levels
+        predicted_co2_emission = (aggregates['total_co2_emission'] or 0) * 2
 
-    # Prepare dates for display
-    if selected_date:
+    # Prepare dates for display based on filter level
+    if level == 'month':
+        current_year = int(selected_year)
+        current_month = int(selected_month)
+        current_date = date(current_year, current_month, 1).strftime("%B %Y")
+        from calendar import monthrange
+        _, last_day = monthrange(current_year, current_month)
+        predicted_date = date(current_year, current_month, last_day).strftime("%B %d, %Y")
+    elif selected_date:
         current_date = selected_date.strftime("%B %d, %Y")
+        predicted_date = (dt.combine(selected_date, dt.min.time()) + timedelta(days=7)).strftime("%B %d, %Y")
     else:
         current_date = datetime.now().strftime("%B %d, %Y")
-    predicted_date = (dt.combine(selected_date, dt.min.time()) + timedelta(days=7)).strftime("%B %d, %Y") if selected_date else (datetime.now() + timedelta(days=7)).strftime("%B %d, %Y")
+        predicted_date = (datetime.now() + timedelta(days=7)).strftime("%B %d, %Y")
 
     # Aggregate energy usage per office from selected filter
     from django.db.models import F
@@ -293,29 +321,52 @@ def admin_dashboard(request):
     if predicted_co2_emission > 0:
         co2_emission_progress = min(100, (aggregates['total_co2_emission'] or 0) / predicted_co2_emission * 100)
 
-    # Change in cost data - filter consistently
-    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
-    if selected_date:
+    # Change in cost data - filter consistently based on level
+    if level == 'month':
+        # Compare current month with previous month
+        current_year = int(selected_year)
+        current_month = int(selected_month)
+        prev_year = current_year
+        prev_month = current_month - 1
+        if prev_month == 0:
+            prev_month = 12
+            prev_year -= 1
+        
+        current_cost = EnergyRecord.objects.filter(
+            date__year=current_year, date__month=current_month,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(device__office__name='DS').aggregate(total=Sum('cost_estimate'))['total'] or 0
+        
+        prev_cost = EnergyRecord.objects.filter(
+            date__year=prev_year, date__month=prev_month,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(device__office__name='DS').aggregate(total=Sum('cost_estimate'))['total'] or 0
+        
+        change_costs = [prev_cost, current_cost]
+        change_dates = [date(prev_year, prev_month, 1), date(current_year, current_month, 1)]
+    elif selected_date:
         # Compare selected_date and previous day
         previous_date = selected_date - timedelta(days=1)
         change_dates = [previous_date, selected_date]
+        change_costs = []
+        for d in change_dates:
+            cost = EnergyRecord.objects.filter(
+                date=d, device__office__office_id__in=valid_office_ids
+            ).exclude(device__office__name='DS').aggregate(total=Sum('cost_estimate'))['total'] or 0
+            change_costs.append(cost)
     else:
         # Default to last two days with data
         change_dates_qs = EnergyRecord.objects.filter(
             device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).dates('date', 'day').distinct().order_by('-date')[:2]
+        ).exclude(device__office__name='DS').dates('date', 'day').distinct().order_by('-date')[:2]
         change_dates = list(change_dates_qs)
-    change_costs = []
-    for d in change_dates:
-        cost = EnergyRecord.objects.filter(
-            date=d,
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
-        change_costs.append(cost)
+        change_costs = []
+        for d in change_dates:
+            cost = EnergyRecord.objects.filter(
+                date=d, device__office__office_id__in=valid_office_ids
+            ).exclude(device__office__name='DS').aggregate(total=Sum('cost_estimate'))['total'] or 0
+            change_costs.append(cost)
+
     if len(change_costs) >= 2:
         latest_cost = change_costs[1]  # selected_date or latest
         prev_cost = change_costs[0]  # previous
@@ -328,10 +379,17 @@ def admin_dashboard(request):
         # Heights: scale to max
         max_cost = max(change_costs)
         heights = [(c / max_cost * 100) if max_cost > 0 else 0 for c in change_costs]
+        if level == 'month':
+            bar1_label = change_dates[0].strftime('%B %Y')  # previous month
+            bar2_label = change_dates[1].strftime('%B %Y')  # current month
+        else:
+            bar1_label = change_dates[0].strftime('%B %d')  # previous day
+            bar2_label = change_dates[1].strftime('%B %d')  # current day
+            
         change_data = {
-            'bar1_label': change_dates[0].strftime('%B %d'),  # previous
+            'bar1_label': bar1_label,
             'bar1_height': heights[0],
-            'bar2_label': change_dates[1].strftime('%B %d'),  # selected or latest
+            'bar2_label': bar2_label,
             'bar2_height': heights[1],
             'percent': change_percent_abs,
             'type': 'DECREASE' if is_decrease else 'INCREASE',
