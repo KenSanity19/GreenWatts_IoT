@@ -257,14 +257,9 @@
           const month = monthSelect.value;
           const year = yearSelect.value;
 
-          if (week) {
-            params.append('selected_week', week);
-          } else if (month && year) {
-            params.append('selected_month', month);
-            params.append('selected_year', year);
-          } else if (year) {
-            params.append('selected_year', year);
-          }
+          if (week) params.append('selected_week', week);
+          if (month) params.append('selected_month', month);
+          if (year) params.append('selected_year', year);
 
           const queryString = params.toString();
           window.location.href = queryString ? `?${queryString}` : '?';
