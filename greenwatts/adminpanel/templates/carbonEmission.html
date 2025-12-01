@@ -131,35 +131,37 @@
 
       <section class="chart-section">
         <p>CARBON FOOTPRINT EMISSION</p>
-        <div class="chart-header">
-          <div class="chart-info">
-            <div class="info-item">
-              <div class="info-label">{{ previous_label }}</div>
-              <div class="info-value">{{ prev_co2 }} kg</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">{{ so_far_label }}</div>
-              <div class="info-value">{{ so_far_co2 }} kg</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">{{ predicted_label }}</div>
-              <div class="info-value">{{ predicted_co2 }} kg</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">CHANGE IN EMISSIONS</div>
-              <div class="info-value">
-                {{ change_percent }}
-                <span class="{{ change_class }}">{{ change_direction }}</span>
+        <div class="change-cost">
+          <div class="chart-header">
+            <div class="chart-info">
+              <div class="info-item">
+                <div class="info-label">{{ previous_label }}</div>
+                <div class="info-value">{{ prev_co2 }} kg</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">{{ so_far_label }}</div>
+                <div class="info-value">{{ so_far_co2 }} kg</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">{{ predicted_label }}</div>
+                <div class="info-value">{{ predicted_co2 }} kg</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">CHANGE IN EMISSIONS</div>
+                <div class="info-value">
+                  {{ change_percent }}
+                  <span class="{{ change_class }}">{{ change_direction }}</span>
+                </div>
               </div>
             </div>
           </div>
+          <canvas id="co2Chart"></canvas>
+          <p class="energy-tip">
+            <strong class="green-text">Energy Tip:</strong> On warm days, setting a programmable
+            thermostat to a higher setting when you are not at home can help
+            reduce your energy costs by approximately 10 percent.
+          </p>
         </div>
-        <canvas id="co2Chart"></canvas>
-        <p class="energy-tip">
-          <strong>Energy Tip:</strong> On warm days, setting a programmable
-          thermostat to a higher setting when you are not at home can help
-          reduce your energy costs by approximately 10 percent.
-        </p>
       </section>
     </div>
 
@@ -301,6 +303,34 @@
         const monthSelect = document.getElementById('month-select');
         const yearSelect = document.getElementById('year-select');
 
+        function updateWeekOptions() {
+          const month = monthSelect.value;
+          const year = yearSelect.value;
+          
+          if (month) {
+            fetch(`/adminpanel/get_weeks/?month=${month}&year=${year || ''}`)
+              .then(response => response.json())
+              .then(data => {
+                if (data.status === 'success') {
+                  weekSelect.innerHTML = '<option value="">Week</option>';
+                  data.weeks.forEach(week => {
+                    weekSelect.innerHTML += `<option value="${week.value}">${week.name}</option>`;
+                  });
+                }
+              })
+              .catch(error => {
+                console.error('Error fetching weeks:', error);
+                weekSelect.innerHTML = '<option value="">Week</option>';
+              });
+          } else {
+            // Reset to all weeks if no month selected
+            weekSelect.innerHTML = '<option value="">Week</option>';
+            {% for week in week_options %}
+            weekSelect.innerHTML += '<option value="{{ week.value }}">{{ week.name }}</option>';
+            {% endfor %}
+          }
+        }
+
         function updateFilters(activeSelect) {
           const params = new URLSearchParams();
           
@@ -328,22 +358,17 @@
         monthSelect.addEventListener('change', function() {
           if (this.value) {
             weekSelect.value = '';
-            // Update week options based on selected month
-            fetch(`/adminpanel/get_weeks/?month=${this.value}&year=${yearSelect.value || ''}`)
-              .then(response => response.json())
-              .then(data => {
-                if (data.status === 'success') {
-                  weekSelect.innerHTML = '<option value="">Week</option>';
-                  data.weeks.forEach(week => {
-                    weekSelect.innerHTML += `<option value="${week.value}">${week.name}</option>`;
-                  });
-                }
-              });
+            updateWeekOptions();
+          } else {
+            updateWeekOptions();
           }
           updateFilters('month');
         });
         
         yearSelect.addEventListener('change', function() {
+          if (this.value && monthSelect.value) {
+            updateWeekOptions();
+          }
           if (this.value && !monthSelect.value) {
             weekSelect.value = '';
           }

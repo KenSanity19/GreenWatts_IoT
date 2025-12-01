@@ -155,6 +155,22 @@ span#live-time {
     text-align: center;
 }
 
+.change-cost .energy-tip {
+    margin: 0 !important;
+    padding: 25px 0 0 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color: #fff !important;
+    font-size: 0.9rem !important;
+    text-align: center !important;
+    flex-shrink: 0 !important;
+}
+
+.change-cost .energy-tip strong {
+    color: #4caf50 !important;
+}
+
 #co2Chart {
     height: 300px !important;
     max-height: 300px;

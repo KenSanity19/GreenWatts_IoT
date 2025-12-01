@@ -65,7 +65,8 @@ span#live-time {
 }
 
 .filters select option {
-    color: #000;
+    color: #fff;
+    background: #16163f;
 }
 
 .report-cards {
@@ -152,6 +153,22 @@ span#live-time {
     font-size: 1rem;
     color: #7ED957;
     text-align: center;
+}
+
+.change-cost .energy-tip {
+    margin: 0 !important;
+    padding: 25px 0 0 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color: #fff !important;
+    font-size: 0.9rem !important;
+    text-align: center !important;
+    flex-shrink: 0 !important;
+}
+
+.change-cost .energy-tip strong {
+    color: #4caf50 !important;
 }
 
 #co2Chart {

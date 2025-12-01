@@ -1153,9 +1153,6 @@ def carbon_emission(request):
     from greenwatts.users.models import Office
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    # Week options: filtered by selected month/year if available
-    week_options = get_week_options(valid_office_ids, selected_month, selected_year)
-
     # Year options: all years with data
     years_with_data = EnergyRecord.objects.filter(
         device__office__office_id__in=valid_office_ids
@@ -1192,16 +1189,13 @@ def carbon_emission(request):
         ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
-    from django.utils import timezone
-    now = timezone.now().date()
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
     
-    # Default to current month if no filter applied
-    if not filter_kwargs:
-        filter_kwargs = {'date__year': now.year, 'date__month': now.month}
-        level = 'month'
-        selected_month = str(now.month)
-        selected_year = str(now.year)
+    # Get current date for calculations
+    now = timezone.now().date()
+    
+    # Week options: filtered by selected month/year if available
+    week_options = get_week_options(valid_office_ids, selected_month, selected_year)
 
     # Aggregates for selected filter
     aggregates = EnergyRecord.objects.filter(**filter_kwargs).filter(
