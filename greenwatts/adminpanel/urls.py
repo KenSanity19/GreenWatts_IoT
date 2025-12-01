@@ -15,4 +15,5 @@ urlpatterns = [
     path('editOffice/<int:id>/', views.edit_office, name='edit_office'),
     path('createDevice/', views.create_device, name='create_device'),
     path('saveThresholds/', views.save_thresholds, name='save_thresholds'),
+    path('get-days/', views.get_days, name='get_days'),
 ]

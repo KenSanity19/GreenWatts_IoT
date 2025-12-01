@@ -9,8 +9,95 @@ from greenwatts.users.models import Office
 from ..sensors.models import Device
 from ..sensors.models import EnergyRecord
 from django.db.models import Sum, F, Max
-from datetime import datetime, timedelta
+from django.db.models.functions import ExtractYear, ExtractMonth
+from datetime import datetime, timedelta, date
 import json
+
+# Constants
+MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+               'July', 'August', 'September', 'October', 'November', 'December']
+
+def get_valid_office_ids():
+    """Get all valid office ids from Office table"""
+    return set(Office.objects.values_list('office_id', flat=True))
+
+def get_year_options(valid_office_ids):
+    """Get year options: all years with data"""
+    years_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    return [str(y) for y in years_with_data]
+
+def get_month_options(valid_office_ids):
+    """Get month options: all months with data"""
+    months_with_data = EnergyRecord.objects.filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    return [{'value': str(m), 'name': MONTH_NAMES[m-1]} for m in months_with_data]
+
+def get_day_options(valid_office_ids, selected_month=None, selected_year=None):
+    """Get day options: all days with data, or filtered by month/year if selected"""
+    if selected_month and selected_year:
+        days = EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')
+    else:
+        days = EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')
+    return [d.strftime('%m/%d/%Y') for d in days]
+
+def determine_filter_level(selected_day, selected_month, selected_year, selected_week):
+    """Determine filter kwargs and level based on selections"""
+    filter_kwargs = {}
+    selected_date = None
+    level = 'day'
+
+    if selected_day:
+        try:
+            month_str, day_str, year_str = selected_day.split('/')
+            selected_date = date(int(year_str), int(month_str), int(day_str))
+            filter_kwargs = {'date': selected_date}
+            level = 'day'
+            selected_month = month_str
+            selected_year = year_str
+        except ValueError:
+            selected_date = None
+    elif selected_month and selected_year:
+        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+        level = 'month'
+    elif selected_year:
+        filter_kwargs = {'date__year': int(selected_year)}
+        level = 'year'
+    elif selected_week:
+        try:
+            week_date = date.fromisoformat(selected_week)
+            week_num = week_date.isocalendar()[1]
+            filter_kwargs = {'date__week': week_num, 'date__year': week_date.year}
+            level = 'week'
+        except ValueError:
+            selected_week = None
+    else:
+        # Default to latest date
+        latest_data = get_latest_date_filter()
+        filter_kwargs = latest_data['filter_kwargs']
+        if filter_kwargs:
+            selected_date = latest_data['selected_date']
+            selected_month = latest_data['selected_month']
+            selected_year = latest_data['selected_year']
+            level = 'day'
+
+    return filter_kwargs, selected_date, level, selected_month, selected_year
 
 def get_latest_date_filter():
     """Get the latest date from EnergyRecord as default filter"""
@@ -181,52 +268,24 @@ def admin_dashboard(request):
                    'July', 'August', 'September', 'October', 'November', 'December']
     month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all days with data
-    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).dates('date', 'day').order_by('-date')]
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
+    else:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
-    filter_kwargs = {}
-    selected_date = None
-    level = 'day'
-    if selected_day:
-        try:
-            month_str, day_str, year_str = selected_day.split('/')
-            selected_date = date(int(year_str), int(month_str), int(day_str))
-            filter_kwargs = {'date': selected_date}
-            level = 'day'
-            # Set selected_month and selected_year for template selects
-            selected_month = month_str
-            selected_year = year_str
-        except ValueError:
-            selected_date = None
-    elif selected_month and selected_year:
-        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
-        level = 'month'
-    elif selected_year:
-        filter_kwargs = {'date__year': int(selected_year)}
-        level = 'year'
-    elif selected_week:
-        try:
-            week_date = date.fromisoformat(selected_week)
-            week_num = week_date.isocalendar()[1]
-            filter_kwargs = {'date__week': week_num, 'date__year': week_date.year}
-            level = 'week'
-        except ValueError:
-            selected_week = None
-    else:
-        # Default to latest date
-        latest_data = get_latest_date_filter()
-        filter_kwargs = latest_data['filter_kwargs']
-        if filter_kwargs:
-            selected_date = latest_data['selected_date']
-            selected_day = latest_data['selected_day']
-            selected_month = latest_data['selected_month']
-            selected_year = latest_data['selected_year']
-            level = 'day'
+    filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
 
     # Aggregate sums for total energy usage, cost estimate, and carbon emission from selected filter
     aggregates = EnergyRecord.objects.filter(**filter_kwargs).aggregate(
@@ -477,52 +536,24 @@ def office_usage(request):
                    'July', 'August', 'September', 'October', 'November', 'December']
     month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all days with data
-    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).dates('date', 'day').order_by('-date')]
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
+    else:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
-    filter_kwargs = {}
-    selected_date = None
-    level = 'day'
-    if selected_day:
-        try:
-            month_str, day_str, year_str = selected_day.split('/')
-            selected_date = date(int(year_str), int(month_str), int(day_str))
-            filter_kwargs = {'date': selected_date}
-            level = 'day'
-            # Set selected_month and selected_year for template selects
-            selected_month = month_str
-            selected_year = year_str
-        except ValueError:
-            selected_date = None
-    elif selected_month and selected_year:
-        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
-        level = 'month'
-    elif selected_year:
-        filter_kwargs = {'date__year': int(selected_year)}
-        level = 'year'
-    elif selected_week:
-        try:
-            week_date = date.fromisoformat(selected_week)
-            week_num = week_date.isocalendar()[1]
-            filter_kwargs = {'date__week': week_num, 'date__year': week_date.year}
-            level = 'week'
-        except ValueError:
-            selected_week = None
-    else:
-        # Default to latest date
-        latest_data = get_latest_date_filter()
-        filter_kwargs = latest_data['filter_kwargs']
-        if filter_kwargs:
-            selected_date = latest_data['selected_date']
-            selected_day = latest_data['selected_day']
-            selected_month = latest_data['selected_month']
-            selected_year = latest_data['selected_year']
-            level = 'day'
+    filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
 
     # Filter office_data for table and pie chart based on filter_kwargs
     office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
@@ -716,12 +747,21 @@ def admin_reports(request):
                    'July', 'August', 'September', 'October', 'November', 'December']
     month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all days with data
-    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).dates('date', 'day').order_by('-date')]
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
+    else:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
     filter_kwargs = {}
@@ -880,12 +920,21 @@ def admin_costs(request):
                    'July', 'August', 'September', 'October', 'November', 'December']
     month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all days with data
-    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).dates('date', 'day').order_by('-date')]
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
+    else:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
     filter_kwargs = {}
@@ -1204,12 +1253,21 @@ def carbon_emission(request):
                    'July', 'August', 'September', 'October', 'November', 'December']
     month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
-    # Day options: all days with data
-    day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).dates('date', 'day').order_by('-date')]
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
+    else:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
     filter_kwargs = {}
@@ -1698,6 +1756,33 @@ def save_thresholds(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@admin_required
+def get_days(request):
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    
+    if not month or not year:
+        return JsonResponse({'status': 'error', 'message': 'Month and year required'})
+    
+    try:
+        valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+        days = EnergyRecord.objects.filter(
+            date__year=int(year),
+            date__month=int(month),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).dates('date', 'day').order_by('-date')
+        
+        day_options = [d.strftime('%m/%d/%Y') for d in days]
+        
+        return JsonResponse({
+            'status': 'success',
+            'days': day_options
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
 
 def admin_logout(request):
     request.session.flush()  # Clear the session
