@@ -22,6 +22,8 @@ header h1 {
   margin: 15px 0;
   display: flex;
   gap: 15px;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
 .filters select {
@@ -35,16 +37,30 @@ header h1 {
   box-sizing: border-box;
 }
 
-  .export-btn {
-    background: #1d1f27;
-    color: #fff;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    margin: 10px 0;
-    display: inline-block;
-  }
+.export-btn {
+  background: linear-gradient(135deg, #138f2f, #49524f);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+  transition: all 0.3s ease;
+}
+
+.export-btn:hover {
+  background: linear-gradient(135deg, #218838, #1ea085);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+  transform: translateY(-1px);
+}
+
+.export-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+}
 
   /* Report Cards */
   .report-cards {
@@ -187,6 +203,11 @@ span.green-text {
   .filters select {
     min-width: 100px;
     flex: 1;
+  }
+
+  .export-btn {
+    width: 100%;
+    margin: 10px 0;
   }
 
 
