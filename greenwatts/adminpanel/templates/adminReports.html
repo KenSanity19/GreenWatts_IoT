@@ -111,12 +111,7 @@
           <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
           {% endfor %}
         </select>
-        <select id="week-select">
-          <option value="">Week</option>
-          {% for week in week_options %}
-          <option value="{{ week.value }}" {% if selected_week == week.value %}selected{% endif %}>{{ week.name }}</option>
-          {% endfor %}
-        </select>
+
       </div>
 
       <!-- Top Report Cards -->
@@ -268,19 +263,15 @@
         const daySelect = document.getElementById('day-select');
         const monthSelect = document.getElementById('month-select');
         const yearSelect = document.getElementById('year-select');
-        const weekSelect = document.getElementById('week-select');
-
         function updateFilters() {
           const params = new URLSearchParams();
           const day = daySelect ? daySelect.value : '';
           const month = monthSelect ? monthSelect.value : '';
           const year = yearSelect ? yearSelect.value : '';
-          const week = weekSelect ? weekSelect.value : '';
 
           if (day) params.append('selected_day', day);
           if (month) params.append('selected_month', month);
           if (year) params.append('selected_year', year);
-          if (week) params.append('selected_week', week);
 
           const queryString = params.toString();
           window.location.href = queryString ? `?${queryString}` : '?';
