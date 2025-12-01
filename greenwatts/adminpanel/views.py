@@ -59,6 +59,7 @@ def get_day_options(valid_office_ids, selected_month=None, selected_year=None):
 
 def determine_filter_level(selected_day, selected_month, selected_year, selected_week):
     """Determine filter kwargs and level based on selections"""
+    from datetime import timedelta
     filter_kwargs = {}
     selected_date = None
     level = 'day'
@@ -73,20 +74,22 @@ def determine_filter_level(selected_day, selected_month, selected_year, selected
             selected_year = year_str
         except ValueError:
             selected_date = None
+    elif selected_week:
+        try:
+            week_start = date.fromisoformat(selected_week)
+            week_end = week_start + timedelta(days=6)
+            filter_kwargs = {'date__gte': week_start, 'date__lte': week_end}
+            level = 'week'
+            selected_month = str(week_start.month)
+            selected_year = str(week_start.year)
+        except ValueError:
+            selected_week = None
     elif selected_month and selected_year:
         filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
         level = 'month'
     elif selected_year:
         filter_kwargs = {'date__year': int(selected_year)}
-        level = 'year'
-    elif selected_week:
-        try:
-            week_date = date.fromisoformat(selected_week)
-            week_num = week_date.isocalendar()[1]
-            filter_kwargs = {'date__week': week_num, 'date__year': week_date.year}
-            level = 'week'
-        except ValueError:
-            selected_week = None
+        level = 'month'
     else:
         # Default to latest date
         latest_data = get_latest_date_filter()
@@ -125,19 +128,23 @@ def admin_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
-def get_week_options(valid_office_ids):
+def get_week_options(valid_office_ids, selected_month=None, selected_year=None):
     from django.db.models import Min
     from django.db.models.functions import ExtractYear, ExtractMonth
 
-    # Get distinct months with data
-    months = EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(
-        month=ExtractMonth('date'),
-        year=ExtractYear('date')
-    ).values('month', 'year').distinct().order_by('year', 'month')
+    # If month and year are selected, filter weeks for that specific month/year
+    if selected_month and selected_year:
+        months = [{'month': int(selected_month), 'year': int(selected_year)}]
+    else:
+        # Get distinct months with data
+        months = EnergyRecord.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).annotate(
+            month=ExtractMonth('date'),
+            year=ExtractYear('date')
+        ).values('month', 'year').distinct().order_by('year', 'month')
 
     week_options = []
     for m in months:
@@ -237,52 +244,26 @@ def admin_dashboard(request):
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
     selected_week = request.GET.get('selected_week')
-    
+
     # Force month filtering when month is selected
     if selected_month and not selected_day and not selected_week:
         if not selected_year:
             selected_year = str(dt.now().year)
 
     # Get all valid office ids from Office table
-    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
-
-    # Week options
-    week_options = get_week_options(valid_office_ids)
+    valid_office_ids = get_valid_office_ids()
 
     # Year options: all years with data
-    years_with_data = EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
-    year_options = [str(y) for y in years_with_data]
+    year_options = get_year_options(valid_office_ids)
 
     # Month options: all months with data
-    months_with_data = EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-    
-    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                   'July', 'August', 'September', 'October', 'November', 'December']
-    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+    month_options = get_month_options(valid_office_ids)
 
     # Day options: all days with data, or filtered by month/year if selected
-    if selected_month and selected_year:
-        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
-            date__year=int(selected_year),
-            date__month=int(selected_month),
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).dates('date', 'day').order_by('-date')]
-    else:
-        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).dates('date', 'day').order_by('-date')]
+    day_options = get_day_options(valid_office_ids, selected_month, selected_year)
+
+    # Week options: filtered by selected month/year if available
+    week_options = get_week_options(valid_office_ids, selected_month, selected_year)
 
     # Determine filter date range
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
@@ -514,9 +495,6 @@ def office_usage(request):
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    # Week options
-    week_options = get_week_options(valid_office_ids)
-
     # Year options: all years with data
     years_with_data = EnergyRecord.objects.filter(
         device__office__office_id__in=valid_office_ids
@@ -551,6 +529,9 @@ def office_usage(request):
         ).exclude(
             device__office__name='DS'
         ).dates('date', 'day').order_by('-date')]
+
+    # Week options: filtered by selected month/year if available
+    week_options = get_week_options(valid_office_ids, selected_month, selected_year)
 
     # Determine filter date range
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
@@ -715,13 +696,14 @@ def admin_reports(request):
     from datetime import datetime as dt
     from django.db.models import F
 
-    # Get selected day, month, year from request
+    # Get selected day, month, year, week from request
     selected_day = request.GET.get('selected_day')
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
-    
+    selected_week = request.GET.get('selected_week')
+
     # Force month filtering when month is selected
-    if selected_month and not selected_day:
+    if selected_month and not selected_day and not selected_week:
         if not selected_year:
             selected_year = str(dt.now().year)
 
@@ -742,7 +724,7 @@ def admin_reports(request):
     ).exclude(
         device__office__name='DS'
     ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-    
+
     month_names = ['January', 'February', 'March', 'April', 'May', 'June',
                    'July', 'August', 'September', 'October', 'November', 'December']
     month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
@@ -763,32 +745,11 @@ def admin_reports(request):
             device__office__name='DS'
         ).dates('date', 'day').order_by('-date')]
 
+    # Week options: filtered by selected month/year if available
+    week_options = get_week_options(valid_office_ids, selected_month, selected_year)
+
     # Determine filter date range
-    filter_kwargs = {}
-    selected_date = None
-    if selected_day:
-        try:
-            month_str, day_str, year_str = selected_day.split('/')
-            selected_date = date(int(year_str), int(month_str), int(day_str))
-            filter_kwargs = {'date': selected_date}
-            # Set selected_month and selected_year for template selects
-            selected_month = month_str
-            selected_year = year_str
-        except ValueError:
-            selected_date = None
-    elif selected_month and selected_year:
-        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
-    elif selected_year:
-        filter_kwargs = {'date__year': int(selected_year)}
-    else:
-        # Default to latest date
-        latest_data = get_latest_date_filter()
-        filter_kwargs = latest_data['filter_kwargs']
-        if filter_kwargs:
-            selected_date = latest_data['selected_date']
-            selected_day = latest_data['selected_day']
-            selected_month = latest_data['selected_month']
-            selected_year = latest_data['selected_year']
+    filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
 
     # Filter data for selected filter
     office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
@@ -898,9 +859,6 @@ def admin_costs(request):
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    # Week options: dynamic from database
-    week_options = get_week_options(valid_office_ids)
-
     # Year options: all years with data
     years_with_data = EnergyRecord.objects.filter(
         device__office__office_id__in=valid_office_ids
@@ -937,46 +895,10 @@ def admin_costs(request):
         ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
-    filter_kwargs = {}
-    selected_date = None
-    level = 'day'
-    if selected_day:
-        try:
-            month_str, day_str, year_str = selected_day.split('/')
-            selected_date = date(int(year_str), int(month_str), int(day_str))
-            filter_kwargs = {'date': selected_date}
-            level = 'day'
-            # Set selected_month and selected_year for template selects
-            selected_month = month_str
-            selected_year = year_str
-        except ValueError:
-            selected_date = None
-    elif selected_month:
-        year = int(selected_year) if selected_year else datetime.now().year
-        filter_kwargs = {'date__year': year, 'date__month': int(selected_month)}
-        level = 'month'
-        selected_year = str(year)
-    elif selected_year:
-        filter_kwargs = {'date__year': int(selected_year)}
-        level = 'year'
-    elif selected_week:
-        try:
-            week_date = date.fromisoformat(selected_week)
-            week_num = week_date.isocalendar()[1]
-            filter_kwargs = {'date__week': week_num, 'date__year': week_date.year}
-            level = 'week'
-        except ValueError:
-            selected_week = None
-    else:
-        # Default to latest date
-        latest_data = get_latest_date_filter()
-        filter_kwargs = latest_data['filter_kwargs']
-        if filter_kwargs:
-            selected_date = latest_data['selected_date']
-            selected_day = latest_data['selected_day']
-            selected_month = latest_data['selected_month']
-            selected_year = latest_data['selected_year']
-            level = 'day'
+    filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
+
+    # Week options: filtered by selected month/year if available
+    week_options = get_week_options(valid_office_ids, selected_month, selected_year)
 
     # Aggregate totals for selected filter
     aggregates = EnergyRecord.objects.filter(**filter_kwargs).filter(
@@ -1231,8 +1153,8 @@ def carbon_emission(request):
     from greenwatts.users.models import Office
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
 
-    # Week options: dynamic from database
-    week_options = get_week_options(valid_office_ids)
+    # Week options: filtered by selected month/year if available
+    week_options = get_week_options(valid_office_ids, selected_month, selected_year)
 
     # Year options: all years with data
     years_with_data = EnergyRecord.objects.filter(
@@ -1270,51 +1192,16 @@ def carbon_emission(request):
         ).dates('date', 'day').order_by('-date')]
 
     # Determine filter date range
-    filter_kwargs = {}
-    selected_date = None
-    level = 'month'  # Default to month for CO2
+    from django.utils import timezone
     now = timezone.now().date()
-    if selected_day:
-        try:
-            month_str, day_str, year_str = selected_day.split('/')
-            selected_date = date(int(year_str), int(month_str), int(day_str))
-            filter_kwargs = {'date': selected_date}
-            level = 'day'
-            # Set selected_month and selected_year for template selects
-            selected_month = month_str
-            selected_year = year_str
-        except ValueError:
-            selected_date = None
-    elif selected_month and selected_year:
-        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+    filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
+    
+    # Default to current month if no filter applied
+    if not filter_kwargs:
+        filter_kwargs = {'date__year': now.year, 'date__month': now.month}
         level = 'month'
-    elif selected_year:
-        filter_kwargs = {'date__year': int(selected_year)}
-        level = 'year'
-    elif selected_week:
-        try:
-            week_date = date.fromisoformat(selected_week)
-            week_num = week_date.isocalendar()[1]
-            filter_kwargs = {'date__week': week_num, 'date__year': week_date.year}
-            level = 'week'
-        except ValueError:
-            selected_week = None
-    else:
-        # Default to latest date
-        latest_data = get_latest_date_filter()
-        filter_kwargs = latest_data['filter_kwargs']
-        if filter_kwargs:
-            selected_date = latest_data['selected_date']
-            selected_day = latest_data['selected_day']
-            selected_month = latest_data['selected_month']
-            selected_year = latest_data['selected_year']
-            level = 'day'
-        else:
-            # Fallback to current month if no data
-            filter_kwargs = {'date__year': now.year, 'date__month': now.month}
-            level = 'month'
-            selected_month = str(now.month)
-            selected_year = str(now.year)
+        selected_month = str(now.month)
+        selected_year = str(now.year)
 
     # Aggregates for selected filter
     aggregates = EnergyRecord.objects.filter(**filter_kwargs).filter(
@@ -1780,6 +1667,22 @@ def get_days(request):
         return JsonResponse({
             'status': 'success',
             'days': day_options
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@admin_required
+def get_weeks(request):
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    
+    try:
+        valid_office_ids = get_valid_office_ids()
+        week_options = get_week_options(valid_office_ids, month, year)
+        
+        return JsonResponse({
+            'status': 'success',
+            'weeks': week_options
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})

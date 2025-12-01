@@ -16,4 +16,5 @@ urlpatterns = [
     path('createDevice/', views.create_device, name='create_device'),
     path('saveThresholds/', views.save_thresholds, name='save_thresholds'),
     path('get-days/', views.get_days, name='get_days'),
+    path('get_weeks/', views.get_weeks, name='get_weeks'),
 ]

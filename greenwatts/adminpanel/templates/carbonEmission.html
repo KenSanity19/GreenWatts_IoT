@@ -301,28 +301,54 @@
         const monthSelect = document.getElementById('month-select');
         const yearSelect = document.getElementById('year-select');
 
-        function updateFilters() {
+        function updateFilters(activeSelect) {
           const params = new URLSearchParams();
-          const week = weekSelect.value;
-          const month = monthSelect.value;
-          const year = yearSelect.value;
-
-          if (week) {
-            params.append('selected_week', week);
-          } else if (month && year) {
-            params.append('selected_month', month);
-            params.append('selected_year', year);
-          } else if (year) {
-            params.append('selected_year', year);
+          
+          if (activeSelect === 'week' && weekSelect.value) {
+            params.append('selected_week', weekSelect.value);
+          } else if (activeSelect === 'month' && monthSelect.value) {
+            params.append('selected_month', monthSelect.value);
+            if (yearSelect.value) params.append('selected_year', yearSelect.value);
+          } else if (activeSelect === 'year' && yearSelect.value) {
+            params.append('selected_year', yearSelect.value);
           }
 
           const queryString = params.toString();
           window.location.href = queryString ? `?${queryString}` : '?';
         }
 
-        weekSelect.addEventListener('change', updateFilters);
-        monthSelect.addEventListener('change', updateFilters);
-        yearSelect.addEventListener('change', updateFilters);
+        weekSelect.addEventListener('change', function() {
+          if (this.value) {
+            monthSelect.value = '';
+            yearSelect.value = '';
+          }
+          updateFilters('week');
+        });
+        
+        monthSelect.addEventListener('change', function() {
+          if (this.value) {
+            weekSelect.value = '';
+            // Update week options based on selected month
+            fetch(`/adminpanel/get_weeks/?month=${this.value}&year=${yearSelect.value || ''}`)
+              .then(response => response.json())
+              .then(data => {
+                if (data.status === 'success') {
+                  weekSelect.innerHTML = '<option value="">Week</option>';
+                  data.weeks.forEach(week => {
+                    weekSelect.innerHTML += `<option value="${week.value}">${week.name}</option>`;
+                  });
+                }
+              });
+          }
+          updateFilters('month');
+        });
+        
+        yearSelect.addEventListener('change', function() {
+          if (this.value && !monthSelect.value) {
+            weekSelect.value = '';
+          }
+          updateFilters('year');
+        });
       });
     </script>
   </body>
