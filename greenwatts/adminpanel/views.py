@@ -11,6 +11,7 @@ from ..sensors.models import EnergyRecord
 from django.db.models import Sum, F, Max
 from django.db.models.functions import ExtractYear, ExtractMonth
 from datetime import datetime, timedelta, date
+from .utils import get_random_energy_tip
 import json
 import csv
 
@@ -459,6 +460,7 @@ def admin_dashboard(request):
         'selected_year': selected_year,
         'selected_week': selected_week,
         'level': level,
+        'random_energy_tip': get_random_energy_tip(),
     }
     return render(request, 'adminDashboard.html', context)
 
@@ -471,7 +473,12 @@ def admin_setting(request):
         threshold = Threshold.objects.get(threshold_id=1)
     except Threshold.DoesNotExist:
         threshold = None
-    return render(request, 'adminSetting.html', {'offices': offices, 'devices': devices, 'threshold': threshold})
+    return render(request, 'adminSetting.html', {
+        'offices': offices, 
+        'devices': devices, 
+        'threshold': threshold,
+        'random_energy_tip': get_random_energy_tip(),
+    })
 
 @admin_required
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
@@ -684,6 +691,7 @@ def office_usage(request):
         'selected_month': selected_month,
         'selected_year': selected_year,
         'selected_week': selected_week,
+        'random_energy_tip': get_random_energy_tip(),
     }
     return render(request, 'officeUsage.html', context)
 
@@ -835,6 +843,7 @@ def admin_reports(request):
         'selected_day': selected_day,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'random_energy_tip': get_random_energy_tip(),
     }
     return render(request, 'adminReports.html', context)
 
@@ -1126,6 +1135,7 @@ def admin_costs(request):
         'selected_year': selected_year,
         'selected_week': selected_week,
         'level': level,
+        'random_energy_tip': get_random_energy_tip(),
     }
     return render(request, 'adminCosts.html', context)
 
@@ -1460,6 +1470,7 @@ def carbon_emission(request):
         'selected_month': selected_month,
         'selected_year': selected_year,
         'selected_week': selected_week,
+        'random_energy_tip': get_random_energy_tip(),
     }
     return render(request, 'carbonEmission.html', context)
 
