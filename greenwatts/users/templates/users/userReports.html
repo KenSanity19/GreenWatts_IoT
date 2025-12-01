@@ -73,7 +73,7 @@
           <option>2024</option>
         </select>
 
-        <button class="export-btn"><i class="fas fa-download"></i> Export</button>
+        <button class="export-btn" id="export-btn"><i class="fas fa-download"></i> Export</button>
       </div>
 
       <!-- Top Report Cards -->
@@ -200,6 +200,20 @@
             window.location.href = '?'; // Clear selection, back to latest
           }
         });
+        
+        // Export button functionality
+        const exportBtn = document.getElementById('export-btn');
+        if (exportBtn) {
+          exportBtn.addEventListener('click', function() {
+            const selectedWeek = weekSelect ? weekSelect.value : '';
+            const params = new URLSearchParams();
+            if (selectedWeek) params.append('week', selectedWeek);
+            
+            const queryString = params.toString();
+            const exportUrl = '{% url "users:export_user_reports" %}' + (queryString ? `?${queryString}` : '');
+            window.open(exportUrl, '_blank');
+          });
+        }
       });
     </script>
     <script src="{% static 'userJs/sidebarToggle.js' %}"></script>

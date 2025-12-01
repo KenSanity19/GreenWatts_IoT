@@ -2,7 +2,9 @@ from django.shortcuts import render, redirect
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
+from django.http import HttpResponse
 from ..adminpanel.models import Threshold
+import csv
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
@@ -713,6 +715,69 @@ def user_emmision(request):
         'threshold': threshold_value,
     }
     return render(request, 'users/userEmmision.html', context)
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@login_required
+def export_user_reports(request):
+    from django.db.models import Sum, Min
+    from datetime import timedelta, date
+    from ..sensors.models import EnergyRecord
+    
+    office = request.user
+    devices = office.devices.all()
+    
+    selected_week_num = request.GET.get('week')
+    if selected_week_num:
+        try:
+            selected_week_num = int(selected_week_num)
+        except ValueError:
+            selected_week_num = 1
+    else:
+        selected_week_num = 1
+    
+    # Get min date to calculate week range
+    min_date_qs = EnergyRecord.objects.filter(device__in=devices).aggregate(min_date=Min('date'))
+    min_date = min_date_qs['min_date']
+    if not min_date:
+        # No data case
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="user_report_no_data.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['No data available'])
+        return response
+    
+    # Calculate week start/end
+    current_week_start = min_date - timedelta(days=min_date.weekday())
+    week_start = current_week_start + timedelta(days=(selected_week_num - 1) * 7)
+    week_end = week_start + timedelta(days=6)
+    
+    # Get week data
+    week_data = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=week_start,
+        date__lte=week_end
+    ).values('date').annotate(
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
+    ).order_by('date')
+    
+    response = HttpResponse(content_type='text/csv')
+    filename = f"user_report_week_{selected_week_num}_{office.username}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Date', 'Energy Usage (kWh)', 'Cost Estimate (PHP)', 'CO2 Emission (kg)'])
+    
+    for record in week_data:
+        writer.writerow([
+            record['date'].strftime('%Y-%m-%d'),
+            f"{record['total_energy']:.2f}" if record['total_energy'] else '0.00',
+            f"{record['total_cost']:.2f}" if record['total_cost'] else '0.00',
+            f"{record['total_co2']:.2f}" if record['total_co2'] else '0.00'
+        ])
+    
+    return response
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def logout(request):

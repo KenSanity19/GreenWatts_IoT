@@ -110,7 +110,7 @@
           {% endfor %}
         </select>
 
-        <button class="export-btn"><i class="fas fa-download"></i> Export</button>
+        <button class="export-btn" id="export-btn"><i class="fas fa-download"></i> Export</button>
       </div>
 
       <!-- Top Report Cards -->
@@ -358,6 +358,25 @@
         const initialYear = yearSelect ? yearSelect.value : '';
         if (initialMonth) {
           updateDayOptions(initialMonth, initialYear);
+        }
+        
+        // Export button functionality
+        const exportBtn = document.getElementById('export-btn');
+        if (exportBtn) {
+          exportBtn.addEventListener('click', function() {
+            const params = new URLSearchParams();
+            const day = daySelect ? daySelect.value : '';
+            const month = monthSelect ? monthSelect.value : '';
+            const year = yearSelect ? yearSelect.value : '';
+            
+            if (day) params.append('selected_day', day);
+            if (month) params.append('selected_month', month);
+            if (year) params.append('selected_year', year);
+            
+            const queryString = params.toString();
+            const exportUrl = '{% url "adminpanel:export_reports" %}' + (queryString ? `?${queryString}` : '');
+            window.open(exportUrl, '_blank');
+          });
         }
       });
     </script>

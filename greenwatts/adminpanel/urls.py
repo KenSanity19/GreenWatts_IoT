@@ -17,4 +17,5 @@ urlpatterns = [
     path('saveThresholds/', views.save_thresholds, name='save_thresholds'),
     path('get-days/', views.get_days, name='get_days'),
     path('get_weeks/', views.get_weeks, name='get_weeks'),
+    path('export-reports/', views.export_reports, name='export_reports'),
 ]

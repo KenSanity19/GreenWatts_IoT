@@ -12,6 +12,7 @@ from django.db.models import Sum, F, Max
 from django.db.models.functions import ExtractYear, ExtractMonth
 from datetime import datetime, timedelta, date
 import json
+import csv
 
 # Constants
 MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -1680,6 +1681,45 @@ def get_weeks(request):
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
+
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def export_reports(request):
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+    
+    valid_office_ids = get_valid_office_ids()
+    filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, None)
+    
+    office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
+        device__office__office_id__in=valid_office_ids
+    ).exclude(
+        device__office__name='DS'
+    ).values(
+        office_name=F('device__office__name')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
+    ).order_by('-total_energy')
+    
+    response = HttpResponse(content_type='text/csv')
+    filename = f"energy_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Office Name', 'Energy Usage (kWh)', 'Cost Estimate (PHP)', 'CO2 Emission (kg)'])
+    
+    for record in office_data:
+        writer.writerow([
+            record['office_name'],
+            f"{record['total_energy']:.2f}" if record['total_energy'] else '0.00',
+            f"{record['total_cost']:.2f}" if record['total_cost'] else '0.00',
+            f"{record['total_co2']:.2f}" if record['total_co2'] else '0.00'
+        ])
+    
+    return response
 
 def admin_logout(request):
     request.session.flush()  # Clear the session
