@@ -353,6 +353,13 @@
             updateFilters();
           });
         }
+        
+        // Check if month is pre-selected on page load and filter days
+        const initialMonth = monthSelect ? monthSelect.value : '';
+        const initialYear = yearSelect ? yearSelect.value : '';
+        if (initialMonth) {
+          updateDayOptions(initialMonth, initialYear);
+        }
       });
     </script>
   </body>

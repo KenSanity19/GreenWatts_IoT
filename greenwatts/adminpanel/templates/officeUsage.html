@@ -327,20 +327,74 @@
 
         monthSelect.addEventListener('change', function() {
           weekSelect.value = '';
-          if (this.value && yearSelect.value) {
-            daySelect.value = '';
+          daySelect.value = '';
+          
+          const selectedMonth = monthSelect.value;
+          const selectedYear = yearSelect.value;
+          
+          if (selectedMonth) {
+            updateDayOptions(selectedMonth, selectedYear);
+            updateFilters();
+          } else {
+            resetDayOptions();
+            updateFilters();
           }
-          updateFilters();
         });
+        
+
+
+        function updateDayOptions(month, year) {
+          fetch(`/adminpanel/get-days/?month=${month}&year=${year || new Date().getFullYear()}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success' && daySelect) {
+                const selectedDay = daySelect.value;
+                daySelect.innerHTML = '<option value="">Day</option>';
+                data.days.forEach(day => {
+                  const option = document.createElement('option');
+                  option.value = day;
+                  option.textContent = day;
+                  if (day === selectedDay) option.selected = true;
+                  daySelect.appendChild(option);
+                });
+              }
+            })
+            .catch(error => console.error('Error fetching days:', error));
+        }
+        
+        function resetDayOptions() {
+          if (daySelect) {
+            const selectedDay = daySelect.value;
+            const allDays = {{ day_options|safe }};
+            daySelect.innerHTML = '<option value="">Day</option>';
+            allDays.forEach(day => {
+              const option = document.createElement('option');
+              option.value = day;
+              option.textContent = day;
+              if (day === selectedDay) option.selected = true;
+              daySelect.appendChild(option);
+            });
+          }
+        }
+        
+        // Check if month is pre-selected on page load and filter days
+        const initialMonth = monthSelect.value;
+        const initialYear = yearSelect.value;
+        if (initialMonth) {
+          updateDayOptions(initialMonth, initialYear);
+        }
 
         yearSelect.addEventListener('change', function() {
           weekSelect.value = '';
-          if (this.value && monthSelect.value) {
-            daySelect.value = '';
-          } else if (this.value && !monthSelect.value) {
-            daySelect.value = '';
-            monthSelect.value = '';
+          daySelect.value = '';
+          
+          const selectedMonth = monthSelect.value;
+          const selectedYear = yearSelect.value;
+          
+          if (selectedMonth && selectedYear) {
+            updateDayOptions(selectedMonth, selectedYear);
           }
+          
           updateFilters();
         });
 
