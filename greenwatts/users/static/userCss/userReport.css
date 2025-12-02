@@ -91,10 +91,11 @@ header h1 {
   }
 
   /* Colors for each card */
-  .total {  background: #527e4c; }     /* Green */
-  .highest { background: #dc3545; }   /* Red */
-  .inactive { background: #214574; }  /* Blue */
-  .best { background: #f3c334; color: #000; } /* Yellow with black text */
+  .energy { background: #527e4c; }     /* Green */
+  .cost { background: #6c757d; }       /* Gray */
+  .co2 { background: #17a2b8; }       /* Teal */
+  .status { background: #214574; }     /* Blue */
+  .highest { background: #dc3545; }    /* Red */
 
   /* Chart Section */
   .chart-container {
@@ -139,9 +140,121 @@ span.green-text {
     margin: 20px 0;
   }
 
-  .chart-title {
-  color: #000000;
+  .chart-calendar-layout {
+    display: flex;
+    gap: 20px;
+  }
+
+  .chart-calendar-layout .chart-container:first-child {
+    flex: 1;
+  }
+
+  .chart-calendar-layout .chart-container:last-child {
+    flex: 0 0 350px;
+  }
+
+  .calendar-title {
+    color: #000000;
     margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .calendar-inner {
+    background-color: white;
+    padding: 10px;
+    border-radius: 4px;
+  }
+
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .calendar-nav {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+  }
+
+  .calendar-nav:hover {
+    background-color: #f0f0f0;
+  }
+
+  .calendar-month-year {
+    font-weight: bold;
+    font-size: 18px;
+  }
+
+  .calendar-grid {
+    width: 100%;
+  }
+
+  .calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 10px;
+  }
+
+  .calendar-weekdays div {
+    text-align: center;
+    font-weight: bold;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+  }
+
+  .calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+
+  .calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+  }
+
+  .calendar-day.empty {
+    visibility: hidden;
+  }
+
+  .calendar-day.low-usage {
+    background-color: #d4edda;
+    color: #155724;
+  }
+
+  .calendar-day.medium-usage {
+    background-color: #fff3cd;
+    color: #856404;
+  }
+
+  .calendar-day.high-usage {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+
+  .calendar-day:hover:not(.empty) {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  .chart-title {
+    color: #000000;
+    margin-bottom: 20px;
+    text-align: center;
   }
 
   .chart-inner {
@@ -217,6 +330,14 @@ span.green-text {
     gap: 10px;
   }
 
+  .chart-calendar-layout {
+    flex-direction: column;
+  }
+
+  .calendar-section {
+    flex: none;
+  }
+
   .chart-frame {
     padding: 15px;
   }
@@ -225,12 +346,21 @@ span.green-text {
     padding: 15px;
   }
 
-  .chart-title {
+  .chart-title, .calendar-title {
     font-size: 18px;
   }
 
-  .chart-inner {
+  .chart-inner, .calendar-inner {
     padding: 5px;
+  }
+
+  .calendar-month-year {
+    font-size: 16px;
+  }
+
+  .calendar-weekdays div {
+    padding: 6px;
+    font-size: 12px;
   }
 
   header {
@@ -242,6 +372,4 @@ span.green-text {
   .header-left h1 {
     font-size: 24px;
   }
-
-
 }
