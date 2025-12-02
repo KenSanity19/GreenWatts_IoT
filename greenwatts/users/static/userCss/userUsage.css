@@ -48,58 +48,256 @@ header h1 {
   -moz-appearance: none;
 }
 
-/* Usage Table */
-.usage-table-container {
-  background-color: var(--bg-sidebar);
+/* Dashboard Wrapper */
+.dashboard-wrapper {
+  background: var(--bg-sidebar);
   border-radius: 10px;
-  overflow: hidden;
-  color: var(--text-black);
+  padding: 20px;
+  margin-top: 20px;
 }
 
-.usage-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: center;
-  background-color: var(--text-white);
+/* Dashboard Container */
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.usage-table th,
-.usage-table td {
-  padding: 12px 10px;
-  border: 1px solid var(--text-black);
+.top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Summary Card */
+.summary-card {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  color: #000;
+  border: 1px solid #444;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 273px;
+}
+
+.summary-card h3 {
+  margin: 0 0 35px 0px;
+  font-size: 28px;
+  color: #000;
   font-weight: bold;
 }
 
-.usage-table th {
-  background-color: var(--text-white);
-  color: var(--text-black);
+.summary-content {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
 }
 
-/* Row Status Colors */
-tr.high td {
-  background-color: #e57373;
-  color: var(--text-white);
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
-tr.efficient td {
-  background-color: #81c784;
-  color: var(--text-black);
+.summary-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-tr.moderate td {
-  background-color: #fff176;
-  color: var(--text-black);
+.summary-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.summary-content p {
+  margin: 0;
+  font-size: 14px;
+  padding: 15px;
+  border-radius: 8px;
+  background: #f8f9fa;
+  border-left: 4px solid #007bff;
+  transition: all 0.2s ease;
+}
+
+.summary-content p:hover {
+  background: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.office-name {
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
+.status-high {
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
+/* Combined Usage Card */
+.combined-usage-card {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  color: #000;
+  border: 1px solid #444;
+}
+
+.usage-percentage {
+  background: white;
+  padding: 20px;
+  text-align: center;
+  border-bottom: 3px solid #c5c3bf;
+}
+
+.percentage-value {
+  display: block;
+  font-size: 48px;
+  font-weight: bold;
+  color: #000;
+  margin-bottom: 5px;
+}
+
+.percentage-label {
+  font-size: 14px;
+  color: #000;
+}
+
+.usage-ranking {
+  background: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.rank-number {
+  display: block;
+  font-size: 24px;
+  font-weight: bold;
+  color: #ff6b6b;
+  margin-bottom: 5px;
+}
+
+.rank-text {
+  font-size: 16px;
+  font-weight: bold;
+  color: #000;
+}
+
+.usage-trend {
+  background: white;
+  padding: 15px 20px;
+  text-align: center;
+}
+
+.trend-arrow {
+  color: #ff6b6b;
+  margin-right: 5px;
+}
+
+.trend-text {
+  font-size: 12px;
+  color: #ff6b6b;
+}
+
+.usage-alert {
+  background: #ff4444;
+  padding: 15px 20px;
+  text-align: center;
+}
+
+.alert-text {
+  display: block;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 5px;
+}
+
+.alert-subtext {
+  font-size: 12px;
+  color: white;
+  opacity: 0.9;
+}
+
+/* Chart Container */
+.chart-container {
+  background: white;
+  border-radius: 10px;
+  padding: 20px 20px 55px 20px;
+  height: 300px;
+  border: 1px solid;
+  position: relative;
+}
+
+
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 20px;
+}
+
+.tab {
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tab.active {
+  color: #000;
+  font-weight: bold;
+}
+
+.chart-period {
+  background: white;
+  color: #000;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* Pie Chart Container */
+.pie-chart-container {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  height: 350px;
+  border: 1px solid #444;
+}
+
+.pie-chart-container h4 {
+  color: #000;
+  text-align: center;
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  font-weight: bold;
 }
 
 /* Energy Tip */
 .energy-tip {
-  background: var(--bg-sidebar);
+  background: transparent;
   color: var(--text-white);
   padding: 12px;
   border-radius: 8px;
   font-size: var(--font-size-sm);
   text-align: center;
-  margin-top: 50px;
+  margin-top: 20px;
 }
 
 .energy-tip .green-text {
@@ -120,18 +318,21 @@ tr.moderate td {
     flex: 1;
   }
 
-  .usage-table-container {
-    overflow-x: auto;
+  .top-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
   }
 
-  .usage-table {
-    min-width: 600px;
-    font-size: 12px;
+  .chart-container {
+    height: 250px;
   }
 
-  .usage-table th,
-  .usage-table td {
-    padding: 8px 6px;
+  .pie-chart-container {
+    height: 300px;
+  }
+
+  .share-percentage {
+    font-size: 36px;
   }
 
   header h1 {

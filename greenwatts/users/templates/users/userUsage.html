@@ -17,6 +17,8 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
 
   <body>
@@ -70,7 +72,7 @@
       <!-- Filters -->
       <div class="filters">
         <select id="day-select">
-          <!-- Updated: Dynamic options if day_options added to view -->
+          <option>Day</option>
           {% for option in day_options %}
             <option value="{{ option }}" {% if selected_date|date:"m/d/Y" == option %}selected{% endif %}>{{ option }}</option>
           {% endfor %}
@@ -87,46 +89,96 @@
         </select>
       </div>
 
-      <!-- Usage Table -->
-      <div class="usage-table-container">
-        <table class="usage-table">
-          <thead>
-            <tr>
-              <th>Office</th>
-              <th>Energy Usage</th>
-              <th>Cost Estimate</th>
-              <th>CO₂ Emissions</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in table_data %}
-            <tr class="{{ row.status_class }}">
-              <td>{{ row.office }}</td>
-              <td>{{ row.energy }}</td>
-              <td>{{ row.cost }}</td>
-              <td>{{ row.co2 }}</td>
-              <td>{{ row.status }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="5">No data available for the selected date.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      <!-- Main Dashboard Content -->
+      <div class="dashboard-wrapper">
+        <div class="dashboard-container">
+          <!-- Top Row - Cards Side by Side -->
+          <div class="top-row">
+            <!-- Office Usage Summary -->
+            <div class="summary-card">
+              <h3>Summary</h3>
+              <div class="summary-content">
+                <div class="summary-item">
+                  <span class="summary-label">Office</span>
+                  <span class="summary-value office-name">{{ office.name }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Energy Usage</span>
+                  <span class="summary-value">{{ office_energy_usage }} kWh</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Cost Predicted</span>
+                  <span class="summary-value">₱{{ office_cost_predicted }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">CO2 Emission</span>
+                  <span class="summary-value">{{ office_co2_emission }} kg</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Status</span>
+                  <span class="summary-value status-high">High</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Date</span>
+                  <span class="summary-value">{{ selected_date|date:"M j, Y" }}</span>
+                </div>
+              </div>
+            </div>
 
-      <!-- Energy Tip -->
-      <div class="energy-tip">
-        <p>
-          <span class="green-text">Energy Tip:</span> On warm days, setting a
-          programmable thermostat to a higher setting when you are not at home
-          can help reduce your energy costs by approximately 10 percent.
-        </p>
+            <!-- Combined Usage Card -->
+            <div class="combined-usage-card">
+              <div class="usage-percentage">
+                <span class="percentage-value">{{ office_share_percentage }}%</span>
+                <span class="percentage-label">of Total Share</span>
+              </div>
+              
+              <div class="usage-ranking">
+                <span class="rank-number">{{ office_rank }}</span>
+                <span class="rank-text">Highest Usage</span>
+              </div>
+              
+              <div class="usage-trend">
+                <i class="fas fa-arrow-up trend-arrow"></i>
+                <span class="trend-text">{{ rank_change }}% Increase vs previous 7 days</span>
+              </div>
+              
+              <div class="usage-alert">
+                <span class="alert-text">OVER-LIMIT</span>
+                <span class="alert-subtext">(Above Threshold)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Row - Chart -->
+          <div class="chart-container">
+            <div class="chart-header">
+              <div class="chart-tabs">
+                <span class="tab active">Energy Usage (kWh)</span>
+                <span class="tab">CO2 Emission (kg)</span>
+              </div>
+              <select class="chart-period">
+                <option>Week</option>
+                <option>Month</option>
+              </select>
+            </div>
+            <canvas id="usageChart" width="400" height="200"></canvas>
+          </div>
+        </div>
+        
+        <!-- Energy Tip -->
+        <div class="energy-tip">
+          <p>
+            <span class="green-text">Energy Tip:</span> On warm days, setting a
+            programmable thermostat to a higher setting when you are not at home
+            can help reduce your energy costs by approximately 10 percent.
+          </p>
+        </div>
       </div>
     </div>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <!-- JS Time Display and Date Filter -->
     <script>
       function updateTime() {
@@ -150,7 +202,7 @@
         const daySelect = document.getElementById("day-select");
         daySelect.addEventListener("change", function () {
           const selectedValue = this.value;
-          if (selectedValue) {
+          if (selectedValue && selectedValue !== 'Day') {
             window.location.href = `?selected_date=${encodeURIComponent(
               selectedValue
             )}`;
@@ -159,6 +211,58 @@
           }
         });
       });
+
+      // Line Chart
+      const ctx = document.getElementById('usageChart').getContext('2d');
+      const usageChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: {{ chart_labels|safe }},
+          datasets: [{
+            label: 'Energy Usage (kWh)',
+            data: {{ chart_data|safe }},
+            borderColor: '#4285f4',
+            backgroundColor: 'rgba(66, 133, 244, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: '#e0e0e0'
+              },
+              ticks: {
+                color: '#000'
+              }
+            },
+            x: {
+              grid: {
+                color: '#e0e0e0'
+              },
+              ticks: {
+                color: '#000',
+                font: {
+                  size: 12,
+                  weight: 'bold'
+                }
+              }
+            }
+          }
+        }
+      });
+
+
     </script>
     <script src="{% static 'userJs/sidebarToggle.js' %}"></script>
   </body>

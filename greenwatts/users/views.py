@@ -190,8 +190,9 @@ def dashboard(request):
 def office_usage(request):
     from django.db.models import Sum, F
     from django.utils import timezone
-    from datetime import date
+    from datetime import date, timedelta
     from ..sensors.models import EnergyRecord
+    import json
 
     office = request.user
     selected_date_str = request.GET.get('selected_date')
@@ -219,46 +220,90 @@ def office_usage(request):
         else:
             selected_date = timezone.now().date()
 
-    # Filter data for selected date
-    office_data = EnergyRecord.objects.filter(
+    # Get current office data for selected date
+    office_record = EnergyRecord.objects.filter(
         date=selected_date,
         device__in=devices
-    ).values(
-        office_name=F('device__office__name')
-    ).annotate(
+    ).aggregate(
         total_energy=Sum('total_energy_kwh'),
         total_cost=Sum('cost_estimate'),
         total_co2=Sum('carbon_emission_kgco2')
+    )
+
+    office_energy = office_record['total_energy'] or 0
+    office_cost = office_record['total_cost'] or 0
+    office_co2 = office_record['total_co2'] or 0
+
+    # Get all offices data for comparison
+    all_offices_data = EnergyRecord.objects.filter(
+        date=selected_date
+    ).values(
+        office_name=F('device__office__name'),
+        office_id=F('device__office__office_id')
+    ).annotate(
+        total_energy=Sum('total_energy_kwh')
     ).order_by('-total_energy')
 
+    # Calculate total energy across all offices
+    total_all_energy = sum(record['total_energy'] or 0 for record in all_offices_data)
+    
+    # Calculate office share percentage
+    office_share_percentage = (office_energy / total_all_energy * 100) if total_all_energy > 0 else 0
+    
+    # Find office rank
+    office_rank = 1
+    for i, record in enumerate(all_offices_data):
+        if record['office_id'] == office.office_id:
+            office_rank = i + 1
+            break
+
+    # Get week data for chart (last 7 days)
+    week_start = selected_date - timedelta(days=6)
+    week_data = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=week_start,
+        date__lte=selected_date
+    ).values('date').annotate(
+        total_energy=Sum('total_energy_kwh')
+    ).order_by('date')
+
+    # Prepare chart data
+    chart_labels = []
+    chart_data = []
+    date_dict = {record['date']: record['total_energy'] or 0 for record in week_data}
+    
+    current = week_start
+    while current <= selected_date:
+        chart_labels.append(current.strftime('%a'))
+        chart_data.append(date_dict.get(current, 0))
+        current += timedelta(days=1)
+
+    # Prepare pie chart data (top 5 offices)
+    pie_labels = []
+    pie_data = []
+    for record in all_offices_data[:5]:
+        pie_labels.append(record['office_name'])
+        pie_data.append(record['total_energy'] or 0)
+
+    # Calculate rank change (mock data for now)
+    rank_change = 10  # This would need historical data to calculate properly
+
     threshold = Threshold.objects.first()
-    table_data = []
-    for record in office_data:
-        energy = record['total_energy'] or 0
-        if energy > threshold.energy_moderate_max:
-            status = 'HIGH'
-            status_class = 'high'
-        elif energy > threshold.energy_efficient_max:
-            status = 'MODERATE'
-            status_class = 'moderate'
-        else:
-            status = 'EFFICIENT'
-            status_class = 'efficient'
-
-        table_data.append({
-            'office': record['office_name'],
-            'energy': f"{energy:.1f} kWh",
-            'cost': f"₱{record['total_cost']:.2f}" if record['total_cost'] else '₱0.00',
-            'co2': f"{record['total_co2']:.1f} kg" if record['total_co2'] else '0.0 kg',
-            'status': status,
-            'status_class': status_class
-        })
-
+    
     context = {
         'office': office,
-        'selected_date': selected_date_str if selected_date_str else None,
+        'selected_date': selected_date,
         'day_options': day_options,
-        'table_data': table_data,
+        'office_energy_usage': f"{office_energy:.1f}",
+        'office_cost_predicted': f"{office_cost:.2f}",
+        'office_co2_emission': f"{office_co2:.1f}",
+        'office_share_percentage': f"{office_share_percentage:.1f}",
+        'office_rank': f"{office_rank}st" if office_rank == 1 else f"{office_rank}nd" if office_rank == 2 else f"{office_rank}rd" if office_rank == 3 else f"{office_rank}th",
+        'rank_change': rank_change,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+        'pie_labels': json.dumps(pie_labels),
+        'pie_data': json.dumps(pie_data),
     }
     return render(request, 'users/userUsage.html', context)
 
