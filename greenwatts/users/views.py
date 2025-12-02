@@ -448,6 +448,25 @@ def user_reports(request):
     # Cost predicted for the week
     cost_predicted = sum(record['total_cost'] or 0 for record in week_data)
 
+    # CO2 emission for the week
+    co2_emission = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=week_start,
+        date__lte=week_end
+    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
+
+    # Office status based on energy usage
+    threshold = Threshold.objects.first()
+    if threshold:
+        if total_energy_usage > threshold.energy_moderate_max:
+            office_status = 'HIGH'
+        elif total_energy_usage > threshold.energy_efficient_max:
+            office_status = 'MODERATE'
+        else:
+            office_status = 'ACTIVE'
+    else:
+        office_status = 'ACTIVE'
+
     # Best performing day (lowest usage)
     if chart_values:
         min_energy = min(chart_values)
@@ -456,9 +475,8 @@ def user_reports(request):
     else:
         best_performing_day = 'N/A'
 
-    threshold = Threshold.objects.first()
     # Recommendation based on highest usage day
-    if max_energy > threshold.energy_moderate_max:
+    if threshold and max_energy > threshold.energy_moderate_max:
         recommendation = f"Usage exceeded on {highest_usage_day}. Consider reducing usage during peak hours."
     else:
         recommendation = "Energy usage is within acceptable limits. Keep up the good work!"
@@ -470,6 +488,8 @@ def user_reports(request):
         'total_energy_usage': f"{total_energy_usage:.2f}",
         'highest_usage_day': highest_usage_day,
         'cost_predicted': f"₱{cost_predicted:.2f}",
+        'co2_emission': f"{co2_emission:.2f}",
+        'office_status': office_status,
         'best_performing_day': best_performing_day,
         'chart_labels': json.dumps(chart_labels),
         'chart_values': json.dumps(chart_values),
