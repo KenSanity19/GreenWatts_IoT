@@ -278,17 +278,50 @@ def office_usage(request):
         chart_data.append(date_dict.get(current, 0))
         current += timedelta(days=1)
 
-    # Prepare pie chart data (top 5 offices)
-    pie_labels = []
-    pie_data = []
-    for record in all_offices_data[:5]:
-        pie_labels.append(record['office_name'])
-        pie_data.append(record['total_energy'] or 0)
+    # Calculate rank change vs previous 7 days
+    prev_week_start = week_start - timedelta(days=7)
+    prev_week_end = week_start - timedelta(days=1)
+    prev_week_energy = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=prev_week_start,
+        date__lte=prev_week_end
+    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+    
+    current_week_energy = sum(chart_data)
+    if prev_week_energy > 0:
+        rank_change = ((current_week_energy - prev_week_energy) / prev_week_energy) * 100
+    else:
+        rank_change = 0
 
-    # Calculate rank change (mock data for now)
-    rank_change = 10  # This would need historical data to calculate properly
-
+    # Get threshold and determine status
     threshold = Threshold.objects.first()
+    if threshold:
+        if office_energy > threshold.energy_moderate_max:
+            energy_status = 'High'
+            status_class = 'status-high'
+        elif office_energy > threshold.energy_efficient_max:
+            energy_status = 'Moderate'
+            status_class = 'status-moderate'
+        else:
+            energy_status = 'Efficient'
+            status_class = 'status-efficient'
+        
+        is_over_limit = office_energy > threshold.energy_moderate_max
+    else:
+        energy_status = 'Unknown'
+        status_class = 'status-unknown'
+        is_over_limit = False
+
+    # Format rank with proper suffix
+    rank_suffix = 'th'
+    if office_rank == 1:
+        rank_suffix = 'st'
+    elif office_rank == 2:
+        rank_suffix = 'nd'
+    elif office_rank == 3:
+        rank_suffix = 'rd'
+    
+    formatted_rank = f"{office_rank}{rank_suffix}"
     
     context = {
         'office': office,
@@ -298,12 +331,14 @@ def office_usage(request):
         'office_cost_predicted': f"{office_cost:.2f}",
         'office_co2_emission': f"{office_co2:.1f}",
         'office_share_percentage': f"{office_share_percentage:.1f}",
-        'office_rank': f"{office_rank}st" if office_rank == 1 else f"{office_rank}nd" if office_rank == 2 else f"{office_rank}rd" if office_rank == 3 else f"{office_rank}th",
-        'rank_change': rank_change,
+        'office_rank': formatted_rank,
+        'rank_change': f"{abs(rank_change):.1f}",
+        'rank_change_direction': 'increase' if rank_change >= 0 else 'decrease',
+        'energy_status': energy_status,
+        'status_class': status_class,
+        'is_over_limit': is_over_limit,
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
-        'pie_labels': json.dumps(pie_labels),
-        'pie_data': json.dumps(pie_data),
     }
     return render(request, 'users/userUsage.html', context)
 

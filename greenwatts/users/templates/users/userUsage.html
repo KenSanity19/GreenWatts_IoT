@@ -116,7 +116,7 @@
                 </div>
                 <div class="summary-item">
                   <span class="summary-label">Status</span>
-                  <span class="summary-value status-high">High</span>
+                  <span class="summary-value {{ status_class }}">{{ energy_status }}</span>
                 </div>
                 <div class="summary-item">
                   <span class="summary-label">Date</span>
@@ -138,14 +138,21 @@
               </div>
               
               <div class="usage-trend">
-                <i class="fas fa-arrow-up trend-arrow"></i>
-                <span class="trend-text">{{ rank_change }}% Increase vs previous 7 days</span>
+                <i class="fas fa-arrow-{{ rank_change_direction|yesno:'up,down' }} trend-arrow"></i>
+                <span class="trend-text">{{ rank_change }}% {{ rank_change_direction|title }} vs previous 7 days</span>
               </div>
               
+              {% if is_over_limit %}
               <div class="usage-alert">
                 <span class="alert-text">OVER-LIMIT</span>
                 <span class="alert-subtext">(Above Threshold)</span>
               </div>
+              {% else %}
+              <div class="usage-normal">
+                <span class="normal-text">WITHIN LIMIT</span>
+                <span class="normal-subtext">(Below Threshold)</span>
+              </div>
+              {% endif %}
             </div>
           </div>
 
