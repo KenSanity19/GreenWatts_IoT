@@ -69,20 +69,22 @@
       <!-- Filters -->
       <div class="filters">
         <select id="day-select">
-          <!-- Updated: Dynamic options if day_options added to view -->
-          {% for option in day_options %}
-            <option value="{{ option }}" {% if selected_date|date:"m/d/Y" == option %}selected{% endif %}>{{ option }}</option>
+          <option value="">Day</option>
+          {% for day in day_options %}
+          <option value="{{ day }}" {% if selected_day == day %}selected{% endif %}>{{ day }}</option>
           {% endfor %}
         </select>
-        <select>
-          <option>Month</option>
-          <option>October</option>
-          <option>November</option>
+        <select id="month-select">
+          <option value="">Month</option>
+          {% for month in month_options %}
+          <option value="{{ month.value }}" {% if selected_month == month.value %}selected{% endif %}>{{ month.name }}</option>
+          {% endfor %}
         </select>
-        <select>
-          <option>Year</option>
-          <option>2023</option>
-          <option>2024</option>
+        <select id="year-select">
+          <option value="">Year</option>
+          {% for year in year_options %}
+          <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
         </select>
       </div>
 
@@ -160,9 +162,8 @@
           <h3>Carbon Footprint</h3>
           <div class="carbon-footprint-header">
             <span class="left-label"
-              ><strong>Emission</strong> Till Date (as of {{ selected_date|date:"F j, Y" }})</span  <!-- Updated: Dynamic date -->
-            >
-            <span class="right-label">Predicted (by {{ predicted_date|date:"F j, Y" }})</span>  <!-- Updated: Dynamic date -->
+              ><strong>Emission</strong> Till Date{% if selected_date %} (as of {{ selected_date|date:"F j, Y" }}){% endif %}</span>
+            <span class="right-label">Predicted (by {{ predicted_date|date:"F j, Y" }})</span>
           </div>
           <div class="carbon-footprint-content">
             <div class="carbon-footprint-bar">
@@ -202,19 +203,143 @@
       setInterval(updateTime, 1000);
       updateTime(); // initial call
 
-      // Handle day dropdown change
-      document.addEventListener("DOMContentLoaded", function () {
-        const daySelect = document.getElementById("day-select");
-        daySelect.addEventListener("change", function () {
-          const selectedValue = this.value;
-          if (selectedValue) {
-            window.location.href = `?selected_date=${encodeURIComponent(
-              selectedValue
-            )}`;
-          } else {
-            window.location.href = "?"; // Clear selection, back to latest
+      // Handle filter dropdown changes
+      document.addEventListener('DOMContentLoaded', function() {
+        const daySelect = document.getElementById('day-select');
+        const monthSelect = document.getElementById('month-select');
+        const yearSelect = document.getElementById('year-select');
+
+        function updateFilters() {
+          const params = new URLSearchParams();
+          const day = daySelect ? daySelect.value : '';
+          const month = monthSelect ? monthSelect.value : '';
+          const year = yearSelect ? yearSelect.value : '';
+
+          if (day) params.append('selected_day', day);
+          if (month) params.append('selected_month', month);
+          if (year) params.append('selected_year', year);
+
+          const queryString = params.toString();
+          window.location.href = queryString ? `?${queryString}` : '?';
+        }
+
+        // Add event listeners only if elements exist
+        if (daySelect) {
+          daySelect.addEventListener('change', function() {
+            const selectedDay = daySelect.value;
+            if (selectedDay) {
+              const [month, day, year] = selectedDay.split('/');
+              const monthValue = parseInt(month).toString();
+              
+              // Set month - add option if it doesn't exist
+              if (monthSelect) {
+                let monthOption = monthSelect.querySelector(`option[value="${monthValue}"]`);
+                if (!monthOption) {
+                  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                    'July', 'August', 'September', 'October', 'November', 'December'];
+                  monthOption = document.createElement('option');
+                  monthOption.value = monthValue;
+                  monthOption.textContent = monthNames[parseInt(monthValue) - 1];
+                  monthSelect.appendChild(monthOption);
+                }
+                monthSelect.value = monthValue;
+              }
+              
+              // Set year - add option if it doesn't exist
+              if (yearSelect) {
+                let yearOption = yearSelect.querySelector(`option[value="${year}"]`);
+                if (!yearOption) {
+                  yearOption = document.createElement('option');
+                  yearOption.value = year;
+                  yearOption.textContent = year;
+                  yearSelect.appendChild(yearOption);
+                }
+                yearSelect.value = year;
+              }
+            } else {
+              if (monthSelect) monthSelect.value = '';
+              if (yearSelect) yearSelect.value = '';
+            }
+            updateFilters();
+          });
+        }
+        
+        if (monthSelect) {
+          monthSelect.addEventListener('change', function() {
+            // Clear day when month is selected
+            if (daySelect) daySelect.value = '';
+            
+            // Update day options based on selected month
+            const selectedMonth = monthSelect.value;
+            const selectedYear = yearSelect ? yearSelect.value : '';
+            
+            if (selectedMonth) {
+              updateDayOptions(selectedMonth, selectedYear);
+            } else {
+              // Reset to all days if no month selected
+              resetDayOptions();
+            }
+            // Always call updateFilters to apply the change
+            updateFilters();
+          });
+        }
+        
+        function updateDayOptions(month, year) {
+          console.log('Fetching days for month:', month, 'year:', year);
+          fetch(`/get-user-days/?month=${month}&year=${year || new Date().getFullYear()}`)
+            .then(response => response.json())
+            .then(data => {
+              console.log('Response data:', data);
+              if (data.status === 'success' && daySelect) {
+                daySelect.innerHTML = '<option value="">Day</option>';
+                data.days.forEach(day => {
+                  const option = document.createElement('option');
+                  option.value = day;
+                  option.textContent = day;
+                  daySelect.appendChild(option);
+                });
+                console.log('Updated day options:', data.days.length, 'days');
+              }
+            })
+            .catch(error => console.error('Error fetching days:', error));
+        }
+        
+        function resetDayOptions() {
+          if (daySelect) {
+            const allDays = {{ day_options|safe }};
+            daySelect.innerHTML = '<option value="">Day</option>';
+            allDays.forEach(day => {
+              const option = document.createElement('option');
+              option.value = day;
+              option.textContent = day;
+              daySelect.appendChild(option);
+            });
           }
-        });
+        }
+        
+        if (yearSelect) {
+          yearSelect.addEventListener('change', function() {
+            // Clear day when year is selected
+            if (daySelect) daySelect.value = '';
+            
+            // Update day options if month is also selected
+            const selectedMonth = monthSelect ? monthSelect.value : '';
+            const selectedYear = yearSelect.value;
+            
+            if (selectedMonth && selectedYear) {
+              updateDayOptions(selectedMonth, selectedYear);
+            }
+            
+            updateFilters();
+          });
+        }
+        
+        // Check if month is pre-selected on page load and filter days
+        const initialMonth = monthSelect ? monthSelect.value : '';
+        const initialYear = yearSelect ? yearSelect.value : '';
+        if (initialMonth) {
+          updateDayOptions(initialMonth, initialYear);
+        }
       });
     </script>
     <script src="{% static 'userJs/sidebarToggle.js' %}"></script>

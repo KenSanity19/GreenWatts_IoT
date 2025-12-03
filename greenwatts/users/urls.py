@@ -11,5 +11,6 @@ urlpatterns = [
     path('user-energy-cost/', views.user_energy_cost, name='user_energy_cost'),
     path('user-emmision/', views.user_emmision, name='user_emmision'),
     path('export-user-reports/', views.export_user_reports, name='export_user_reports'),
+    path('get-user-days/', views.get_user_days, name='get_user_days'),
     path('logout/', views.logout, name='logout'),
 ]

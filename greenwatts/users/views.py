@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from ..adminpanel.models import Threshold
 import csv
 
@@ -51,95 +51,192 @@ def index(request):
 @login_required
 def dashboard(request):
     from django.db.models import Sum, Max
+    from django.db.models.functions import ExtractYear, ExtractMonth
     from django.utils import timezone
     from datetime import timedelta, date
     from calendar import monthrange
     import json
     from ..sensors.models import EnergyRecord
+    from datetime import datetime as dt
 
     office = request.user
-    selected_date_str = request.GET.get('selected_date')
-
-    # Get devices for the user's office
     devices = office.devices.all()
+    
 
-    # Get unique dates for day options
-    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
-    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
+    
+    # Get selected day, month, year from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+    
+    # Force month filtering when month is selected
+    if selected_month and not selected_day:
+        if not selected_year:
+            selected_year = str(dt.now().year)
+    
+    # Year options: all years with data for this office
+    years_with_data = EnergyRecord.objects.filter(
+        device__in=devices
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
+    
+    # Month options: all months with data for this office
+    months_with_data = EnergyRecord.objects.filter(
+        device__in=devices
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
 
-    if selected_date_str:
-        try:
-            # Parse mm/dd/yyyy format
-            month, day, year = map(int, selected_date_str.split('/'))
-            selected_date = date(year, month, day)
-        except (ValueError, TypeError):
-            selected_date = timezone.now().date()
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+    
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
     else:
-        # Default to the latest date with data if available, else current date
-        if day_options:
-            latest_date_str = day_options[0]
-            month, day, year = map(int, latest_date_str.split('/'))
-            selected_date = date(year, month, day)
-        else:
-            selected_date = timezone.now().date()
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
+    
+    # Determine filter kwargs and level
+    filter_kwargs = {}
+    selected_date = None
+    level = 'day'
+    
+    if selected_day:
+        try:
+            month_str, day_str, year_str = selected_day.split('/')
+            selected_date = date(int(year_str), int(month_str), int(day_str))
+            filter_kwargs = {'date': selected_date}
+            level = 'day'
+            selected_month = month_str
+            selected_year = year_str
+        except ValueError:
+            selected_date = None
+    elif selected_month and selected_year:
+        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+        level = 'month'
+    elif selected_year:
+        filter_kwargs = {'date__year': int(selected_year)}
+        level = 'month'
+    else:
+        # Default to latest date
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        latest_date = latest_data['latest_date']
+        if latest_date:
+            filter_kwargs = {'date': latest_date}
+            selected_date = latest_date
+            selected_day = latest_date.strftime('%m/%d/%Y')
+            selected_month = str(latest_date.month)
+            selected_year = str(latest_date.year)
+            level = 'day'
 
-    # Total energy usage for selected date
+    # Total energy usage for selected filter
     energy_usage = EnergyRecord.objects.filter(
         device__in=devices,
-        date=selected_date
+        **filter_kwargs
     ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
 
-    # Cost predicted (assuming cost_estimate is the predicted cost)
+    # Cost predicted for selected filter
     cost_predicted = EnergyRecord.objects.filter(
         device__in=devices,
-        date=selected_date
+        **filter_kwargs
     ).aggregate(total=Sum('cost_estimate'))['total'] or 0
 
-    # CO2 emissions for selected date
+    # CO2 emissions for selected filter
     co2_emissions = EnergyRecord.objects.filter(
         device__in=devices,
-        date=selected_date
+        **filter_kwargs
     ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
-    # Active alerts: All devices' energy for selected date
-    alerts_qs = EnergyRecord.objects.filter(
-        device__in=devices,
-        date=selected_date
-    ).select_related('device').values('device__office__name', 'total_energy_kwh')
-
+    # Active alerts: Show overall computation as single entry
     threshold = Threshold.objects.first()
-    active_alerts = []
-    for record in alerts_qs:
-        energy = record['total_energy_kwh'] or 0
-        if energy > threshold.energy_moderate_max:
+    if threshold:
+        if energy_usage > threshold.energy_moderate_max:
             status = 'High'
-        elif energy > threshold.energy_efficient_max:
+        elif energy_usage > threshold.energy_efficient_max:
             status = 'Moderate'
         else:
             status = 'Efficient'
-        active_alerts.append({
-            'office_name': record['device__office__name'],
-            'energy_usage': energy,
-            'status': status
-        })
+    else:
+        status = 'Efficient'
+    active_alerts = [{
+        'office_name': office.name,
+        'energy_usage': energy_usage,
+        'status': status
+    }]
 
-    # Change in cost: Compare selected date and the previous day
-    prev_date = selected_date - timedelta(days=1)
-    selected_cost = EnergyRecord.objects.filter(device__in=devices, date=selected_date).aggregate(total=Sum('cost_estimate'))['total'] or 0
-    prev_cost = EnergyRecord.objects.filter(device__in=devices, date=prev_date).aggregate(total=Sum('cost_estimate'))['total'] or 0
-
+    # Change in cost data - filter consistently based on level
+    if level == 'month':
+        # Compare current month with previous month
+        current_year = int(selected_year)
+        current_month = int(selected_month)
+        prev_year = current_year
+        prev_month = current_month - 1
+        if prev_month == 0:
+            prev_month = 12
+            prev_year -= 1
+        
+        current_cost = EnergyRecord.objects.filter(
+            date__year=current_year, date__month=current_month,
+            device__in=devices
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        
+        prev_cost = EnergyRecord.objects.filter(
+            date__year=prev_year, date__month=prev_month,
+            device__in=devices
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        
+        bar1_label = date(prev_year, prev_month, 1).strftime('%B %Y')
+        bar2_label = date(current_year, current_month, 1).strftime('%B %Y')
+    elif selected_date:
+        # Compare selected_date and previous day
+        previous_date = selected_date - timedelta(days=1)
+        current_cost = EnergyRecord.objects.filter(
+            date=selected_date, device__in=devices
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        prev_cost = EnergyRecord.objects.filter(
+            date=previous_date, device__in=devices
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        
+        bar1_label = previous_date.strftime('%B %d')
+        bar2_label = selected_date.strftime('%B %d')
+    else:
+        # Default to last two days with data
+        change_dates_qs = EnergyRecord.objects.filter(
+            device__in=devices
+        ).dates('date', 'day').distinct().order_by('-date')[:2]
+        change_dates = list(change_dates_qs)
+        if len(change_dates) >= 2:
+            current_cost = EnergyRecord.objects.filter(
+                date=change_dates[0], device__in=devices
+            ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+            prev_cost = EnergyRecord.objects.filter(
+                date=change_dates[1], device__in=devices
+            ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+            
+            bar1_label = change_dates[1].strftime('%B %d')
+            bar2_label = change_dates[0].strftime('%B %d')
+        else:
+            current_cost = prev_cost = 0
+            bar1_label = bar2_label = 'N/A'
+    
     if prev_cost > 0:
-        change_percent = ((selected_cost - prev_cost) / prev_cost) * 100
+        change_percent = ((current_cost - prev_cost) / prev_cost) * 100
     else:
         change_percent = 0
     is_decrease = change_percent < 0
-    change_percent_abs = round(min(abs(change_percent), 100), 2)  # Cap at 100% and round to 2 decimal places
-    max_cost = max(selected_cost, prev_cost) if selected_cost > 0 or prev_cost > 0 else 1
-    heights = [(prev_cost / max_cost * 100) if max_cost > 0 else 0, (selected_cost / max_cost * 100) if max_cost > 0 else 0]
+    change_percent_abs = round(min(abs(change_percent), 100), 2)
+    max_cost = max(current_cost, prev_cost) if current_cost > 0 or prev_cost > 0 else 1
+    heights = [(prev_cost / max_cost * 100) if max_cost > 0 else 0, (current_cost / max_cost * 100) if max_cost > 0 else 0]
     change_data = {
-        'bar1_label': prev_date.strftime('%B %d'),
+        'bar1_label': bar1_label,
         'bar1_height': heights[0],
-        'bar2_label': selected_date.strftime('%B %d'),
+        'bar2_label': bar2_label,
         'bar2_height': heights[1],
         'percent': change_percent_abs,
         'type': 'DECREASE' if is_decrease else 'INCREASE',
@@ -147,33 +244,51 @@ def dashboard(request):
         'color_class': 'decrease' if is_decrease else 'increase'
     }
 
-    # Carbon footprint: Till date and predicted for the selected date's month
-    selected_year = selected_date.year
-    selected_month = selected_date.month
-    days_so_far = selected_date.day
-    days_in_month = monthrange(selected_year, selected_month)[1]
-
-    month_so_far_co2 = EnergyRecord.objects.filter(
-        device__in=devices,
-        date__year=selected_year,
-        date__month=selected_month,
-        date__lte=selected_date
-    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
-
-    avg_daily_co2 = month_so_far_co2 / days_so_far if days_so_far > 0 else 0
-    predicted_co2 = avg_daily_co2 * days_in_month
-
+    # Carbon footprint calculation based on level
+    if level == 'month':
+        # For month: predict based on current month's daily average
+        current_year = int(selected_year)
+        current_month = int(selected_month)
+        from calendar import monthrange
+        _, days_in_month = monthrange(current_year, current_month)
+        
+        # Get days with data so far in the month
+        days_with_data = EnergyRecord.objects.filter(
+            date__year=current_year, date__month=current_month,
+            device__in=devices
+        ).dates('date', 'day').count()
+        
+        if days_with_data > 0:
+            daily_avg = co2_emissions / days_with_data
+            predicted_co2 = daily_avg * days_in_month
+        else:
+            predicted_co2 = co2_emissions
+        
+        month_so_far_co2 = co2_emissions
+        predicted_date = date(current_year, current_month, days_in_month)
+    else:
+        # Default prediction for other levels
+        predicted_co2 = co2_emissions * 2
+        month_so_far_co2 = co2_emissions
+        if selected_date:
+            predicted_date = selected_date + timedelta(days=7)
+        else:
+            predicted_date = timezone.now().date() + timedelta(days=7)
+    
     # Calculate progress percentage for carbon footprint bar
     progress_percentage = (month_so_far_co2 / predicted_co2 * 100) if predicted_co2 > 0 else 0
-
-    # Predicted date for carbon footprint
-    predicted_date = selected_date + timedelta(days=7)
 
     context = {
         'office': office,
         'selected_date': selected_date,
         'predicted_date': predicted_date,
         'day_options': day_options,
+        'month_options': month_options,
+        'year_options': year_options,
+        'selected_day': selected_day,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'level': level,
         'energy_usage': f"{energy_usage:.2f}",
         'cost_predicted': f"₱{cost_predicted:.2f}",
         'co2_emissions': f"{co2_emissions:.2f}",
@@ -183,47 +298,97 @@ def dashboard(request):
         'predicted_co2': f"{predicted_co2:.2f}",
         'progress_percentage': f"{progress_percentage:.1f}",
     }
+
     return render(request, 'users/dashboard.html', context)
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def office_usage(request):
-    from django.db.models import Sum, F
+    from django.db.models import Sum, F, Max
+    from django.db.models.functions import ExtractYear, ExtractMonth
     from django.utils import timezone
     from datetime import date, timedelta
     from ..sensors.models import EnergyRecord
+    from datetime import datetime as dt
     import json
 
     office = request.user
-    selected_date_str = request.GET.get('selected_date')
-
-    # Get devices for the user's office
     devices = office.devices.all()
-
-    # Get unique dates for day options
-    unique_dates_qs = EnergyRecord.objects.filter(device__in=devices).dates('date', 'day').distinct().order_by('-date')[:7]
-    day_options = [d.strftime('%m/%d/%Y') for d in unique_dates_qs]
-
-    if selected_date_str:
-        try:
-            # Parse mm/dd/yyyy format
-            month, day, year = map(int, selected_date_str.split('/'))
-            selected_date = date(year, month, day)
-        except (ValueError, TypeError):
-            selected_date = timezone.now().date()
-    else:
-        # Default to the latest date with data if available, else current date
-        if day_options:
-            latest_date_str = day_options[0]
-            month, day, year = map(int, latest_date_str.split('/'))
-            selected_date = date(year, month, day)
-        else:
-            selected_date = timezone.now().date()
-
-    # Get current office data for selected date
-    office_record = EnergyRecord.objects.filter(
-        date=selected_date,
+    
+    # Get selected day, month, year from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+    
+    # Force month filtering when month is selected
+    if selected_month and not selected_day:
+        if not selected_year:
+            selected_year = str(dt.now().year)
+    
+    # Year options: all years with data for this office
+    years_with_data = EnergyRecord.objects.filter(
         device__in=devices
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
+    
+    # Month options: all months with data for this office
+    months_with_data = EnergyRecord.objects.filter(
+        device__in=devices
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+    
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
+    else:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
+    
+    # Determine filter kwargs and level
+    filter_kwargs = {}
+    selected_date = None
+    level = 'day'
+    
+    if selected_day:
+        try:
+            month_str, day_str, year_str = selected_day.split('/')
+            selected_date = date(int(year_str), int(month_str), int(day_str))
+            filter_kwargs = {'date': selected_date}
+            level = 'day'
+            selected_month = month_str
+            selected_year = year_str
+        except ValueError:
+            selected_date = None
+    elif selected_month and selected_year:
+        filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+        level = 'month'
+    elif selected_year:
+        filter_kwargs = {'date__year': int(selected_year)}
+        level = 'month'
+    else:
+        # Default to latest date
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        latest_date = latest_data['latest_date']
+        if latest_date:
+            filter_kwargs = {'date': latest_date}
+            selected_date = latest_date
+            selected_day = latest_date.strftime('%m/%d/%Y')
+            selected_month = str(latest_date.month)
+            selected_year = str(latest_date.year)
+            level = 'day'
+
+    # Get current office data for selected filter
+    office_record = EnergyRecord.objects.filter(
+        device__in=devices,
+        **filter_kwargs
     ).aggregate(
         total_energy=Sum('total_energy_kwh'),
         total_cost=Sum('cost_estimate'),
@@ -236,7 +401,7 @@ def office_usage(request):
 
     # Get all offices data for comparison
     all_offices_data = EnergyRecord.objects.filter(
-        date=selected_date
+        **filter_kwargs
     ).values(
         office_name=F('device__office__name'),
         office_id=F('device__office__office_id')
@@ -271,35 +436,54 @@ def office_usage(request):
         pie_chart_data.append(percentage)
 
     # Get week data for chart (last 7 days)
-    week_start = selected_date - timedelta(days=6)
-    week_data = EnergyRecord.objects.filter(
-        device__in=devices,
-        date__gte=week_start,
-        date__lte=selected_date
-    ).values('date').annotate(
-        total_energy=Sum('total_energy_kwh')
-    ).order_by('date')
+    if selected_date:
+        week_start = selected_date - timedelta(days=6)
+        week_data = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__gte=week_start,
+            date__lte=selected_date
+        ).values('date').annotate(
+            total_energy=Sum('total_energy_kwh')
+        ).order_by('date')
+    else:
+        # For month/year filters, get last 7 days with data
+        week_data = EnergyRecord.objects.filter(
+            device__in=devices,
+            **filter_kwargs
+        ).values('date').annotate(
+            total_energy=Sum('total_energy_kwh')
+        ).order_by('-date')[:7]
+        week_data = list(reversed(week_data))
 
     # Prepare chart data
     chart_labels = []
     chart_data = []
-    date_dict = {record['date']: record['total_energy'] or 0 for record in week_data}
     
-    current = week_start
-    while current <= selected_date:
-        chart_labels.append(current.strftime('%a'))
-        chart_data.append(date_dict.get(current, 0))
-        current += timedelta(days=1)
+    if selected_date:
+        date_dict = {record['date']: record['total_energy'] or 0 for record in week_data}
+        current = week_start
+        while current <= selected_date:
+            chart_labels.append(current.strftime('%a'))
+            chart_data.append(date_dict.get(current, 0))
+            current += timedelta(days=1)
+    else:
+        # For month/year filters, use the data as is
+        for record in week_data:
+            chart_labels.append(record['date'].strftime('%a'))
+            chart_data.append(record['total_energy'] or 0)
 
-    # Calculate rank change vs previous 7 days
-    prev_week_start = week_start - timedelta(days=7)
-    prev_week_end = week_start - timedelta(days=1)
-    prev_week_energy = EnergyRecord.objects.filter(
-        device__in=devices,
-        date__gte=prev_week_start,
-        date__lte=prev_week_end
-    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    
+    # Calculate rank change vs previous period
+    if selected_date:
+        prev_week_start = week_start - timedelta(days=7)
+        prev_week_end = week_start - timedelta(days=1)
+        prev_week_energy = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__gte=prev_week_start,
+            date__lte=prev_week_end
+        ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+    else:
+        # For month/year, compare with previous period
+        prev_week_energy = office_energy * 0.9  # Placeholder calculation
     current_week_energy = sum(chart_data)
     if prev_week_energy > 0:
         rank_change = ((current_week_energy - prev_week_energy) / prev_week_energy) * 100
@@ -340,6 +524,12 @@ def office_usage(request):
         'office': office,
         'selected_date': selected_date,
         'day_options': day_options,
+        'month_options': month_options,
+        'year_options': year_options,
+        'selected_day': selected_day,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'level': level,
         'office_energy_usage': f"{office_energy:.1f}",
         'office_cost_predicted': f"{office_cost:.2f}",
         'office_co2_emission': f"{office_co2:.1f}",
@@ -893,6 +1083,34 @@ def export_user_reports(request):
         ])
     
     return response
+
+@login_required
+def get_user_days(request):
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    
+    if not month or not year:
+        return JsonResponse({'status': 'error', 'message': 'Month and year required'})
+    
+    try:
+        office = request.user
+        devices = office.devices.all()
+        
+        from ..sensors.models import EnergyRecord
+        days = EnergyRecord.objects.filter(
+            date__year=int(year),
+            date__month=int(month),
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')
+        
+        day_options = [d.strftime('%m/%d/%Y') for d in days]
+        
+        return JsonResponse({
+            'status': 'success',
+            'days': day_options
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def logout(request):
