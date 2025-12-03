@@ -65,7 +65,7 @@ header h1 {
 
 .top-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
 }
 
@@ -195,7 +195,7 @@ header h1 {
 
 .rank-number {
   display: block;
-  font-size: 24px;
+  font-size: 55px;
   font-weight: bold;
   color: #ff6b6b;
   margin-bottom: 5px;
@@ -226,7 +226,7 @@ header h1 {
 }
 
 .trend-text {
-  font-size: 12px;
+  font-size: 20px;
   color: #333;
 }
 
@@ -252,7 +252,7 @@ header h1 {
 
 .usage-normal {
   background: #28a745;
-  padding: 15px 20px;
+  padding: 35px 20px;
   text-align: center;
 }
 
@@ -318,7 +318,7 @@ header h1 {
 .pie-chart-container {
   background: white;
   border-radius: 10px;
-  padding: 20px;
+  padding: 20px 20px 45px 20px;
   height: 350px;
   border: 1px solid #444;
 }

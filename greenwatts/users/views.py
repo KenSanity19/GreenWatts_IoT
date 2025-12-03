@@ -257,6 +257,19 @@ def office_usage(request):
             office_rank = i + 1
             break
 
+    # Prepare pie chart data
+    pie_chart_labels = []
+    pie_chart_data = []
+    pie_chart_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+    
+    for i, record in enumerate(all_offices_data[:5]):  # Top 5 offices
+        office_name = record['office_name']
+        energy = record['total_energy'] or 0
+        percentage = (energy / total_all_energy * 100) if total_all_energy > 0 else 0
+        
+        pie_chart_labels.append(office_name)
+        pie_chart_data.append(percentage)
+
     # Get week data for chart (last 7 days)
     week_start = selected_date - timedelta(days=6)
     week_data = EnergyRecord.objects.filter(
@@ -339,6 +352,8 @@ def office_usage(request):
         'is_over_limit': is_over_limit,
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
+        'pie_chart_labels': json.dumps(pie_chart_labels),
+        'pie_chart_data': json.dumps(pie_chart_data),
     }
     return render(request, 'users/userUsage.html', context)
 

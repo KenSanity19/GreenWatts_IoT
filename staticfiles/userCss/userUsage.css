@@ -48,58 +48,277 @@ header h1 {
   -moz-appearance: none;
 }
 
-/* Usage Table */
-.usage-table-container {
-  background-color: var(--bg-sidebar);
+/* Dashboard Wrapper */
+.dashboard-wrapper {
+  background: var(--bg-sidebar);
   border-radius: 10px;
-  overflow: hidden;
-  color: var(--text-black);
+  padding: 20px;
+  margin-top: 20px;
 }
 
-.usage-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: center;
-  background-color: var(--text-white);
+/* Dashboard Container */
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.usage-table th,
-.usage-table td {
-  padding: 12px 10px;
-  border: 1px solid var(--text-black);
+.top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Minimized Summary Card */
+.summary-card-mini {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  color: #000;
+  border: 1px solid #444;
+}
+
+.summary-card-mini h3 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  color: #000;
   font-weight: bold;
 }
 
-.usage-table th {
-  background-color: var(--text-white);
-  color: var(--text-black);
+.summary-content-mini {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  align-items: start;
 }
 
-/* Row Status Colors */
-tr.high td {
-  background-color: #e57373;
-  color: var(--text-white);
+.summary-item-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-tr.efficient td {
-  background-color: #81c784;
-  color: var(--text-black);
+.summary-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-tr.moderate td {
-  background-color: #fff176;
-  color: var(--text-black);
+.summary-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
 }
+
+.summary-content p {
+  margin: 0;
+  font-size: 14px;
+  padding: 15px;
+  border-radius: 8px;
+  background: #f8f9fa;
+  border-left: 4px solid #007bff;
+  transition: all 0.2s ease;
+}
+
+.summary-content p:hover {
+  background: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.office-name {
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
+.status-high {
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
+.status-moderate {
+  color: #ffa500;
+  font-weight: bold;
+}
+
+.status-efficient {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.status-unknown {
+  color: #6c757d;
+  font-weight: bold;
+}
+
+/* Minimized Combined Usage Card */
+.combined-usage-card-mini {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  color: #000;
+  border: 1px solid #444;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.usage-percentage-mini {
+  background: white;
+  padding: 10px 15px;
+  text-align: center;
+  border-right: 1px solid #c5c3bf;
+  flex: 1;
+  min-width: 120px;
+}
+
+.percentage-value-mini {
+  display: block;
+  font-size: 24px;
+  font-weight: bold;
+  color: #000;
+  margin-bottom: 3px;
+}
+
+.percentage-label-mini {
+  font-size: 10px;
+  color: #000;
+}
+
+.usage-ranking-mini {
+  background: white;
+  padding: 10px 15px;
+  text-align: center;
+  border-right: 1px solid #c5c3bf;
+  flex: 1;
+  min-width: 120px;
+}
+
+.rank-number-mini {
+  display: block;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff6b6b;
+  margin-bottom: 3px;
+}
+
+.rank-text-mini {
+  font-size: 10px;
+  font-weight: bold;
+  color: #000;
+}
+
+.usage-trend-mini {
+  background: white;
+  padding: 8px 15px;
+  text-align: center;
+  flex: 1;
+  min-width: 150px;
+}
+
+.trend-text-mini {
+  font-size: 9px;
+  color: #333;
+}
+
+.usage-alert-mini {
+  background: #ff4444;
+  padding: 8px 15px;
+  text-align: center;
+  width: 100%;
+}
+
+.alert-text-mini {
+  display: block;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 2px;
+}
+
+.alert-subtext-mini {
+  font-size: 9px;
+  color: white;
+  opacity: 0.9;
+}
+
+.usage-normal-mini {
+  background: #28a745;
+  padding: 8px 15px;
+  text-align: center;
+  width: 100%;
+}
+
+.normal-text-mini {
+  display: block;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 2px;
+}
+
+.normal-subtext-mini {
+  font-size: 9px;
+  color: white;
+  opacity: 0.9;
+}
+
+/* Chart Container */
+.chart-container {
+  background: white;
+  border-radius: 10px;
+  padding: 20px 20px 55px 20px;
+  height: 300px;
+  border: 1px solid;
+  position: relative;
+}
+
+
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 20px;
+}
+
+.tab {
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tab.active {
+  color: #000;
+  font-weight: bold;
+}
+
+.chart-period {
+  background: white;
+  color: #000;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+
 
 /* Energy Tip */
 .energy-tip {
-  background: var(--bg-sidebar);
+  background: transparent;
   color: var(--text-white);
   padding: 12px;
   border-radius: 8px;
   font-size: var(--font-size-sm);
   text-align: center;
-  margin-top: 50px;
+  margin-top: 20px;
 }
 
 .energy-tip .green-text {
@@ -120,18 +339,37 @@ tr.moderate td {
     flex: 1;
   }
 
-  .usage-table-container {
-    overflow-x: auto;
+  .top-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
   }
 
-  .usage-table {
-    min-width: 600px;
-    font-size: 12px;
+  .summary-content-mini {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .usage-table th,
-  .usage-table td {
-    padding: 8px 6px;
+  .combined-usage-card-mini {
+    flex-direction: column;
+  }
+
+  .usage-percentage-mini,
+  .usage-ranking-mini,
+  .usage-trend-mini {
+    border-right: none;
+    border-bottom: 1px solid #c5c3bf;
+    min-width: auto;
+  }
+
+  .chart-container {
+    height: 250px;
+  }
+
+  .pie-chart-container {
+    height: 300px;
+  }
+
+  .share-percentage {
+    font-size: 36px;
   }
 
   header h1 {
