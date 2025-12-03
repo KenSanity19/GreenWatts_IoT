@@ -226,9 +226,40 @@
         // Add event listeners only if elements exist
         if (daySelect) {
           daySelect.addEventListener('change', function() {
-            // Clear month and year when day is selected
-            if (monthSelect) monthSelect.value = '';
-            if (yearSelect) yearSelect.value = '';
+            const selectedDay = daySelect.value;
+            if (selectedDay) {
+              const [month, day, year] = selectedDay.split('/');
+              const monthValue = parseInt(month).toString();
+              
+              // Set month - add option if it doesn't exist
+              if (monthSelect) {
+                let monthOption = monthSelect.querySelector(`option[value="${monthValue}"]`);
+                if (!monthOption) {
+                  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                    'July', 'August', 'September', 'October', 'November', 'December'];
+                  monthOption = document.createElement('option');
+                  monthOption.value = monthValue;
+                  monthOption.textContent = monthNames[parseInt(monthValue) - 1];
+                  monthSelect.appendChild(monthOption);
+                }
+                monthSelect.value = monthValue;
+              }
+              
+              // Set year - add option if it doesn't exist
+              if (yearSelect) {
+                let yearOption = yearSelect.querySelector(`option[value="${year}"]`);
+                if (!yearOption) {
+                  yearOption = document.createElement('option');
+                  yearOption.value = year;
+                  yearOption.textContent = year;
+                  yearSelect.appendChild(yearOption);
+                }
+                yearSelect.value = year;
+              }
+            } else {
+              if (monthSelect) monthSelect.value = '';
+              if (yearSelect) yearSelect.value = '';
+            }
             updateFilters();
           });
         }
