@@ -926,24 +926,167 @@ def user_reports(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def user_energy_cost(request):
-    from django.db.models import Sum, Min
+    from django.db.models import Sum, Max
+    from django.db.models.functions import ExtractYear, ExtractMonth
     from django.utils import timezone
     from datetime import date, timedelta
     from ..sensors.models import EnergyRecord
+    from datetime import datetime as dt
+    from calendar import monthrange
     import json
 
     office = request.user
     devices = office.devices.all()
-    now = timezone.now().date()
-
-    # Get min date from EnergyRecord to determine available weeks
-    min_date_qs = EnergyRecord.objects.filter(device__in=devices).aggregate(min_date=Min('date'))
-    min_date = min_date_qs['min_date']
-    if not min_date:
-        # No data, handle gracefully
+    
+    # Get selected day, month, year, week from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+    selected_week = request.GET.get('selected_week')
+    
+    # Force month filtering when month is selected
+    if selected_month and not selected_day and not selected_week:
+        if not selected_year:
+            selected_year = str(dt.now().year)
+    
+    # Year options: all years with data for this office
+    years_with_data = EnergyRecord.objects.filter(
+        device__in=devices
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
+    
+    # Month options: all months with data for this office
+    months_with_data = EnergyRecord.objects.filter(
+        device__in=devices
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+    
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
+    else:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
+    
+    # Week options function
+    def get_user_week_options(devices, selected_month=None, selected_year=None):
+        from django.db.models.functions import ExtractYear, ExtractMonth
+        
+        if selected_month and selected_year:
+            months = [{'month': int(selected_month), 'year': int(selected_year)}]
+        else:
+            months = EnergyRecord.objects.filter(
+                device__in=devices
+            ).annotate(
+                month=ExtractMonth('date'),
+                year=ExtractYear('date')
+            ).values('month', 'year').distinct().order_by('year', 'month')
+        
+        week_options = []
+        for m in months:
+            year = m['year']
+            month = m['month']
+            
+            dates_in_month = EnergyRecord.objects.filter(
+                device__in=devices
+            ).filter(
+                date__year=year,
+                date__month=month
+            ).dates('date', 'day')
+            
+            if not dates_in_month:
+                continue
+            
+            min_date = min(dates_in_month)
+            max_date = max(dates_in_month)
+            
+            first_day = date(year, month, 1)
+            start_of_month = first_day
+            week_num = 1
+            current_start = start_of_month
+            while current_start <= max_date:
+                current_end = min(current_start + timedelta(days=6), max_date)
+                if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+                    week_options.append({
+                        'value': current_start.strftime('%Y-%m-%d'),
+                        'name': f"Week {week_num}"
+                    })
+                current_start += timedelta(days=7)
+                week_num += 1
+        
+        return week_options
+    
+    week_options = get_user_week_options(devices, selected_month, selected_year)
+    
+    # Determine filter kwargs and level
+    def determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices):
+        filter_kwargs = {}
+        selected_date = None
+        level = 'day'
+        
+        if selected_day:
+            try:
+                month_str, day_str, year_str = selected_day.split('/')
+                selected_date = date(int(year_str), int(month_str), int(day_str))
+                filter_kwargs = {'date': selected_date}
+                level = 'day'
+                selected_month = month_str
+                selected_year = year_str
+            except ValueError:
+                selected_date = None
+        elif selected_week:
+            try:
+                week_start = date.fromisoformat(selected_week)
+                week_end = week_start + timedelta(days=6)
+                filter_kwargs = {'date__gte': week_start, 'date__lte': week_end}
+                level = 'week'
+                selected_month = str(week_start.month)
+                selected_year = str(week_start.year)
+            except ValueError:
+                selected_week = None
+        elif selected_month and selected_year:
+            filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+            level = 'month'
+        elif selected_year:
+            filter_kwargs = {'date__year': int(selected_year)}
+            level = 'year'
+        else:
+            latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+            latest_date = latest_data['latest_date']
+            if latest_date:
+                filter_kwargs = {'date': latest_date}
+                selected_date = latest_date
+                selected_month = str(latest_date.month)
+                selected_year = str(latest_date.year)
+                level = 'day'
+        
+        return filter_kwargs, selected_date, level, selected_month, selected_year
+    
+    filter_kwargs, selected_date, level, selected_month, selected_year = determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices)
+    
+    if not filter_kwargs:
         context = {
-            'week_options': [],
-            'selected_week': 1,
+            'office': office,
+            'week_options': week_options,
+            'month_options': month_options,
+            'year_options': year_options,
+            'day_options': day_options,
+            'selected_day': selected_day,
+            'selected_month': selected_month,
+            'selected_year': selected_year,
+            'selected_week': selected_week,
+            'total_energy': '0.00',
+            'total_cost': '₱0.00',
+            'avg_daily_cost': '₱0.00',
+            'highest_cost_day': 'N/A',
             'last_month_cost': '₱0.00',
             'current_month_so_far_cost': '₱0.00',
             'predicted_total_cost': '₱0.00',
@@ -952,119 +1095,200 @@ def user_energy_cost(request):
             'chart_data': json.dumps([]),
         }
         return render(request, 'users/userEnergyCost.html', context)
-
-    # Generate week options: Weeks from min_date to now, labeled as Week 1, Week 2, etc.
-    week_options = []
-    current_week_start = min_date - timedelta(days=min_date.weekday())  # Monday of min_date week
-    week_num = 1
-    while current_week_start <= now:
-        week_end = current_week_start + timedelta(days=6)
-        week_options.append({
-            'value': week_num,
-            'label': f'Week {week_num}',
-            'start_date': current_week_start,
-            'end_date': week_end,
-        })
-        current_week_start += timedelta(days=7)
-        week_num += 1
-
-    # Reverse to have latest first, but keep numbering ascending
-    week_options.reverse()
-
-    # Get selected week from GET, default to latest (Week with highest num)
-    selected_week_num = request.GET.get('week')
-    if selected_week_num:
-        try:
-            selected_week_num = int(selected_week_num)
-        except ValueError:
-            selected_week_num = len(week_options)
-    else:
-        selected_week_num = len(week_options)  # Latest
-
-    # Find selected week
-    selected_week = next((w for w in week_options if w['value'] == selected_week_num), week_options[-1] if week_options else None)
-    if not selected_week:
-        selected_week = week_options[0] if week_options else None
-
-    week_start = selected_week['start_date']
-    week_end = selected_week['end_date']
-
-    # Last month (relative to the selected week)
-    last_month = week_start.replace(day=1) - timedelta(days=1)
-    last_month_start = last_month.replace(day=1)
-    last_month_end = last_month
-    last_month_cost = EnergyRecord.objects.filter(
+    
+    # Aggregate totals for selected filter
+    aggregates = EnergyRecord.objects.filter(
         device__in=devices,
-        date__gte=last_month_start,
-        date__lte=last_month_end
-    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
-
-    # Current month so far (relative to the selected week)
-    current_month_start = week_start.replace(day=1)
-    current_month_end = min(week_end, now)
-    current_month_so_far_cost = EnergyRecord.objects.filter(
-        device__in=devices,
-        date__gte=current_month_start,
-        date__lte=current_month_end
-    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
-
-    # Predicted total this month
-    days_in_month = ((current_month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)).day
-    days_so_far = (current_month_end - current_month_start).days + 1
-    if days_so_far > 0:
-        daily_avg = current_month_so_far_cost / days_so_far
-        predicted_total_cost = daily_avg * days_in_month
-    else:
-        predicted_total_cost = 0
-
-    # Estimate saving: compared to last month
-    if last_month_cost > predicted_total_cost:
-        estimate_saving = last_month_cost - predicted_total_cost
-    else:
-        estimate_saving = 0
-
-    # Weekly chart: for the selected week
-    week_data = EnergyRecord.objects.filter(
-        device__in=devices,
-        date__gte=week_start,
-        date__lte=week_end
-    ).values('date').annotate(
+        **filter_kwargs
+    ).aggregate(
         total_energy=Sum('total_energy_kwh'),
         total_cost=Sum('cost_estimate')
-    ).order_by('date')
-
-    # Calculate card data
-    total_energy_sum = sum(record['total_energy'] or 0 for record in week_data)
-    total_cost_sum = sum(record['total_cost'] or 0 for record in week_data)
-    avg_daily_cost = total_cost_sum / 7 if total_cost_sum else 0
-    if week_data:
-        max_record = max(week_data, key=lambda x: x['total_cost'] or 0)
-        highest_cost_day = max_record['date'].strftime('%Y-%m-%d')
+    )
+    
+    num_days = EnergyRecord.objects.filter(
+        device__in=devices,
+        **filter_kwargs
+    ).dates('date', 'day').distinct().count() or 1
+    
+    total_energy = aggregates['total_energy'] or 0
+    total_cost = aggregates['total_cost'] or 0
+    avg_daily_cost = total_cost / num_days if num_days > 0 else 0
+    
+    # Calculate period start and end based on level
+    now = timezone.now().date()
+    if level == 'week':
+        if selected_week:
+            period_start = date.fromisoformat(selected_week)
+        else:
+            period_start = now - timedelta(days=now.weekday())
+        period_end = period_start + timedelta(days=6)
+    elif level == 'month':
+        year = int(selected_year) if selected_year else dt.now().year
+        month = int(selected_month) if selected_month else dt.now().month
+        period_start = date(year, month, 1)
+        _, last_day = monthrange(year, month)
+        period_end = date(year, month, last_day)
+    elif level == 'year':
+        period_start = date(int(selected_year), 1, 1)
+        period_end = date(int(selected_year), 12, 31)
+    else:  # day
+        period_start = selected_date
+        period_end = selected_date
+    
+    # Calculate previous period
+    if level == 'week':
+        prev_start = period_start - timedelta(days=7)
+        prev_end = period_end - timedelta(days=7)
+    elif level == 'month':
+        year = int(selected_year) if selected_year else dt.now().year
+        month = int(selected_month) if selected_month else dt.now().month
+        prev_year = year
+        prev_month = month - 1
+        if prev_month == 0:
+            prev_month = 12
+            prev_year -= 1
+        prev_start = date(prev_year, prev_month, 1)
+        _, last_day = monthrange(prev_year, prev_month)
+        prev_end = date(prev_year, prev_month, last_day)
+    elif level == 'year':
+        prev_start = date(int(selected_year) - 1, 1, 1)
+        prev_end = date(int(selected_year) - 1, 12, 31)
+    else:  # day
+        prev_start = period_start - timedelta(days=1)
+        prev_end = period_end - timedelta(days=1)
+    
+    # Previous cost
+    prev_cost = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=prev_start,
+        date__lte=prev_end
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+    
+    # So far cost
+    so_far_end = min(period_end, now)
+    so_far_cost = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=period_start,
+        date__lte=so_far_end
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+    
+    # Predicted cost
+    total_days = (period_end - period_start).days + 1
+    days_so_far = (so_far_end - period_start).days + 1 if so_far_end >= period_start else 0
+    if days_so_far > 0 and period_end > now:
+        avg_daily = so_far_cost / days_so_far
+        predicted_cost = avg_daily * total_days
     else:
-        highest_cost_day = 'N/A'
-
-    chart_labels = []
-    chart_data = []
-    current = week_start
-    cost_dict = {record['date']: record['total_cost'] or 0 for record in week_data}
-
-    while current <= week_end:
-        chart_labels.append([current.strftime('%A'), current.strftime('%Y-%m-%d')])
-        chart_data.append(cost_dict.get(current, 0))
-        current += timedelta(days=1)
-
+        predicted_cost = so_far_cost
+    
+    # Savings
+    savings = prev_cost - predicted_cost if prev_cost > predicted_cost else 0
+    
+    # Highest cost day/period
+    if level == 'day':
+        highest_cost_day = selected_date.strftime('%Y-%m-%d')
+    else:
+        daily_costs = EnergyRecord.objects.filter(
+            device__in=devices,
+            **filter_kwargs
+        ).values('date').annotate(
+            total_cost=Sum('cost_estimate')
+        ).order_by('-total_cost')
+        
+        if daily_costs:
+            highest_cost_day = daily_costs.first()['date'].strftime('%Y-%m-%d')
+        else:
+            highest_cost_day = 'N/A'
+    
+    # Chart data based on selected filter
+    if level == 'week':
+        week_date = date.fromisoformat(selected_week)
+        start_date = week_date
+        end_date = start_date + timedelta(days=6)
+        chart_dates = [start_date + timedelta(days=i) for i in range(7)]
+        chart_labels = [[d.strftime('%A'), d.strftime('%Y-%m-%d')] for d in chart_dates]
+        chart_data = []
+        for d in chart_dates:
+            cost = EnergyRecord.objects.filter(
+                device__in=devices,
+                date=d
+            ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+            chart_data.append(cost)
+    elif level == 'month':
+        year = int(selected_year) if selected_year else dt.now().year
+        month = int(selected_month) if selected_month else dt.now().month
+        start_date = date(year, month, 1)
+        _, last_day = monthrange(year, month)
+        end_date = date(year, month, last_day)
+        chart_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+        chart_labels = [[d.strftime('%d'), d.strftime('%Y-%m-%d')] for d in chart_dates]
+        chart_data = []
+        for d in chart_dates:
+            cost = EnergyRecord.objects.filter(
+                device__in=devices,
+                date=d
+            ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+            chart_data.append(cost)
+    elif level == 'year':
+        monthly_data = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__year=int(selected_year)
+        ).annotate(
+            month=ExtractMonth('date')
+        ).values('month').annotate(
+            total_cost=Sum('cost_estimate')
+        ).order_by('month')
+        chart_labels = [['Jan', 'January'], ['Feb', 'February'], ['Mar', 'March'], ['Apr', 'April'], 
+                       ['May', 'May'], ['Jun', 'June'], ['Jul', 'July'], ['Aug', 'August'], 
+                       ['Sep', 'September'], ['Oct', 'October'], ['Nov', 'November'], ['Dec', 'December']]
+        chart_data = [0] * 12
+        for item in monthly_data:
+            chart_data[item['month'] - 1] = item['total_cost'] or 0
+    else:  # day
+        chart_labels = [[selected_date.strftime('%A'), selected_date.strftime('%Y-%m-%d')]]
+        chart_data = [total_cost]
+    
+    # Labels for chart header
+    if level == 'week':
+        previous_label = f"Previous Week ({prev_start.strftime('%B %d')} - {prev_end.strftime('%d, %Y')})"
+        period_label = f"Week ({period_start.strftime('%B %d')} - {period_end.strftime('%d, %Y')})"
+    elif level == 'month':
+        previous_label = f"{prev_start.strftime('%B %Y')} Total"
+        period_label = f"{period_start.strftime('%B %Y')}"
+    elif level == 'year':
+        previous_label = f"{prev_start.year} Total"
+        period_label = f"{selected_year}"
+    else:  # day
+        previous_label = f"{prev_start.strftime('%B %d, %Y')} Total"
+        period_label = f"{period_start.strftime('%B %d, %Y')}"
+    
+    so_far_label = f"So Far This {level.capitalize()} ({period_label})"
+    predicted_label = f"Predicted This {level.capitalize()}"
+    savings_label = "Estimated Savings"
+    
     context = {
         'office': office,
         'week_options': week_options,
-        'selected_week': selected_week_num,
-        'total_energy': f"{total_energy_sum:.2f}",
-        'total_cost': f"₱{total_cost_sum:.2f}",
+        'month_options': month_options,
+        'year_options': year_options,
+        'day_options': day_options,
+        'selected_day': selected_day,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'selected_week': selected_week,
+        'level': level,
+        'total_energy': f"{total_energy:.2f}",
+        'total_cost': f"₱{total_cost:.2f}",
         'avg_daily_cost': f"₱{avg_daily_cost:.2f}",
         'highest_cost_day': highest_cost_day,
-        'last_month_cost': f"₱{last_month_cost:.2f}",
-        'current_month_so_far_cost': f"₱{current_month_so_far_cost:.2f}",
-        'predicted_total_cost': f"₱{predicted_total_cost:.2f}",
-        'estimate_saving': f"₱{estimate_saving:.2f}",
+        'previous_label': previous_label,
+        'prev_cost': f"₱{prev_cost:.2f}",
+        'so_far_label': so_far_label,
+        'so_far_cost': f"₱{so_far_cost:.2f}",
+        'predicted_label': predicted_label,
+        'predicted_cost': f"₱{predicted_cost:.2f}",
+        'savings_label': savings_label,
+        'savings': f"₱{savings:.2f}",
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
     }
@@ -1359,7 +1583,6 @@ def get_user_days(request):
         office = request.user
         devices = office.devices.all()
         
-        from ..sensors.models import EnergyRecord
         days = EnergyRecord.objects.filter(
             date__year=int(year),
             date__month=int(month),
@@ -1385,15 +1608,12 @@ def get_user_weeks(request):
         devices = office.devices.all()
         
         def get_user_week_options(devices, selected_month=None, selected_year=None):
-            from django.db.models import Min
             from django.db.models.functions import ExtractYear, ExtractMonth
             from datetime import date, timedelta
 
-            # If month and year are selected, filter weeks for that specific month/year
             if selected_month and selected_year:
                 months = [{'month': int(selected_month), 'year': int(selected_year)}]
             else:
-                # Get distinct months with data
                 months = EnergyRecord.objects.filter(
                     device__in=devices
                 ).annotate(
@@ -1406,7 +1626,6 @@ def get_user_weeks(request):
                 year = m['year']
                 month = m['month']
 
-                # Get all dates in this month with data
                 dates_in_month = EnergyRecord.objects.filter(
                     device__in=devices
                 ).filter(
@@ -1420,15 +1639,12 @@ def get_user_weeks(request):
                 min_date = min(dates_in_month)
                 max_date = max(dates_in_month)
 
-                # Calculate weeks: start on the first day of the month
                 first_day = date(year, month, 1)
                 start_of_month = first_day
                 week_num = 1
                 current_start = start_of_month
                 while current_start <= max_date:
                     current_end = min(current_start + timedelta(days=6), max_date)
-                    # Check if there is data in this week
-                    # Always include Week 1, and others if there is data
                     if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
                         week_options.append({
                             'value': current_start.strftime('%Y-%m-%d'),
