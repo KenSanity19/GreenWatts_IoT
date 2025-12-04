@@ -12,5 +12,6 @@ urlpatterns = [
     path('user-emmision/', views.user_emmision, name='user_emmision'),
     path('export-user-reports/', views.export_user_reports, name='export_user_reports'),
     path('get-user-days/', views.get_user_days, name='get_user_days'),
+    path('get-user-weeks/', views.get_user_weeks, name='get_user_weeks'),
     path('logout/', views.logout, name='logout'),
 ]

@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.http import HttpResponse, JsonResponse
 from ..adminpanel.models import Threshold
+from ..sensors.models import EnergyRecord
 import csv
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
@@ -577,26 +578,177 @@ def office_usage(request):
 @login_required
 def user_reports(request):
     from django.db.models import Sum, Max, Min
+    from django.db.models.functions import ExtractYear, ExtractMonth
     from django.utils import timezone
     from datetime import timedelta, date
+    from datetime import datetime as dt
     import json
     from ..sensors.models import EnergyRecord
 
     office = request.user
     devices = office.devices.all()
-    now = timezone.now().date()
 
-    # Get min date from EnergyRecord to determine available weeks
-    min_date_qs = EnergyRecord.objects.filter(device__in=devices).aggregate(min_date=Min('date'))
-    min_date = min_date_qs['min_date']
-    if not min_date:
+    # Get selected day, month, year, week from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+    selected_week = request.GET.get('selected_week')
+
+    # Force month filtering when month is selected
+    if selected_month and not selected_day and not selected_week:
+        if not selected_year:
+            selected_year = str(dt.now().year)
+
+    # Year options: all years with data for this office
+    years_with_data = EnergyRecord.objects.filter(
+        device__in=devices
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
+
+    # Month options: all months with data for this office
+    months_with_data = EnergyRecord.objects.filter(
+        device__in=devices
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
+    else:
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
+
+    # Week options: filtered by selected month/year if available
+    def get_user_week_options(devices, selected_month=None, selected_year=None):
+        from django.db.models import Min
+        from django.db.models.functions import ExtractYear, ExtractMonth
+
+        # If month and year are selected, filter weeks for that specific month/year
+        if selected_month and selected_year:
+            months = [{'month': int(selected_month), 'year': int(selected_year)}]
+        else:
+            # Get distinct months with data
+            months = EnergyRecord.objects.filter(
+                device__in=devices
+            ).annotate(
+                month=ExtractMonth('date'),
+                year=ExtractYear('date')
+            ).values('month', 'year').distinct().order_by('year', 'month')
+
+        week_options = []
+        for m in months:
+            year = m['year']
+            month = m['month']
+
+            # Get all dates in this month with data
+            dates_in_month = EnergyRecord.objects.filter(
+                device__in=devices
+            ).filter(
+                date__year=year,
+                date__month=month
+            ).dates('date', 'day')
+
+            if not dates_in_month:
+                continue
+
+            min_date = min(dates_in_month)
+            max_date = max(dates_in_month)
+
+            # Calculate weeks: start on the first day of the month
+            from datetime import date, timedelta
+            first_day = date(year, month, 1)
+            start_of_month = first_day
+            week_num = 1
+            current_start = start_of_month
+            while current_start <= max_date:
+                current_end = min(current_start + timedelta(days=6), max_date)
+                # Check if there is data in this week
+                # Always include Week 1, and others if there is data
+                if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+                    week_options.append({
+                        'value': current_start.strftime('%Y-%m-%d'),
+                        'name': f"Week {week_num}"
+                    })
+                current_start += timedelta(days=7)
+                week_num += 1
+
+        return week_options
+
+    week_options = get_user_week_options(devices, selected_month, selected_year)
+
+    # Determine filter kwargs and level
+    def determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices):
+        from datetime import timedelta
+        filter_kwargs = {}
+        selected_date = None
+        level = 'day'
+
+        if selected_day:
+            try:
+                month_str, day_str, year_str = selected_day.split('/')
+                selected_date = date(int(year_str), int(month_str), int(day_str))
+                filter_kwargs = {'date': selected_date}
+                level = 'day'
+                selected_month = month_str
+                selected_year = year_str
+            except ValueError:
+                selected_date = None
+        elif selected_week:
+            try:
+                week_start = date.fromisoformat(selected_week)
+                week_end = week_start + timedelta(days=6)
+                filter_kwargs = {'date__gte': week_start, 'date__lte': week_end}
+                level = 'week'
+                selected_month = str(week_start.month)
+                selected_year = str(week_start.year)
+            except ValueError:
+                selected_week = None
+        elif selected_month and selected_year:
+            filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+            level = 'month'
+        elif selected_year:
+            filter_kwargs = {'date__year': int(selected_year)}
+            level = 'month'
+        else:
+            # Default to latest date
+            latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+            latest_date = latest_data['latest_date']
+            if latest_date:
+                filter_kwargs = {'date': latest_date}
+                selected_date = latest_date
+                selected_month = str(latest_date.month)
+                selected_year = str(latest_date.year)
+                level = 'day'
+
+        return filter_kwargs, selected_date, level, selected_month, selected_year
+
+    filter_kwargs, selected_date, level, selected_month, selected_year = determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices)
+
+    if not filter_kwargs:
         # No data, handle gracefully
         context = {
-            'week_options': [],
-            'selected_week': 1,
+            'office': office,
+            'week_options': week_options,
+            'month_options': month_options,
+            'year_options': year_options,
+            'day_options': day_options,
+            'selected_day': selected_day,
+            'selected_month': selected_month,
+            'selected_year': selected_year,
+            'selected_week': selected_week,
             'total_energy_usage': '0.00',
             'highest_usage_day': 'N/A',
             'cost_predicted': '₱0.00',
+            'co2_emission': '0.00',
+            'office_status': 'ACTIVE',
             'best_performing_day': 'N/A',
             'chart_labels': json.dumps([]),
             'chart_values': json.dumps([]),
@@ -604,87 +756,98 @@ def user_reports(request):
         }
         return render(request, 'users/userReports.html', context)
 
-    # Generate week options: Weeks from min_date to now, labeled as Week 1, Week 2, etc.
-    week_options = []
-    current_week_start = min_date - timedelta(days=min_date.weekday())  # Monday of min_date week
-    week_num = 1
-    while current_week_start <= now:
-        week_end = current_week_start + timedelta(days=6)
-        week_options.append({
-            'value': week_num,
-            'label': f'Week {week_num}',
-            'start_date': current_week_start,
-            'end_date': week_end,
-        })
-        current_week_start += timedelta(days=7)
-        week_num += 1
-
-    # Reverse to have latest first, but keep numbering ascending
-    week_options.reverse()
-
-    # Get selected week from GET, default to latest (Week with highest num)
-    selected_week_num = request.GET.get('week')
-    if selected_week_num:
-        try:
-            selected_week_num = int(selected_week_num)
-        except ValueError:
-            selected_week_num = len(week_options)
-    else:
-        selected_week_num = len(week_options)  # Latest
-
-    # Find selected week
-    selected_week = next((w for w in week_options if w['value'] == selected_week_num), week_options[-1] if week_options else None)
-    if not selected_week:
-        selected_week = week_options[0] if week_options else None
-
-    week_start = selected_week['start_date']
-    week_end = selected_week['end_date']
-
-    # Fetch data for the week
-    week_data = EnergyRecord.objects.filter(
+    # Fetch data for the selected filter
+    period_data = EnergyRecord.objects.filter(
         device__in=devices,
-        date__gte=week_start,
-        date__lte=week_end
-    ).values('date').annotate(
+        **filter_kwargs
+    ).aggregate(
         total_energy=Sum('total_energy_kwh'),
-        total_cost=Sum('cost_estimate')
-    ).order_by('date')
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
+    )
 
-    # Prepare daily data for chart
-    daily_energy = {}
-    for record in week_data:
-        daily_energy[record['date']] = record['total_energy'] or 0
+    total_energy_usage = period_data['total_energy'] or 0
+    cost_predicted = period_data['total_cost'] or 0
+    co2_emission = period_data['total_co2'] or 0
 
-    # Generate labels and values for the week
-    chart_labels = []
-    chart_values = []
-    current = week_start
-    while current <= week_end:
-        chart_labels.append([current.strftime('%A'), current.strftime('%Y-%m-%d')])
-        chart_values.append(daily_energy.get(current, 0))
-        current += timedelta(days=1)
-
-    # Total energy usage for the week
-    total_energy_usage = sum(chart_values)
-
-    # Highest usage day
-    if chart_values:
-        max_energy = max(chart_values)
-        max_index = chart_values.index(max_energy)
-        highest_usage_day = (week_start + timedelta(days=max_index)).strftime('%Y-%m-%d')
-    else:
-        highest_usage_day = 'N/A'
-        max_energy = 0
-
-    # Cost predicted for the week
-    cost_predicted = sum(record['total_cost'] or 0 for record in week_data)
-
-    # CO2 emission for the week
-    co2_emission = EnergyRecord.objects.filter(
-        device__in=devices,
-        date__gte=week_start,
-        date__lte=week_end
-    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
+    # Prepare chart data based on level
+    import calendar
+    if level == 'day':
+        # Show hourly data if available, otherwise just the day
+        chart_labels = [selected_date.strftime('%Y-%m-%d')]
+        chart_values = [total_energy_usage]
+        highest_usage_day = selected_date.strftime('%Y-%m-%d')
+        best_performing_day = selected_date.strftime('%Y-%m-%d')
+    elif level == 'week':
+        # Show daily data for the week
+        week_start = date.fromisoformat(selected_week)
+        week_end = week_start + timedelta(days=6)
+        
+        daily_data = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__gte=week_start,
+            date__lte=week_end
+        ).values('date').annotate(
+            total_energy=Sum('total_energy_kwh')
+        ).order_by('date')
+        
+        daily_energy = {record['date']: record['total_energy'] or 0 for record in daily_data}
+        
+        chart_labels = []
+        chart_values = []
+        current = week_start
+        while current <= week_end:
+            chart_labels.append(current.strftime('%A'))
+            chart_values.append(daily_energy.get(current, 0))
+            current += timedelta(days=1)
+        
+        # Find highest and best performing days
+        if chart_values:
+            max_energy = max(chart_values)
+            max_index = chart_values.index(max_energy)
+            highest_usage_day = (week_start + timedelta(days=max_index)).strftime('%Y-%m-%d')
+            
+            min_energy = min(chart_values)
+            min_index = chart_values.index(min_energy)
+            best_performing_day = (week_start + timedelta(days=min_index)).strftime('%Y-%m-%d')
+        else:
+            highest_usage_day = 'N/A'
+            best_performing_day = 'N/A'
+    elif level == 'month':
+        # Show daily data for the month
+        start_date = date(int(selected_year), int(selected_month), 1)
+        end_date = date(int(selected_year), int(selected_month), calendar.monthrange(int(selected_year), int(selected_month))[1])
+        
+        daily_data = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__gte=start_date,
+            date__lte=end_date
+        ).values('date').annotate(
+            total_energy=Sum('total_energy_kwh')
+        ).order_by('date')
+        
+        daily_energy = {record['date']: record['total_energy'] or 0 for record in daily_data}
+        
+        chart_labels = []
+        chart_values = []
+        current = start_date
+        while current <= end_date:
+            chart_labels.append(current.strftime('%d'))
+            chart_values.append(daily_energy.get(current, 0))
+            current += timedelta(days=1)
+        
+        # Find highest and best performing days
+        if chart_values and any(v > 0 for v in chart_values):
+            max_energy = max(chart_values)
+            max_index = chart_values.index(max_energy)
+            highest_usage_day = (start_date + timedelta(days=max_index)).strftime('%Y-%m-%d')
+            
+            min_energy = min(v for v in chart_values if v > 0) if any(v > 0 for v in chart_values) else 0
+            min_index = next(i for i, v in enumerate(chart_values) if v == min_energy)
+            best_performing_day = (start_date + timedelta(days=min_index)).strftime('%Y-%m-%d')
+        else:
+            highest_usage_day = 'N/A'
+            best_performing_day = 'N/A'
 
     # Office status based on energy usage
     threshold = Threshold.objects.first()
@@ -698,24 +861,23 @@ def user_reports(request):
     else:
         office_status = 'ACTIVE'
 
-    # Best performing day (lowest usage)
-    if chart_values:
-        min_energy = min(chart_values)
-        min_index = chart_values.index(min_energy)
-        best_performing_day = (week_start + timedelta(days=min_index)).strftime('%Y-%m-%d')
-    else:
-        best_performing_day = 'N/A'
-
-    # Recommendation based on highest usage day
-    if threshold and max_energy > threshold.energy_moderate_max:
-        recommendation = f"Usage exceeded on {highest_usage_day}. Consider reducing usage during peak hours."
+    # Recommendation based on usage and threshold
+    if threshold and total_energy_usage > threshold.energy_moderate_max:
+        recommendation = f"Usage exceeded threshold. Consider reducing energy consumption during peak hours."
     else:
         recommendation = "Energy usage is within acceptable limits. Keep up the good work!"
 
     context = {
         'office': office,
         'week_options': week_options,
-        'selected_week': selected_week_num,
+        'month_options': month_options,
+        'year_options': year_options,
+        'day_options': day_options,
+        'selected_day': selected_day,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'selected_week': selected_week,
+        'level': level,
         'total_energy_usage': f"{total_energy_usage:.2f}",
         'highest_usage_day': highest_usage_day,
         'cost_predicted': f"₱{cost_predicted:.2f}",
@@ -1050,26 +1212,64 @@ def user_emmision(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def export_user_reports(request):
-    from django.db.models import Sum, Min
+    from django.db.models import Sum, Max
+    from django.db.models.functions import ExtractYear, ExtractMonth
     from datetime import timedelta, date
+    from datetime import datetime as dt
     from ..sensors.models import EnergyRecord
+    import calendar
     
     office = request.user
     devices = office.devices.all()
     
-    selected_week_num = request.GET.get('week')
-    if selected_week_num:
-        try:
-            selected_week_num = int(selected_week_num)
-        except ValueError:
-            selected_week_num = 1
-    else:
-        selected_week_num = 1
+    # Get filter parameters
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+    selected_week = request.GET.get('selected_week')
     
-    # Get min date to calculate week range
-    min_date_qs = EnergyRecord.objects.filter(device__in=devices).aggregate(min_date=Min('date'))
-    min_date = min_date_qs['min_date']
-    if not min_date:
+    # Use same filter logic as main view
+    def determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices):
+        from datetime import timedelta
+        filter_kwargs = {}
+        selected_date = None
+        level = 'day'
+
+        if selected_day:
+            try:
+                month_str, day_str, year_str = selected_day.split('/')
+                selected_date = date(int(year_str), int(month_str), int(day_str))
+                filter_kwargs = {'date': selected_date}
+                level = 'day'
+            except ValueError:
+                selected_date = None
+        elif selected_week:
+            try:
+                week_start = date.fromisoformat(selected_week)
+                week_end = week_start + timedelta(days=6)
+                filter_kwargs = {'date__gte': week_start, 'date__lte': week_end}
+                level = 'week'
+            except ValueError:
+                selected_week = None
+        elif selected_month and selected_year:
+            filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+            level = 'month'
+        elif selected_year:
+            filter_kwargs = {'date__year': int(selected_year)}
+            level = 'year'
+        else:
+            # Default to latest date
+            latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+            latest_date = latest_data['latest_date']
+            if latest_date:
+                filter_kwargs = {'date': latest_date}
+                level = 'day'
+
+        return filter_kwargs, level
+    
+    filter_kwargs, level = determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices)
+    
+    if not filter_kwargs:
         # No data case
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="user_report_no_data.csv"'
@@ -1077,16 +1277,10 @@ def export_user_reports(request):
         writer.writerow(['No data available'])
         return response
     
-    # Calculate week start/end
-    current_week_start = min_date - timedelta(days=min_date.weekday())
-    week_start = current_week_start + timedelta(days=(selected_week_num - 1) * 7)
-    week_end = week_start + timedelta(days=6)
-    
-    # Get week data
-    week_data = EnergyRecord.objects.filter(
+    # Get data based on filter
+    export_data = EnergyRecord.objects.filter(
         device__in=devices,
-        date__gte=week_start,
-        date__lte=week_end
+        **filter_kwargs
     ).values('date').annotate(
         total_energy=Sum('total_energy_kwh'),
         total_cost=Sum('cost_estimate'),
@@ -1094,13 +1288,25 @@ def export_user_reports(request):
     ).order_by('date')
     
     response = HttpResponse(content_type='text/csv')
-    filename = f"user_report_week_{selected_week_num}_{office.username}.csv"
+    
+    # Generate filename based on filter
+    if level == 'day':
+        filename = f"user_report_day_{selected_day.replace('/', '_')}_{office.username}.csv"
+    elif level == 'week':
+        filename = f"user_report_week_{selected_week}_{office.username}.csv"
+    elif level == 'month':
+        filename = f"user_report_month_{selected_month}_{selected_year}_{office.username}.csv"
+    elif level == 'year':
+        filename = f"user_report_year_{selected_year}_{office.username}.csv"
+    else:
+        filename = f"user_report_{office.username}.csv"
+    
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     writer = csv.writer(response)
     writer.writerow(['Date', 'Energy Usage (kWh)', 'Cost Estimate (PHP)', 'CO2 Emission (kg)'])
     
-    for record in week_data:
+    for record in export_data:
         writer.writerow([
             record['date'].strftime('%Y-%m-%d'),
             f"{record['total_energy']:.2f}" if record['total_energy'] else '0.00',
@@ -1134,6 +1340,79 @@ def get_user_days(request):
         return JsonResponse({
             'status': 'success',
             'days': day_options
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
+def get_user_weeks(request):
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    
+    try:
+        office = request.user
+        devices = office.devices.all()
+        
+        def get_user_week_options(devices, selected_month=None, selected_year=None):
+            from django.db.models import Min
+            from django.db.models.functions import ExtractYear, ExtractMonth
+            from datetime import date, timedelta
+
+            # If month and year are selected, filter weeks for that specific month/year
+            if selected_month and selected_year:
+                months = [{'month': int(selected_month), 'year': int(selected_year)}]
+            else:
+                # Get distinct months with data
+                months = EnergyRecord.objects.filter(
+                    device__in=devices
+                ).annotate(
+                    month=ExtractMonth('date'),
+                    year=ExtractYear('date')
+                ).values('month', 'year').distinct().order_by('year', 'month')
+
+            week_options = []
+            for m in months:
+                year = m['year']
+                month = m['month']
+
+                # Get all dates in this month with data
+                dates_in_month = EnergyRecord.objects.filter(
+                    device__in=devices
+                ).filter(
+                    date__year=year,
+                    date__month=month
+                ).dates('date', 'day')
+
+                if not dates_in_month:
+                    continue
+
+                min_date = min(dates_in_month)
+                max_date = max(dates_in_month)
+
+                # Calculate weeks: start on the first day of the month
+                first_day = date(year, month, 1)
+                start_of_month = first_day
+                week_num = 1
+                current_start = start_of_month
+                while current_start <= max_date:
+                    current_end = min(current_start + timedelta(days=6), max_date)
+                    # Check if there is data in this week
+                    # Always include Week 1, and others if there is data
+                    if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+                        week_options.append({
+                            'value': current_start.strftime('%Y-%m-%d'),
+                            'name': f"Week {week_num}"
+                        })
+                    current_start += timedelta(days=7)
+                    week_num += 1
+
+            return week_options
+        
+        week_options = get_user_week_options(devices, month, year)
+        
+        return JsonResponse({
+            'status': 'success',
+            'weeks': week_options
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
