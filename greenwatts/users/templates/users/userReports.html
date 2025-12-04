@@ -13,6 +13,12 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
+    <style>
+      .filters select option {
+        color: white !important;
+        background-color: #2c3e50 !important;
+      }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
@@ -58,19 +64,16 @@
       <!-- Filters -->
       <div class="filters">
         <select id="week-select">
-          <option value="">Week</option>
           {% for option in week_options %}
           <option value="{{ option.value }}" {% if option.value == selected_week %}selected{% endif %}>{{ option.name }}</option>
           {% endfor %}
         </select>
         <select id="month-select">
-          <option value="">Month</option>
           {% for option in month_options %}
           <option value="{{ option.value }}" {% if option.value == selected_month %}selected{% endif %}>{{ option.name }}</option>
           {% endfor %}
         </select>
         <select id="year-select">
-          <option value="">Year</option>
           {% for option in year_options %}
           <option value="{{ option }}" {% if option == selected_year %}selected{% endif %}>{{ option }}</option>
           {% endfor %}

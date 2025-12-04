@@ -152,3 +152,6 @@ CACHES = {
         'LOCATION': 'unique-snowflake',
     }
 }
+
+# Disable HTTPS redirects in development
+SECURE_SSL_REDIRECT = False

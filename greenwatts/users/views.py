@@ -594,6 +594,14 @@ def user_reports(request):
     selected_year = request.GET.get('selected_year')
     selected_week = request.GET.get('selected_week')
 
+    # Auto-select latest data if no filters provided
+    if not any([selected_day, selected_month, selected_year, selected_week]):
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        if latest_data['latest_date']:
+            latest_date = latest_data['latest_date']
+            selected_month = str(latest_date.month)
+            selected_year = str(latest_date.year)
+
     # Force month filtering when month is selected
     if selected_month and not selected_day and not selected_week:
         if not selected_year:
@@ -683,6 +691,10 @@ def user_reports(request):
         return week_options
 
     week_options = get_user_week_options(devices, selected_month, selected_year)
+    
+    # Auto-select latest week if no week selected but month/year are set
+    if not selected_week and selected_month and selected_year and week_options:
+        selected_week = week_options[-1]['value']  # Latest week
 
     # Determine filter kwargs and level
     def determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices):
@@ -944,6 +956,14 @@ def user_energy_cost(request):
     selected_year = request.GET.get('selected_year')
     selected_week = request.GET.get('selected_week')
     
+    # Auto-select latest data if no filters provided
+    if not any([selected_day, selected_month, selected_year, selected_week]):
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        if latest_data['latest_date']:
+            latest_date = latest_data['latest_date']
+            selected_month = str(latest_date.month)
+            selected_year = str(latest_date.year)
+    
     # Force month filtering when month is selected
     if selected_month and not selected_day and not selected_week:
         if not selected_year:
@@ -1025,6 +1045,10 @@ def user_energy_cost(request):
         return week_options
     
     week_options = get_user_week_options(devices, selected_month, selected_year)
+    
+    # Auto-select latest week if no week selected but month/year are set
+    if not selected_week and selected_month and selected_year and week_options:
+        selected_week = week_options[-1]['value']  # Latest week
     
     # Determine filter kwargs and level
     def determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices):
@@ -1297,31 +1321,162 @@ def user_energy_cost(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def user_emmision(request):
-    from django.db.models import Sum, Min
-    from django.db.models.functions import TruncDate
+    from django.db.models import Sum, Min, Max
+    from django.db.models.functions import TruncDate, ExtractYear, ExtractMonth
     from datetime import datetime, timedelta, date
     from calendar import monthrange
     from django.utils import timezone
     import json
     from greenwatts.users.models import Office
     from ..sensors.models import EnergyRecord
+    from datetime import datetime as dt
 
-    # Get all valid office ids from Office table
-    valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
+    office = request.user
+    devices = office.devices.all()
 
-    now = timezone.now().date()
+    # Get selected day, month, year, week from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+    selected_week = request.GET.get('selected_week')
 
-    # Get min date from EnergyRecord to determine available weeks
-    min_date_qs = EnergyRecord.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).aggregate(min_date=Min('date'))
-    min_date = min_date_qs['min_date']
-    if not min_date:
-        # No data, handle gracefully
+    # Auto-select latest data if no filters provided
+    if not any([selected_day, selected_month, selected_year, selected_week]):
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        if latest_data['latest_date']:
+            latest_date = latest_data['latest_date']
+            selected_month = str(latest_date.month)
+            selected_year = str(latest_date.year)
+
+    # Force month filtering when month is selected
+    if selected_month and not selected_day and not selected_week:
+        if not selected_year:
+            selected_year = str(dt.now().year)
+
+    # Year options: all years with data for this office
+    years_with_data = EnergyRecord.objects.filter(
+        device__in=devices
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
+
+    # Month options: all months with data for this office
+    months_with_data = EnergyRecord.objects.filter(
+        device__in=devices
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+
+    # Week options function
+    def get_user_week_options(devices, selected_month=None, selected_year=None):
+        from django.db.models.functions import ExtractYear, ExtractMonth
+        
+        if selected_month and selected_year:
+            months = [{'month': int(selected_month), 'year': int(selected_year)}]
+        else:
+            months = EnergyRecord.objects.filter(
+                device__in=devices
+            ).annotate(
+                month=ExtractMonth('date'),
+                year=ExtractYear('date')
+            ).values('month', 'year').distinct().order_by('year', 'month')
+        
+        week_options = []
+        for m in months:
+            year = m['year']
+            month = m['month']
+            
+            dates_in_month = EnergyRecord.objects.filter(
+                device__in=devices
+            ).filter(
+                date__year=year,
+                date__month=month
+            ).dates('date', 'day')
+            
+            if not dates_in_month:
+                continue
+            
+            min_date = min(dates_in_month)
+            max_date = max(dates_in_month)
+            
+            first_day = date(year, month, 1)
+            start_of_month = first_day
+            week_num = 1
+            current_start = start_of_month
+            while current_start <= max_date:
+                current_end = min(current_start + timedelta(days=6), max_date)
+                if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+                    week_options.append({
+                        'value': current_start.strftime('%Y-%m-%d'),
+                        'name': f"Week {week_num}"
+                    })
+                current_start += timedelta(days=7)
+                week_num += 1
+        
+        return week_options
+
+    week_options = get_user_week_options(devices, selected_month, selected_year)
+    
+    # Auto-select latest week if no week selected but month/year are set
+    if not selected_week and selected_month and selected_year and week_options:
+        selected_week = week_options[-1]['value']  # Latest week
+
+    # Determine filter kwargs and level
+    def determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices):
+        filter_kwargs = {}
+        selected_date = None
+        level = 'day'
+        
+        if selected_day:
+            try:
+                month_str, day_str, year_str = selected_day.split('/')
+                selected_date = date(int(year_str), int(month_str), int(day_str))
+                filter_kwargs = {'date': selected_date}
+                level = 'day'
+                selected_month = month_str
+                selected_year = year_str
+            except ValueError:
+                selected_date = None
+        elif selected_week:
+            try:
+                week_start = date.fromisoformat(selected_week)
+                week_end = week_start + timedelta(days=6)
+                filter_kwargs = {'date__gte': week_start, 'date__lte': week_end}
+                level = 'week'
+                selected_month = str(week_start.month)
+                selected_year = str(week_start.year)
+            except ValueError:
+                selected_week = None
+        elif selected_month and selected_year:
+            filter_kwargs = {'date__year': int(selected_year), 'date__month': int(selected_month)}
+            level = 'month'
+        elif selected_year:
+            filter_kwargs = {'date__year': int(selected_year)}
+            level = 'year'
+        else:
+            latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+            latest_date = latest_data['latest_date']
+            if latest_date:
+                filter_kwargs = {'date': latest_date}
+                selected_date = latest_date
+                selected_month = str(latest_date.month)
+                selected_year = str(latest_date.year)
+                level = 'day'
+        
+        return filter_kwargs, selected_date, level, selected_month, selected_year
+
+    filter_kwargs, selected_date, level, selected_month, selected_year = determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices)
+
+    if not filter_kwargs:
         context = {
-            'week_options': [],
+            'office': office,
+            'week_options': week_options,
+            'month_options': month_options,
+            'year_options': year_options,
+            'selected_week': selected_week,
+            'selected_month': selected_month,
+            'selected_year': selected_year,
             'previous_week_name': 'N/A',
             'last_week_co2': '0.0',
             'current_week_so_far_co2': '0.0',
@@ -1330,129 +1485,175 @@ def user_emmision(request):
             'change_direction': '▼',
             'change_class': 'green-arrow',
             'chart_labels': json.dumps([]),
-            'prev_week_data': json.dumps([]),
-            'current_week_data': json.dumps([]),
+            'week_data': json.dumps([]),
             'threshold': 180,
         }
         return render(request, 'users/userEmmision.html', context)
 
-    # Generate week options: Weeks from min_date to now, labeled as Week 1, Week 2, etc.
-    week_options = []
-    current_week_start = min_date - timedelta(days=min_date.weekday())  # Monday of min_date week
-    week_num = 1
-    while current_week_start <= now:
-        week_end = current_week_start + timedelta(days=6)
-        week_options.append({
-            'value': week_num,
-            'label': f'Week {week_num}',
-            'start_date': current_week_start,
-            'end_date': week_end,
-        })
-        current_week_start += timedelta(days=7)
-        week_num += 1
+    # Get CO2 data for selected filter
+    co2_data = EnergyRecord.objects.filter(
+        device__in=devices,
+        **filter_kwargs
+    ).aggregate(total_co2=Sum('carbon_emission_kgco2'))['total_co2'] or 0
 
-    # Reverse to have latest first, but keep numbering ascending
-    week_options.reverse()
-
-    # Get selected week from GET, default to latest (Week with highest num)
-    selected_week_num = request.GET.get('week')
-    if selected_week_num:
-        try:
-            selected_week_num = int(selected_week_num)
-        except ValueError:
-            selected_week_num = len(week_options)
+    # Calculate previous period for comparison
+    if level == 'week':
+        week_start = date.fromisoformat(selected_week)
+        week_end = week_start + timedelta(days=6)
+        prev_week_start = week_start - timedelta(days=7)
+        prev_week_end = week_end - timedelta(days=7)
+        previous_label = f"Previous Week"
+    elif level == 'month':
+        current_year = int(selected_year)
+        current_month = int(selected_month)
+        prev_year = current_year
+        prev_month = current_month - 1
+        if prev_month == 0:
+            prev_month = 12
+            prev_year -= 1
+        prev_week_start = date(prev_year, prev_month, 1)
+        _, last_day = monthrange(prev_year, prev_month)
+        prev_week_end = date(prev_year, prev_month, last_day)
+        week_start = date(current_year, current_month, 1)
+        _, last_day = monthrange(current_year, current_month)
+        week_end = date(current_year, current_month, last_day)
+        previous_label = f"Previous Month"
     else:
-        selected_week_num = len(week_options)  # Latest
+        # Default to week-based calculation
+        now = timezone.now().date()
+        week_start = now - timedelta(days=6)
+        week_end = now
+        prev_week_start = week_start - timedelta(days=7)
+        prev_week_end = week_end - timedelta(days=7)
+        previous_label = f"Previous Week"
 
-    # Find selected week
-    selected_week = next((w for w in week_options if w['value'] == selected_week_num), week_options[-1] if week_options else None)
-    if not selected_week:
-        selected_week = week_options[0] if week_options else None
-
-    week_start = selected_week['start_date']
-    week_end = selected_week['end_date']
-
-    # Previous week
-    prev_week_start = week_start - timedelta(days=7)
-    prev_week_end = week_end - timedelta(days=7)
-    previous_week_name = f"Week {selected_week_num - 1}" if selected_week_num > 1 else "Previous Week"
-
-    # Last week total CO2
-    last_week_total_co2 = EnergyRecord.objects.filter(
+    # Previous period CO2
+    last_week_co2 = EnergyRecord.objects.filter(
+        device__in=devices,
         date__gte=prev_week_start,
-        date__lte=prev_week_end,
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
+        date__lte=prev_week_end
     ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
-    # Current week so far CO2 (up to today if within week)
-    current_week_end = min(week_end, now)
+    # Current period so far CO2
+    now = timezone.now().date()
+    current_end = min(week_end, now)
     current_week_so_far_co2 = EnergyRecord.objects.filter(
+        device__in=devices,
         date__gte=week_start,
-        date__lte=current_week_end,
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
+        date__lte=current_end
     ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
-    # Days so far in week
-    days_so_far = (current_week_end - week_start).days + 1
-
-    # Predicted this week CO2
-    avg_daily_co2 = current_week_so_far_co2 / days_so_far if days_so_far > 0 else 0
-    predicted_week_co2 = avg_daily_co2 * 7
+    # Predicted CO2
+    if level == 'week':
+        days_so_far = (current_end - week_start).days + 1 if current_end >= week_start else 1
+        avg_daily_co2 = current_week_so_far_co2 / days_so_far if days_so_far > 0 else 0
+        predicted_week_co2 = avg_daily_co2 * 7
+    elif level == 'month':
+        days_so_far = (current_end - week_start).days + 1 if current_end >= week_start else 1
+        _, days_in_month = monthrange(int(selected_year), int(selected_month))
+        avg_daily_co2 = current_week_so_far_co2 / days_so_far if days_so_far > 0 else 0
+        predicted_week_co2 = avg_daily_co2 * days_in_month
+    else:
+        predicted_week_co2 = current_week_so_far_co2 * 2
 
     # Change in emissions
-    if last_week_total_co2 > 0:
-        change_percent = ((current_week_so_far_co2 - last_week_total_co2) / last_week_total_co2) * 100
+    if last_week_co2 > 0:
+        change_percent = ((current_week_so_far_co2 - last_week_co2) / last_week_co2) * 100
     else:
         change_percent = 0
     change_direction = '▲' if change_percent > 0 else '▼'
     change_class = 'red-arrow' if change_percent > 0 else 'green-arrow'
 
-    # Chart data: Daily CO2 for selected week
-    daily_data = EnergyRecord.objects.filter(
-        date__gte=week_start,
-        date__lte=week_end,
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(
-        day_date=TruncDate('date')
-    ).values(
-        'day_date'
-    ).annotate(
-        total_co2=Sum('carbon_emission_kgco2')
-    ).order_by('day_date')
-
-    # Generate date range for 7 days
-    date_range = []
-    current = week_start
-    while current <= week_end:
-        date_range.append(current)
-        current += timedelta(days=1)
-
-    # Map data
-    date_dict = {item['day_date']: item['total_co2'] or 0 for item in daily_data}
-
-    # Current week data
-    week_data = []
-    labels = []
-    for d in date_range:
-        label = d.strftime('%a %d')  # e.g., Mon 01
-        labels.append(label)
-        week_data.append(date_dict.get(d, 0))
+    # Chart data based on level
+    if level == 'week':
+        daily_data = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__gte=week_start,
+            date__lte=week_end
+        ).annotate(
+            day_date=TruncDate('date')
+        ).values('day_date').annotate(
+            total_co2=Sum('carbon_emission_kgco2')
+        ).order_by('day_date')
+        
+        date_range = []
+        current = week_start
+        while current <= week_end:
+            date_range.append(current)
+            current += timedelta(days=1)
+        
+        date_dict = {item['day_date']: item['total_co2'] or 0 for item in daily_data}
+        week_data = []
+        labels = []
+        for d in date_range:
+            label = d.strftime('%a %d')
+            labels.append(label)
+            week_data.append(date_dict.get(d, 0))
+    elif level == 'month':
+        daily_data = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__gte=week_start,
+            date__lte=week_end
+        ).annotate(
+            day_date=TruncDate('date')
+        ).values('day_date').annotate(
+            total_co2=Sum('carbon_emission_kgco2')
+        ).order_by('day_date')
+        
+        date_range = []
+        current = week_start
+        while current <= week_end:
+            date_range.append(current)
+            current += timedelta(days=1)
+        
+        date_dict = {item['day_date']: item['total_co2'] or 0 for item in daily_data}
+        week_data = []
+        labels = []
+        for d in date_range:
+            label = d.strftime('%d')
+            labels.append(label)
+            week_data.append(date_dict.get(d, 0))
+    else:
+        # Default to last 7 days
+        end_date = now
+        start_date = end_date - timedelta(days=6)
+        daily_data = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__gte=start_date,
+            date__lte=end_date
+        ).annotate(
+            day_date=TruncDate('date')
+        ).values('day_date').annotate(
+            total_co2=Sum('carbon_emission_kgco2')
+        ).order_by('day_date')
+        
+        date_range = []
+        current = start_date
+        while current <= end_date:
+            date_range.append(current)
+            current += timedelta(days=1)
+        
+        date_dict = {item['day_date']: item['total_co2'] or 0 for item in daily_data}
+        week_data = []
+        labels = []
+        for d in date_range:
+            label = d.strftime('%a %d')
+            labels.append(label)
+            week_data.append(date_dict.get(d, 0))
 
     threshold = Threshold.objects.first()
-    threshold_value = threshold.co2_moderate_max
+    threshold_value = threshold.co2_moderate_max if threshold else 180
 
     context = {
-        'office': request.user,
+        'office': office,
         'week_options': week_options,
-        'selected_week': selected_week_num,
-        'previous_week_name': previous_week_name,
-        'last_week_co2': f"{last_week_total_co2:.1f}",
+        'month_options': month_options,
+        'year_options': year_options,
+        'selected_week': selected_week,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'previous_week_name': previous_label,
+        'last_week_co2': f"{last_week_co2:.1f}",
         'current_week_so_far_co2': f"{current_week_so_far_co2:.1f}",
         'predicted_week_co2': f"{predicted_week_co2:.0f}",
         'change_percent': f"{abs(change_percent):.2f}%",
