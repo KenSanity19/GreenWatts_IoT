@@ -115,20 +115,40 @@
       <!-- Top Cards -->
       <div class="report-cards">
         <div class="card total">
-          <p>Total Energy Use</p>
-          <span>{{ total_energy|floatformat:1 }} kWh</span>
+          <div class="card-icon">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Total Energy Use</div>
+            <div class="card-value">{{ total_energy|floatformat:1 }} kWh</div>
+          </div>
         </div>
         <div class="card inactive">
-          <p>Total Cost</p>
-          <span>₱{{ total_cost|floatformat:2 }}</span>
+          <div class="card-icon">
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Total Cost</div>
+            <div class="card-value">₱{{ total_cost|floatformat:2 }}</div>
+          </div>
         </div>
         <div class="card inactive">
-          <p>Average Daily Cost</p>
-          <span>₱{{ avg_daily_cost|floatformat:2 }}</span>
+          <div class="card-icon">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Average Daily Cost</div>
+            <div class="card-value">₱{{ avg_daily_cost|floatformat:2 }}</div>
+          </div>
         </div>
         <div class="card highest">
-          <p>HIGHEST COST OFFICE</p>
-          <span>{{ highest_office }}</span>
+          <div class="card-icon">
+            <i class="fas fa-building"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Highest Cost Office</div>
+            <div class="card-value">{{ highest_office }}</div>
+          </div>
         </div>
       </div>
 

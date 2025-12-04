@@ -91,16 +91,31 @@
       <!-- Top Cards -->
       <div class="report-cards">
         <div class="card total">
-          <p>Energy Usage</p>
-          <span>{{ energy_usage }} kWh</span>  <!-- Updated: Dynamic energy usage -->
+          <div class="card-icon">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Energy Usage</div>
+            <div class="card-value">{{ energy_usage }} kWh</div>
+          </div>
         </div>
         <div class="card inactive">
-          <p>Cost Predicted</p>
-          <span>{{ cost_predicted }}</span>  <!-- Updated: Dynamic cost -->
+          <div class="card-icon">
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Cost Predicted</div>
+            <div class="card-value">{{ cost_predicted }}</div>
+          </div>
         </div>
         <div class="card highest">
-          <p>CO2 Emissions</p>
-          <span>{{ co2_emissions }} kg</span>  <!-- Updated: Dynamic emissions -->
+          <div class="card-icon">
+            <i class="fas fa-leaf"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">CO2 Emissions</div>
+            <div class="card-value">{{ co2_emissions }} kg</div>
+          </div>
         </div>
       </div>
 

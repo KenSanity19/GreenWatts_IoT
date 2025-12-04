@@ -116,16 +116,40 @@
       <!-- Top Report Cards -->
       <div class="report-cards">
         <div class="card total">
-          Total Energy Usage <br /><span>{{ total_energy_usage|floatformat:0 }} kWh</span>
+          <div class="card-icon">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Total Energy Usage</div>
+            <div class="card-value">{{ total_energy_usage|floatformat:0 }} kWh</div>
+          </div>
         </div>
         <div class="card highest">
-          Highest Usage Office <br /><span>{{ highest_usage_office }}</span>
+          <div class="card-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Highest Usage Office</div>
+            <div class="card-value">{{ highest_usage_office }}</div>
+          </div>
         </div>
         <div class="card inactive">
-          Inactive Office/s <br /><span>{{ inactive_offices }}</span>
+          <div class="card-icon">
+            <i class="fas fa-power-off"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Inactive Office/s</div>
+            <div class="card-value">{{ inactive_offices }}</div>
+          </div>
         </div>
         <div class="card best">
-          Best Performing Office <br /><span>{{ best_performing_office }}</span>
+          <div class="card-icon">
+            <i class="fas fa-trophy"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Best Performing Office</div>
+            <div class="card-value">{{ best_performing_office }}</div>
+          </div>
         </div>
       </div>
 

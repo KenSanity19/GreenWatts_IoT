@@ -82,19 +82,49 @@
       <!-- Top Report Cards -->
       <div class="report-cards">
         <div class="card energy">
-          Energy Usage <br /><span>{{ total_energy_usage }} kWh</span>
+          <div class="card-icon">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Energy Usage</div>
+            <div class="card-value">{{ total_energy_usage }} kWh</div>
+          </div>
         </div>
         <div class="card cost">
-          Cost <br /><span>{{ cost_predicted }}</span>
+          <div class="card-icon">
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Cost</div>
+            <div class="card-value">{{ cost_predicted }}</div>
+          </div>
         </div>
         <div class="card co2">
-          CO2 Emission <br /><span>{{ co2_emission }} kg</span>
+          <div class="card-icon">
+            <i class="fas fa-leaf"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">CO2 Emission</div>
+            <div class="card-value">{{ co2_emission }} kg</div>
+          </div>
         </div>
         <div class="card status">
-          Status <br /><span>{{ office_status }}</span>
+          <div class="card-icon">
+            <i class="fas fa-info-circle"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Status</div>
+            <div class="card-value">{{ office_status }}</div>
+          </div>
         </div>
         <div class="card highest">
-          Highest Day <br /><span>{{ highest_usage_day }}</span>
+          <div class="card-icon">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Highest Day</div>
+            <div class="card-value">{{ highest_usage_day }}</div>
+          </div>
         </div>
       </div>
 

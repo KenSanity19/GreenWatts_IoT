@@ -81,6 +81,46 @@
         </select>
       </div>
 
+      <!-- CO2 Emission Cards -->
+      <div class="co2-cards">
+        <div class="co2-card">
+          <div class="card-icon">
+            <i class="fas fa-leaf"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Current Week CO2</div>
+            <div class="card-value">{{ current_week_so_far_co2 }} kg</div>
+          </div>
+        </div>
+        <div class="co2-card">
+          <div class="card-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Predicted Week CO2</div>
+            <div class="card-value">{{ predicted_week_co2 }} kg</div>
+          </div>
+        </div>
+        <div class="co2-card">
+          <div class="card-icon">
+            <i class="fas fa-exchange-alt"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Change from Last Week</div>
+            <div class="card-value {{ change_class }}">{{ change_percent }} {{ change_direction }}</div>
+          </div>
+        </div>
+        <div class="co2-card">
+          <div class="card-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Threshold Limit</div>
+            <div class="card-value">{{ threshold }} kg</div>
+          </div>
+        </div>
+      </div>
+
       <section class="chart-section">
         <p>CARBON FOOTPRINT EMISSION</p>
         <div class="chart-header">

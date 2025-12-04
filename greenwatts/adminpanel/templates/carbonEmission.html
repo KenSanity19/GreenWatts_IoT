@@ -112,20 +112,40 @@
 
       <div class="report-cards">
         <div class="card total">
-          <p>Total Energy Use</p>
-          <span>{{ total_energy_kwh }} kWh</span>
+          <div class="card-icon">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Total Energy Use</div>
+            <div class="card-value">{{ total_energy_kwh }} kWh</div>
+          </div>
         </div>
         <div class="card inactive">
-          <p>Total CO2 Emission</p>
-          <span>{{ total_co2 }} kg</span>
+          <div class="card-icon">
+            <i class="fas fa-leaf"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Total CO2 Emission</div>
+            <div class="card-value">{{ total_co2 }} kg</div>
+          </div>
         </div>
         <div class="card inactive">
-          <p>Average Daily CO2</p>
-          <span>{{ avg_daily_co2 }} kg</span>
+          <div class="card-icon">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Average Daily CO2</div>
+            <div class="card-value">{{ avg_daily_co2 }} kg</div>
+          </div>
         </div>
         <div class="card highest">
-          <p>HIGHEST CO2 EMISSION OFFICE</p>
-          <span>{{ highest_co2_office }}</span>
+          <div class="card-icon">
+            <i class="fas fa-building"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Highest CO2 Emission Office</div>
+            <div class="card-value">{{ highest_co2_office }}</div>
+          </div>
         </div>
       </div>
 

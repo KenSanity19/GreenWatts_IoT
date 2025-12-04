@@ -91,16 +91,40 @@
       <!-- Report Cards -->
       <div class="report-cards">
         <div class="card total">
-          Total Energy Use <br /><span>{{ total_energy }}</span>
+          <div class="card-icon">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Total Energy Use</div>
+            <div class="card-value">{{ total_energy }}</div>
+          </div>
         </div>
         <div class="card highest">
-          Total Cost <br /><span>{{ total_cost }}</span>
+          <div class="card-icon">
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Total Cost</div>
+            <div class="card-value">{{ total_cost }}</div>
+          </div>
         </div>
         <div class="card inactive">
-          Average Daily Cost <br /><span>{{ avg_daily_cost }}</span>
+          <div class="card-icon">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Average Daily Cost</div>
+            <div class="card-value">{{ avg_daily_cost }}</div>
+          </div>
         </div>
         <div class="card best">
-          Day with Highest Cost <br /><span>{{ highest_cost_day }}</span>
+          <div class="card-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Day with Highest Cost</div>
+            <div class="card-value">{{ highest_cost_day }}</div>
+          </div>
         </div>
       </div>
 

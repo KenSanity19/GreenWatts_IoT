@@ -114,16 +114,31 @@
       <!-- Top Cards -->
       <div class="report-cards">
         <div class="card total">
-          <p>Total Energy Use</p>
-          <span>{{ total_energy_usage|floatformat:2 }} kWh</span>
+          <div class="card-icon">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Total Energy Use</div>
+            <div class="card-value">{{ total_energy_usage|floatformat:2 }} kWh</div>
+          </div>
         </div>
         <div class="card inactive">
-          <p>Total Cost</p>
-          <span>₱{{ total_cost_predicted|floatformat:2 }}</span>
+          <div class="card-icon">
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Total Cost</div>
+            <div class="card-value">₱{{ total_cost_predicted|floatformat:2 }}</div>
+          </div>
         </div>
         <div class="card highest">
-          <p>Co2 Emission</p>
-          <span>{{ total_co2_emission|floatformat:2 }} kg</span>
+          <div class="card-icon">
+            <i class="fas fa-leaf"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-label">Co2 Emission</div>
+            <div class="card-value">{{ total_co2_emission|floatformat:2 }} kg</div>
+          </div>
         </div>
       </div>
 
