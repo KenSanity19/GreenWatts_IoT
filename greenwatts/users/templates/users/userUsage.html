@@ -410,8 +410,12 @@
               align: 'center',
               labels: {
                 color: '#000',
-                font: {
-                  size: 10
+                font: function(context) {
+                  const label = context.chart.data.labels[context.dataIndex];
+                  return {
+                    size: 10,
+                    weight: label === '{{ office.name }}' ? 'bold' : 'normal'
+                  };
                 },
                 padding: 8,
                 usePointStyle: true,

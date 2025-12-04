@@ -432,7 +432,13 @@ def office_usage(request):
         energy = record['total_energy'] or 0
         percentage = (energy / total_all_energy * 100) if total_all_energy > 0 else 0
         
-        pie_chart_labels.append(office_name)
+        # Anonymize office names except for the logged-in user's office
+        if record['office_id'] == office.office_id:
+            display_name = office_name
+        else:
+            display_name = f"Office {i + 1}"
+        
+        pie_chart_labels.append(display_name)
         pie_chart_data.append(percentage)
 
     # Get week data for chart (last 7 days)
@@ -481,10 +487,30 @@ def office_usage(request):
             date__gte=prev_week_start,
             date__lte=prev_week_end
         ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+        current_week_energy = sum(chart_data)
+    elif selected_month and selected_year:
+        # Compare with previous month
+        prev_year = int(selected_year)
+        prev_month = int(selected_month) - 1
+        if prev_month == 0:
+            prev_month = 12
+            prev_year -= 1
+        
+        prev_week_energy = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__year=prev_year,
+            date__month=prev_month
+        ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+        current_week_energy = office_energy
     else:
-        # For month/year, compare with previous period
-        prev_week_energy = office_energy * 0.9  # Placeholder calculation
-    current_week_energy = sum(chart_data)
+        # For year, compare with previous year
+        prev_year = int(selected_year) - 1
+        prev_week_energy = EnergyRecord.objects.filter(
+            device__in=devices,
+            date__year=prev_year
+        ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+        current_week_energy = office_energy
+    
     if prev_week_energy > 0:
         rank_change = ((current_week_energy - prev_week_energy) / prev_week_energy) * 100
     else:
