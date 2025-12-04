@@ -155,7 +155,7 @@
         // If labels are arrays (day view), use the first element
         formattedLabels = chartLabels.map(label => label[0]);
       }
-      const chartColors = ["#28a745", "#ffc107", "#dc3545", "#28a745", "#dc3545", "#ffc107", "#28a745"];
+      const chartColors = {{ chart_colors|safe }};
 
       const chart = new Chart(ctx, {
         type: "line",
@@ -168,7 +168,9 @@
               backgroundColor: chartColors,
               borderColor: chartColors,
               borderWidth: 2,
-              fill: false
+              fill: false,
+              pointBackgroundColor: chartColors,
+              pointBorderColor: chartColors
             },
           ],
         },
@@ -275,7 +277,8 @@
       const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"];
       
-      let currentDate = new Date();
+      const calendarEnergy = {{ calendar_energy|safe }};
+      let currentDate = new Date({{ calendar_year }}, {{ calendar_month }} - 1);
       
       function generateCalendar(year, month) {
         const firstDay = new Date(year, month, 1).getDay();
@@ -299,11 +302,17 @@
           dayElement.className = 'calendar-day';
           dayElement.textContent = day;
           
-          // Add sample energy usage colors (you can customize this based on actual data)
-          const usage = Math.random();
-          if (usage > 0.7) dayElement.classList.add('high-usage');
-          else if (usage > 0.4) dayElement.classList.add('medium-usage');
-          else dayElement.classList.add('low-usage');
+          // Get energy usage for this day
+          const energy = calendarEnergy[day] || 0;
+          
+          // Apply threshold-based colors (using real thresholds from database)
+          if (energy > {{ energy_moderate_max }}) {
+            dayElement.classList.add('high-usage');
+          } else if (energy > {{ energy_efficient_max }}) {
+            dayElement.classList.add('medium-usage');
+          } else if (energy > 0) {
+            dayElement.classList.add('low-usage');
+          }
           
           calendarDays.appendChild(dayElement);
         }
@@ -311,12 +320,16 @@
       
       document.getElementById('prevMonth').addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() - 1);
-        generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        const newMonth = currentDate.getMonth() + 1;
+        const newYear = currentDate.getFullYear();
+        window.location.href = `?selected_month=${newMonth}&selected_year=${newYear}`;
       });
       
       document.getElementById('nextMonth').addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() + 1);
-        generateCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        const newMonth = currentDate.getMonth() + 1;
+        const newYear = currentDate.getFullYear();
+        window.location.href = `?selected_month=${newMonth}&selected_year=${newYear}`;
       });
       
       // Initialize calendar

@@ -858,14 +858,39 @@ def user_reports(request):
             office_status = 'MODERATE'
         else:
             office_status = 'ACTIVE'
+        energy_efficient_max = threshold.energy_efficient_max
+        energy_moderate_max = threshold.energy_moderate_max
     else:
         office_status = 'ACTIVE'
+        energy_efficient_max = 10.0
+        energy_moderate_max = 20.0
 
     # Recommendation based on usage and threshold
     if threshold and total_energy_usage > threshold.energy_moderate_max:
         recommendation = f"Usage exceeded threshold. Consider reducing energy consumption during peak hours."
     else:
         recommendation = "Energy usage is within acceptable limits. Keep up the good work!"
+
+    # Get calendar data for current month
+    from django.utils import timezone
+    now = timezone.now().date()
+    calendar_year = int(selected_year) if selected_year else now.year
+    calendar_month = int(selected_month) if selected_month else now.month
+    
+    calendar_data = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__year=calendar_year,
+        date__month=calendar_month
+    ).values('date').annotate(
+        total_energy=Sum('total_energy_kwh')
+    )
+    
+    # Create calendar energy map
+    calendar_energy = {}
+    for record in calendar_data:
+        day = record['date'].day
+        energy = record['total_energy'] or 0
+        calendar_energy[day] = energy
 
     context = {
         'office': office,
@@ -886,7 +911,13 @@ def user_reports(request):
         'best_performing_day': best_performing_day,
         'chart_labels': json.dumps(chart_labels),
         'chart_values': json.dumps(chart_values),
+        'chart_colors': json.dumps(["#dc3545" if v > energy_moderate_max else "#ffc107" if v > energy_efficient_max else "#28a745" for v in chart_values]),
         'recommendation': recommendation,
+        'calendar_energy': json.dumps(calendar_energy),
+        'calendar_year': calendar_year,
+        'calendar_month': calendar_month,
+        'energy_efficient_max': energy_efficient_max,
+        'energy_moderate_max': energy_moderate_max,
     }
     return render(request, 'users/userReports.html', context)
 
