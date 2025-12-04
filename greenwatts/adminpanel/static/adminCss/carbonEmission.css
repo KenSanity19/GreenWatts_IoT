@@ -122,8 +122,9 @@ span#live-time {
 
 /* Colors for each card */
 .total {  background: #527e4c; }     /* Green */
-.highest { background: #dc3545; }   /* Red */
-.inactive { background: #214574; }  /* Blue */
+.inactive:nth-of-type(2) { background: #214574; }  /* Blue */
+.inactive:nth-of-type(3) { background: #5a5a5a; }  /* Gray */
+.highest { background: #e33b4b; }   /* Red */
 
 .chart-section {
     margin-top: 30px;
