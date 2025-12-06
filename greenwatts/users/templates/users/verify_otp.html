@@ -1,0 +1,83 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify Login - GreenWatts</title>
+    <link rel="icon" type="image/png" href="{% static 'browse-logo.png' %}" />
+    <link rel="stylesheet" href="{% static 'userCss/index.css' %}" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <style>
+      .otp-input {
+        font-size: 24px;
+        letter-spacing: 10px;
+        text-align: center;
+        font-weight: bold;
+      }
+      .info-text {
+        color: #666;
+        font-size: 14px;
+        margin: 15px 0;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="left-section">
+      <div class="logo"></div>
+      <p>Monitor. Reduce. Sustain</p>
+    </div>
+
+    <div class="right-section">
+      <div class="login-box">
+        <h2>Verify Your Login</h2>
+        
+        <p class="info-text">
+          A verification code has been sent to your email.<br>
+          Please enter the 6-digit code below.
+        </p>
+
+        {% if messages %}
+          <ul class="messages">
+            {% for message in messages %}
+              <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                {{ message }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="input-box">
+            <span class="material-icons input-icon">verified_user</span>
+            <input
+              type="text"
+              name="otp"
+              placeholder="Enter 6-digit code"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              class="otp-input"
+              required
+              autofocus
+            />
+          </div>
+
+          <button type="submit">Verify & Login</button>
+
+          <a class="admin-login" href="{% url 'users:index' %}">
+            Back to Login
+          </a>
+        </form>
+
+        <p class="lower-text">
+          Code expires in 10 minutes.<br>
+          Didn't receive the code? Check your spam folder.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

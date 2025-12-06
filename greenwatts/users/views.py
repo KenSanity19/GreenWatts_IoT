@@ -10,6 +10,7 @@ import csv
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
     from ..adminpanel.login_attempts import is_locked_out, record_failed_attempt, clear_attempts, get_lockout_time_remaining
+    from .two_factor import get_device_fingerprint, is_trusted_device, generate_otp, store_otp, send_otp_email
     
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -25,6 +26,23 @@ def index(request):
             user = auth.authenticate(username=username, password=password)
             if user is not None:
                 clear_attempts(username, 'user')
+                
+                # Check if device is trusted
+                device_fingerprint = get_device_fingerprint(request)
+                if not is_trusted_device(username, device_fingerprint):
+                    # New device - require 2FA
+                    otp = generate_otp()
+                    store_otp(username, otp)
+                    try:
+                        send_otp_email(office.email, otp, office.name)
+                        request.session['pending_2fa_user'] = username
+                        request.session['device_fingerprint'] = device_fingerprint
+                        messages.info(request, 'Verification code sent to your email.')
+                        return redirect('users:verify_otp')
+                    except Exception as e:
+                        messages.error(request, 'Failed to send verification code. Please try again.')
+                        return render(request, 'index.html')
+                
                 auth.login(request, user)
                 return redirect('users:dashboard')
             else:
@@ -1888,6 +1906,42 @@ def get_user_weeks(request):
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def verify_otp(request):
+    from .two_factor import verify_otp as check_otp, trust_device
+    
+    if 'pending_2fa_user' not in request.session:
+        return redirect('users:index')
+    
+    username = request.session.get('pending_2fa_user')
+    
+    if request.method == 'POST':
+        otp = request.POST.get('otp', '').strip()
+        
+        if check_otp(username, otp):
+            # OTP valid - trust device and login
+            from .models import Office
+            try:
+                office = Office.objects.get(username=username)
+                device_fingerprint = request.session.get('device_fingerprint')
+                trust_device(username, device_fingerprint)
+                
+                # Clean up session
+                del request.session['pending_2fa_user']
+                del request.session['device_fingerprint']
+                
+                # Login user
+                auth.login(request, office, backend='django.contrib.auth.backends.ModelBackend')
+                messages.success(request, 'Login successful!')
+                return redirect('users:dashboard')
+            except Office.DoesNotExist:
+                messages.error(request, 'User not found.')
+                return redirect('users:index')
+        else:
+            messages.error(request, 'Invalid or expired verification code.')
+    
+    return render(request, 'users/verify_otp.html', {'username': username})
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def logout(request):

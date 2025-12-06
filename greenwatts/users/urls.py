@@ -5,6 +5,7 @@ app_name = 'users'
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('verify-otp/', views.verify_otp, name='verify_otp'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('office-usage/', views.office_usage, name='office_usage'),
     path('user-reports/', views.user_reports, name='user_reports'),
