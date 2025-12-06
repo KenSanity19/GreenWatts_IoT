@@ -35,7 +35,7 @@ header h1 {
 }
 
 .filters select {
-  padding: 8px 15px;
+  padding: 8px 30px 8px 15px;
   border-radius: 6px;
   border: 2px solid #0b1444 !important;
   font-weight: bold;
@@ -46,6 +46,10 @@ header h1 {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="white" d="M6 9L1 4h10z"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  cursor: pointer;
 }
 
 /* Dashboard Wrapper */

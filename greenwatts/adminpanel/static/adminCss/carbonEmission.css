@@ -54,7 +54,7 @@ span#live-time {
 }
 
 .filters select {
-    padding: 8px 15px;
+    padding: 8px 30px 8px 15px;
     border-radius: 6px;
     border: 2px solid #0b1444;
     font-weight: bold;
@@ -62,6 +62,13 @@ span#live-time {
     color: #ffffff;
     min-width: 120px;
     box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="white" d="M6 9L1 4h10z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    cursor: pointer;
 }
 
 .filters select option {
