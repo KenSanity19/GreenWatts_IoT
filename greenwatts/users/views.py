@@ -102,6 +102,9 @@ def dashboard(request):
         day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
+
+    # Get latest date for Day dropdown display (latest in current filter context)
+    latest_day_display = day_options[0] if day_options else None
     
     # Determine filter kwargs and level
     filter_kwargs = {}
@@ -289,6 +292,7 @@ def dashboard(request):
         'selected_day': selected_day,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'latest_day_display': latest_day_display,
         'level': level,
         'energy_usage': f"{energy_usage:.2f}",
         'cost_predicted': f"₱{cost_predicted:.2f}",
@@ -352,6 +356,9 @@ def office_usage(request):
         day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
+    
+    # Get latest date for Day dropdown display (latest in current filter context)
+    latest_day_display = day_options[0] if day_options else None
     
     # Determine filter kwargs and level
     filter_kwargs = {}
@@ -479,17 +486,17 @@ def office_usage(request):
             chart_labels.append(record['date'].strftime('%a'))
             chart_data.append(record['total_energy'] or 0)
 
-    # Calculate rank change vs previous period
-    if selected_date:
-        prev_week_start = week_start - timedelta(days=7)
-        prev_week_end = week_start - timedelta(days=1)
+    # Calculate rank change vs previous period based on level
+    if level == 'day':
+        # Compare with yesterday
+        prev_date = selected_date - timedelta(days=1)
         prev_week_energy = EnergyRecord.objects.filter(
             device__in=devices,
-            date__gte=prev_week_start,
-            date__lte=prev_week_end
+            date=prev_date
         ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-        current_week_energy = sum(chart_data)
-    elif selected_month and selected_year:
+        current_week_energy = office_energy
+        comparison_label = 'vs Yesterday'
+    elif level == 'month':
         # Compare with previous month
         prev_year = int(selected_year)
         prev_month = int(selected_month) - 1
@@ -503,6 +510,7 @@ def office_usage(request):
             date__month=prev_month
         ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
         current_week_energy = office_energy
+        comparison_label = 'vs Previous Month'
     else:
         # For year, compare with previous year
         prev_year = int(selected_year) - 1
@@ -511,11 +519,13 @@ def office_usage(request):
             date__year=prev_year
         ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
         current_week_energy = office_energy
+        comparison_label = 'vs Previous Year'
     
     if prev_week_energy > 0:
         rank_change = ((current_week_energy - prev_week_energy) / prev_week_energy) * 100
+        rank_change = max(min(rank_change, 999.9), -999.9)
     else:
-        rank_change = 0
+        rank_change = 100.0 if current_week_energy > 0 else 0
 
     # Get threshold and determine status
     threshold = Threshold.objects.first()
@@ -547,15 +557,28 @@ def office_usage(request):
     
     formatted_rank = f"{office_rank}{rank_suffix}"
     
+    # Format display date based on level
+    if level == 'month' and selected_month and selected_year:
+        from datetime import date
+        display_date = date(int(selected_year), int(selected_month), 1).strftime('%B %Y')
+    elif level == 'year' and selected_year:
+        display_date = selected_year
+    elif selected_date:
+        display_date = selected_date
+    else:
+        display_date = None
+    
     context = {
         'office': office,
         'selected_date': selected_date,
+        'display_date': display_date,
         'day_options': day_options,
         'month_options': month_options,
         'year_options': year_options,
         'selected_day': selected_day,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'latest_day_display': latest_day_display,
         'level': level,
         'office_energy_usage': f"{office_energy:.1f}",
         'office_cost_predicted': f"{office_cost:.2f}",
@@ -564,6 +587,7 @@ def office_usage(request):
         'office_rank': formatted_rank,
         'rank_change': f"{abs(rank_change):.1f}",
         'rank_change_direction': 'increase' if rank_change >= 0 else 'decrease',
+        'comparison_label': comparison_label,
         'energy_status': energy_status,
         'status_class': status_class,
         'is_over_limit': is_over_limit,
