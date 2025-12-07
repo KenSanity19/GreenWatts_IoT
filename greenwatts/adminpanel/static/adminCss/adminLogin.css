@@ -24,11 +24,11 @@ body {
     background-size: contain;
     background-repeat: no-repeat;
     background-position: left center;
-    width: 70%;
-    height: 76%;
+    width: 75%;
+    height: 20%;
     margin-left: 8px;
-    margin-bottom: -235px;
-    margin-top: -265px;
+    /* margin-bottom: -214px; */
+    margin-top: -55px;
 }
 
 .left-section p {
