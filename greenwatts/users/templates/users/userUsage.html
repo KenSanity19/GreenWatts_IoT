@@ -181,7 +181,7 @@
               <select id="week-select" class="chart-period">
                 <option value="">Week</option>
                 {% for week in week_options %}
-                <option value="{{ week.value }}">{{ week.name }}</option>
+                <option value="{{ week.value }}" {% if selected_week == week.value %}selected{% endif %}>{{ week.name }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -232,8 +232,11 @@
           const day = daySelect ? daySelect.value : '';
           const month = monthSelect ? monthSelect.value : '';
           const year = yearSelect ? yearSelect.value : '';
+          const weekSelect = document.getElementById('week-select');
+          const week = weekSelect ? weekSelect.value : '';
 
           if (day) params.append('selected_day', day);
+          if (week) params.append('selected_week', week);
           if (month) params.append('selected_month', month);
           if (year) params.append('selected_year', year);
 
@@ -363,6 +366,14 @@
             .catch(error => console.error('Error fetching weeks:', error));
         }
         
+        const weekSelect = document.getElementById('week-select');
+        if (weekSelect) {
+          weekSelect.addEventListener('change', function() {
+            if (daySelect) daySelect.value = '';
+            updateFilters();
+          });
+        }
+        
         function resetWeekOptions() {
           const weekSelect = document.getElementById('week-select');
           if (weekSelect) {
@@ -388,10 +399,12 @@
 
       // Line Chart
       const ctx = document.getElementById('usageChart').getContext('2d');
+      const chartLabels = {{ chart_labels|safe }};
+      const chartDates = {{ chart_dates|safe }};
       const usageChart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: {{ chart_labels|safe }},
+          labels: chartLabels,
           datasets: [{
             label: 'Energy Usage (kWh)',
             data: {{ chart_data|safe }},
@@ -408,6 +421,13 @@
           plugins: {
             legend: {
               display: false
+            },
+            tooltip: {
+              callbacks: {
+                title: function(context) {
+                  return chartDates[context[0].dataIndex];
+                }
+              }
             }
           },
           scales: {
