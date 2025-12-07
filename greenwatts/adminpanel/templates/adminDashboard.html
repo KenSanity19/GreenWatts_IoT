@@ -98,7 +98,7 @@
       <!-- Filters -->
       <div class="filters">
         <select id="day-select">
-          <option value="">Day</option>
+          <option value="">{% if selected_day %}{{ selected_day }}{% else %}Day{% endif %}</option>
           {% for day in day_options %}
           <option value="{{ day }}" {% if selected_day == day %}selected{% endif %}>{{ day }}</option>
           {% endfor %}
@@ -353,12 +353,14 @@
         
         function resetDayOptions() {
           if (daySelect) {
+            const currentSelected = daySelect.value;
             const allDays = {{ day_options|safe }};
             daySelect.innerHTML = '<option value="">Day</option>';
             allDays.forEach(day => {
               const option = document.createElement('option');
               option.value = day;
               option.textContent = day;
+              if (day === currentSelected) option.selected = true;
               daySelect.appendChild(option);
             });
           }

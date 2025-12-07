@@ -269,6 +269,10 @@ def admin_dashboard(request):
 
     # Determine filter date range
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
+    
+    # Auto-select latest day if no filters provided
+    if not selected_day and selected_date:
+        selected_day = selected_date.strftime('%m/%d/%Y')
 
     # Aggregate sums for total energy usage, cost estimate, and carbon emission from selected filter
     aggregates = EnergyRecord.objects.filter(**filter_kwargs).aggregate(
@@ -543,6 +547,10 @@ def office_usage(request):
 
     # Determine filter date range
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
+    
+    # Auto-select latest day if no filters provided
+    if not selected_day and selected_date:
+        selected_day = selected_date.strftime('%m/%d/%Y')
 
     # Filter office_data for table and pie chart based on filter_kwargs
     office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
@@ -815,6 +823,10 @@ def admin_reports(request):
 
     # Determine filter date range
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
+    
+    # Auto-select latest day if no filters provided
+    if not selected_day and selected_date:
+        selected_day = selected_date.strftime('%m/%d/%Y')
 
     # Filter data for selected filter
     office_data = EnergyRecord.objects.filter(**filter_kwargs).filter(
@@ -966,6 +978,10 @@ def admin_costs(request):
 
     # Determine filter date range
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
+
+    # Auto-select latest day if no filters provided
+    if not selected_day and selected_date:
+        selected_day = selected_date.strftime('%m/%d/%Y')
 
     # Week options: filtered by selected month/year if available
     week_options = get_week_options(valid_office_ids, selected_month, selected_year)
@@ -1261,6 +1277,10 @@ def carbon_emission(request):
 
     # Determine filter date range
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
+    
+    # Auto-select latest day if no filters provided
+    if not selected_day and selected_date:
+        selected_day = selected_date.strftime('%m/%d/%Y')
     
     # Get current date for calculations
     now = timezone.now().date()
