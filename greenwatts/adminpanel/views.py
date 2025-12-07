@@ -695,6 +695,62 @@ def office_usage(request):
     }
     return render(request, 'officeUsage.html', context)
 
+def generate_recommendation(office_data, energy_moderate_max, energy_efficient_max, filter_kwargs, valid_office_ids):
+    """Generate detailed recommendation based on office energy usage patterns"""
+    from django.db.models import Avg, Max
+    
+    high_usage_offices = [r for r in office_data if (r['total_energy'] or 0) > energy_moderate_max]
+    moderate_usage_offices = [r for r in office_data if energy_efficient_max < (r['total_energy'] or 0) <= energy_moderate_max]
+    
+    if high_usage_offices:
+        office_name = high_usage_offices[0]['office_name']
+        total_energy = high_usage_offices[0]['total_energy']
+        
+        # Get detailed stats
+        office_records = EnergyRecord.objects.filter(
+            **filter_kwargs,
+            device__office__name=office_name,
+            device__office__office_id__in=valid_office_ids
+        )
+        
+        days_exceeded = office_records.filter(total_energy_kwh__gt=energy_moderate_max).dates('date', 'day').count()
+        avg_daily = office_records.aggregate(avg=Avg('total_energy_kwh'))['avg'] or 0
+        peak_power = office_records.aggregate(peak=Max('peak_power_w'))['peak'] or 0
+        
+        excess_percentage = ((total_energy - energy_moderate_max) / energy_moderate_max * 100) if energy_moderate_max > 0 else 0
+        
+        recommendation = f"{office_name} exceeded the threshold by {excess_percentage:.1f}% with {total_energy:.1f} kWh total usage"
+        
+        if days_exceeded > 1:
+            recommendation += f" over {days_exceeded} days (avg: {avg_daily:.1f} kWh/day)"
+        
+        recommendation += f". Peak power reached {peak_power:.0f}W. Recommendations: "
+        
+        suggestions = []
+        if peak_power > 1500:
+            suggestions.append("reduce peak load by staggering equipment usage")
+        if days_exceeded >= 3:
+            suggestions.append("implement automated shutdowns during off-hours (6PM-6AM)")
+        if avg_daily > energy_moderate_max:
+            suggestions.append("conduct energy audit to identify high-consumption devices")
+        
+        if not suggestions:
+            suggestions.append("monitor usage patterns and schedule equipment shutdowns during non-working hours")
+        
+        recommendation += ", ".join(suggestions) + "."
+        return recommendation
+    
+    if moderate_usage_offices:
+        office_name = moderate_usage_offices[0]['office_name']
+        total_energy = moderate_usage_offices[0]['total_energy']
+        return f"{office_name} is approaching the threshold with {total_energy:.1f} kWh. Consider implementing energy-saving measures such as turning off unused equipment, optimizing air conditioning temperature (set to 24-26°C), and unplugging idle devices."
+    
+    if len(office_data) > 0:
+        best_office = min(office_data, key=lambda x: x['total_energy'] or 0)
+        return f"All offices are operating efficiently. {best_office['office_name']} shows exemplary performance with {best_office['total_energy']:.1f} kWh. Continue current practices and maintain regular monitoring."
+    
+    return "No data available for the selected period. Ensure devices are connected and transmitting data properly."
+
 @admin_required
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_reports(request):
@@ -828,6 +884,9 @@ def admin_reports(request):
             colors.append('#5cb85c')  # green
             statuses.append('Below Threshold')
 
+    # Generate dynamic recommendation
+    recommendation = generate_recommendation(office_data, energy_moderate_max, energy_efficient_max, filter_kwargs, valid_office_ids)
+
     context = {
         'total_energy_usage': total_energy_usage,
         'highest_usage_office': highest_usage_office,
@@ -844,6 +903,7 @@ def admin_reports(request):
         'selected_month': selected_month,
         'selected_year': selected_year,
         'random_energy_tip': get_random_energy_tip(),
+        'recommendation': recommendation,
     }
     return render(request, 'adminReports.html', context)
 
