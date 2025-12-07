@@ -33,7 +33,6 @@ body {
   height: 100vh;
   overflow: hidden;
   background: linear-gradient(to bottom, #fdedcd, #ffc300);
-  color: var(--text-primary);
 }
 
 .sidebar {
