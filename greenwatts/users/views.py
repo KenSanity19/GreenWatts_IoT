@@ -10,7 +10,6 @@ import csv
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
     from ..adminpanel.login_attempts import is_locked_out, record_failed_attempt, clear_attempts, get_lockout_time_remaining
-    from .two_factor import get_device_fingerprint, is_trusted_device, generate_otp, store_otp, send_otp_email
     
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -26,26 +25,9 @@ def index(request):
             user = auth.authenticate(username=username, password=password)
             if user is not None:
                 clear_attempts(username, 'user')
-                
-                # Check if device is trusted
-                try:
-                    device_fingerprint = get_device_fingerprint(request)
-                    if not is_trusted_device(username, device_fingerprint):
-                        # New device - require 2FA
-                        otp = generate_otp()
-                        store_otp(username, otp)
-                        send_otp_email(office.email, otp, office.name)
-                        request.session['pending_2fa_user'] = username
-                        request.session['device_fingerprint'] = device_fingerprint
-                        messages.info(request, 'Verification code sent to your email.')
-                        return redirect('users:verify_otp')
-                except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f'2FA error: {str(e)}')
-                    # If 2FA fails, allow direct login
-                    pass
-                
+
+                # 2FA REMOVED – missing module caused error
+                # Login directly
                 auth.login(request, user)
                 return redirect('users:dashboard')
             else:
