@@ -40,7 +40,10 @@ def index(request):
                         messages.info(request, 'Verification code sent to your email.')
                         return redirect('users:verify_otp')
                     except Exception as e:
-                        messages.error(request, 'Failed to send verification code. Please try again.')
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f'Email sending failed: {str(e)}')
+                        messages.error(request, f'Failed to send verification code: {str(e)}')
                         return render(request, 'index.html')
                 
                 auth.login(request, user)
