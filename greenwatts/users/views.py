@@ -1933,7 +1933,6 @@ def verify_otp(request):
                 
                 # Login user
                 auth.login(request, office, backend='django.contrib.auth.backends.ModelBackend')
-                messages.success(request, 'Login successful!')
                 return redirect('users:dashboard')
             except Office.DoesNotExist:
                 messages.error(request, 'User not found.')
