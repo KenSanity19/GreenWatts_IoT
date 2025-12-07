@@ -149,11 +149,11 @@ AUTH_USER_MODEL = 'users.Office'
 
 LOGIN_URL = '/'
 
-# Cache configuration - use in-memory for simplicity on free tier
+# Cache configuration for login attempt tracking
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'greenwatts-cache',
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'greenwatts_cache_table',
     }
 }
 
