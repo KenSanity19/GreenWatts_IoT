@@ -43,6 +43,9 @@ def send_otp_email(email, otp, office_name):
     """Send OTP via email"""
     from django.core.mail import send_mail
     from django.conf import settings
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     subject = 'GreenWatts - Login Verification Code'
     message = f"""
@@ -60,10 +63,15 @@ Best regards,
 GreenWatts Team
 """
     
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False,
+        )
+        logger.info(f"OTP email sent successfully to {email}")
+    except Exception as e:
+        logger.error(f"Failed to send OTP email to {email}: {str(e)}")
+        raise

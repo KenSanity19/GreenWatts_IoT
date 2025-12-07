@@ -152,8 +152,8 @@ LOGIN_URL = '/'
 # Cache configuration for login attempt tracking
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'greenwatts_cache_table',
     }
 }
 
