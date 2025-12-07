@@ -919,11 +919,46 @@ def user_reports(request):
         energy_efficient_max = 10.0
         energy_moderate_max = 20.0
 
-    # Recommendation based on usage and threshold
-    if threshold and total_energy_usage > threshold.energy_moderate_max:
-        recommendation = f"Usage exceeded threshold. Consider reducing energy consumption during peak hours."
-    else:
-        recommendation = "Energy usage is within acceptable limits. Keep up the good work!"
+    # Dynamic recommendation based on usage and threshold
+    def generate_recommendation(total_energy, threshold, level, chart_values):
+        if not threshold:
+            return "Energy usage is within acceptable limits. Keep up the good work!"
+        
+        # Calculate average and peak from chart data
+        avg_usage = sum(chart_values) / len(chart_values) if chart_values else 0
+        peak_usage = max(chart_values) if chart_values else 0
+        
+        # Determine status
+        if total_energy > threshold.energy_moderate_max:
+            # High usage - provide specific recommendations
+            excess = total_energy - threshold.energy_moderate_max
+            recommendations = [
+                f"Energy usage ({total_energy:.2f} kWh) exceeds the moderate threshold ({threshold.energy_moderate_max:.2f} kWh) by {excess:.2f} kWh. ",
+            ]
+            
+            # Add specific tips based on peak usage
+            if peak_usage > threshold.energy_moderate_max:
+                recommendations.append("Consider reducing consumption during peak hours by turning off unused equipment and optimizing HVAC settings.")
+            else:
+                recommendations.append("Spread out energy-intensive activities throughout the day to avoid concentration of usage.")
+                
+        elif total_energy > threshold.energy_efficient_max:
+            # Moderate usage - provide improvement suggestions
+            recommendations = [
+                f"Energy usage is moderate ({total_energy:.2f} kWh). ",
+                f"You're {((threshold.energy_moderate_max - total_energy) / threshold.energy_moderate_max * 100):.1f}% away from high usage. ",
+                "Consider implementing energy-saving practices like using natural lighting and scheduling equipment usage during off-peak hours."
+            ]
+        else:
+            # Efficient usage - provide encouragement
+            recommendations = [
+                f"Excellent! Energy usage is within efficient limits ({total_energy:.2f} kWh). ",
+                "Keep up the good work by maintaining current energy-saving practices."
+            ]
+        
+        return "".join(recommendations)
+    
+    recommendation = generate_recommendation(total_energy_usage, threshold, level, chart_values)
 
     # Get calendar data for current month
     from django.utils import timezone
