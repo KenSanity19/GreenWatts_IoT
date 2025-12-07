@@ -13,6 +13,7 @@ GreenWatts is an IoT-based energy monitoring system that tracks real-time electr
 - Admin dashboard with threshold settings
 - Offline data queuing for reliable data collection
 - Daily energy summaries and reports
+- **2-Factor Authentication (2FA)** via Gmail API for enhanced security
 
 ## System Architecture
 
@@ -60,7 +61,15 @@ pip install -r requirements.txt
 SECRET_KEY=your-secret-key-here
 DATABASE_URL=postgresql://username:password@host:port/database
 DEBUG=True
+
+# Gmail API for 2FA (see GMAIL_API_SETUP.md)
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REFRESH_TOKEN=your_refresh_token
+GMAIL_SENDER=your_email@gmail.com
 ```
+
+   **Note:** For 2FA setup, see `GMAIL_API_SETUP.md` and run `python get_gmail_token.py`
 
 5. **Database Migration**
 
@@ -283,6 +292,7 @@ The ESP32 implements a robust offline queuing system:
 - Daily/monthly usage reports
 - Carbon footprint tracking
 - Cost analysis
+- **2FA protected login** - OTP sent via email for new devices
 
 ### Admin Panel
 
@@ -290,6 +300,23 @@ The ESP32 implements a robust offline queuing system:
 - Threshold configuration
 - System-wide reports
 - Device management
+
+## Security Features
+
+### 2-Factor Authentication (2FA)
+
+The user login system includes device-based 2FA:
+
+- **Device Fingerprinting**: Tracks trusted devices for 30 days
+- **OTP via Gmail API**: 6-digit codes sent to user email
+- **10-minute expiry**: Security codes expire automatically
+- **Seamless UX**: Trusted devices skip 2FA
+
+For setup instructions, see:
+- `2FA_IMPLEMENTATION.md` - Complete implementation guide
+- `GMAIL_API_SETUP.md` - Gmail API configuration
+- `get_gmail_token.py` - Helper script for token generation
+- `test_2fa.py` - Test script to verify setup
 
 ## Database Schema
 

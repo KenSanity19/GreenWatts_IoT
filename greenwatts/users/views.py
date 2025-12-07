@@ -10,6 +10,7 @@ import csv
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
     from ..adminpanel.login_attempts import is_locked_out, record_failed_attempt, clear_attempts, get_lockout_time_remaining
+    from .two_factor import get_device_fingerprint, is_trusted_device, send_otp
     
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -26,10 +27,21 @@ def index(request):
             if user is not None:
                 clear_attempts(username, 'user')
 
-                # 2FA REMOVED – missing module caused error
-                # Login directly
-                auth.login(request, user)
-                return redirect('users:dashboard')
+                # Check device fingerprint for 2FA
+                device_fingerprint = get_device_fingerprint(request)
+                
+                if is_trusted_device(username, device_fingerprint):
+                    # Trusted device - login directly
+                    auth.login(request, user)
+                    return redirect('users:dashboard')
+                else:
+                    # New device - require 2FA
+                    if send_otp(username, office.email):
+                        request.session['pending_2fa_user'] = username
+                        request.session['device_fingerprint'] = device_fingerprint
+                        return redirect('users:verify_otp')
+                    else:
+                        messages.error(request, 'Failed to send verification code. Please try again.')
             else:
                 attempts = record_failed_attempt(username, 'user')
                 if attempts >= 5:
