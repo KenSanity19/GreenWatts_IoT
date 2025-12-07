@@ -335,10 +335,11 @@ def office_usage(request):
     office = request.user
     devices = office.devices.all()
     
-    # Get selected day, month, year from request
+    # Get selected day, month, year, week from request
     selected_day = request.GET.get('selected_day')
     selected_month = request.GET.get('selected_month')
     selected_year = request.GET.get('selected_year')
+    selected_week = request.GET.get('selected_week')
     
     # Force month filtering when month is selected
     if selected_month and not selected_day:
@@ -374,6 +375,40 @@ def office_usage(request):
     
     # Get latest date for Day dropdown display (latest in current filter context)
     latest_day_display = day_options[0] if day_options else None
+    
+    # Week options
+    def get_week_options(devices, selected_month, selected_year):
+        if selected_month and selected_year:
+            months = [{'month': int(selected_month), 'year': int(selected_year)}]
+        else:
+            months = EnergyRecord.objects.filter(device__in=devices).annotate(
+                month=ExtractMonth('date'), year=ExtractYear('date')
+            ).values('month', 'year').distinct().order_by('year', 'month')
+        
+        week_options = []
+        for m in months:
+            year, month = m['year'], m['month']
+            dates_in_month = EnergyRecord.objects.filter(
+                device__in=devices, date__year=year, date__month=month
+            ).dates('date', 'day')
+            
+            if not dates_in_month:
+                continue
+            
+            max_date = max(dates_in_month)
+            first_day = date(year, month, 1)
+            week_num, current_start = 1, first_day
+            
+            while current_start <= max_date:
+                current_end = min(current_start + timedelta(days=6), max_date)
+                if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+                    week_options.append({'value': current_start.strftime('%Y-%m-%d'), 'name': f"Week {week_num}"})
+                current_start += timedelta(days=7)
+                week_num += 1
+        
+        return week_options
+    
+    week_options = get_week_options(devices, selected_month, selected_year)
     
     # Determine filter kwargs and level
     filter_kwargs = {}
@@ -588,9 +623,11 @@ def office_usage(request):
         'selected_date': selected_date,
         'display_date': display_date,
         'day_options': day_options,
+        'week_options': week_options,
         'month_options': month_options,
         'year_options': year_options,
         'selected_day': selected_day,
+        'selected_week': selected_week,
         'selected_month': selected_month,
         'selected_year': selected_year,
         'latest_day_display': latest_day_display,

@@ -178,9 +178,11 @@
                 <span class="tab active">Energy Usage (kWh)</span>
                 <span class="tab">CO2 Emission (kg)</span>
               </div>
-              <select class="chart-period">
-                <option>Week</option>
-                <option>Month</option>
+              <select id="week-select" class="chart-period">
+                <option value="">Week</option>
+                {% for week in week_options %}
+                <option value="{{ week.value }}">{{ week.name }}</option>
+                {% endfor %}
               </select>
             </div>
             <canvas id="usageChart" width="400" height="200"></canvas>
@@ -287,8 +289,10 @@
             
             if (selectedMonth) {
               updateDayOptions(selectedMonth, selectedYear);
+              updateWeekOptions(selectedMonth, selectedYear);
             } else {
               resetDayOptions();
+              resetWeekOptions();
             }
             updateFilters();
           });
@@ -332,16 +336,45 @@
             
             if (selectedMonth && selectedYear) {
               updateDayOptions(selectedMonth, selectedYear);
+              updateWeekOptions(selectedMonth, selectedYear);
             }
             
             updateFilters();
           });
         }
         
+        function updateWeekOptions(month, year) {
+          const weekSelect = document.getElementById('week-select');
+          if (!weekSelect) return;
+          
+          fetch(`/get-user-weeks/?month=${month}&year=${year || new Date().getFullYear()}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success') {
+                weekSelect.innerHTML = '<option value="">Week</option>';
+                data.weeks.forEach(week => {
+                  const option = document.createElement('option');
+                  option.value = week.value;
+                  option.textContent = week.name;
+                  weekSelect.appendChild(option);
+                });
+              }
+            })
+            .catch(error => console.error('Error fetching weeks:', error));
+        }
+        
+        function resetWeekOptions() {
+          const weekSelect = document.getElementById('week-select');
+          if (weekSelect) {
+            weekSelect.innerHTML = '<option value="">Week</option>';
+          }
+        }
+        
         const initialMonth = monthSelect ? monthSelect.value : '';
         const initialYear = yearSelect ? yearSelect.value : '';
         if (initialMonth) {
           updateDayOptions(initialMonth, initialYear);
+          updateWeekOptions(initialMonth, initialYear);
         }
         
         // Set Day dropdown text to latest date if no day is selected

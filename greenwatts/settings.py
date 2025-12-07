@@ -88,7 +88,7 @@ DATABASES = {
             'DATABASE_URL',
             'postgresql://postgres.sfweuxojewjwxyzomyal:Greenwatts!123@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
         ),
-        conn_max_age=600,  # enables connection reuse
+        conn_max_age=600,
         ssl_require=True
     )
 }
