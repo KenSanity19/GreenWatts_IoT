@@ -164,7 +164,7 @@
         <div class="chart-container">
           <h2 class="chart-title">Energy Usage</h2>
           <div class="chart-inner">
-            <canvas id="energyChart" style="height: 400px; width: 100%;"></canvas>
+            <canvas id="energyChart" style="height: 465px; width: 100%;"></canvas>
           </div>
           <div class="recommendation chart-recommendation">
             <i class="fas fa-lightbulb" style="color: #ffc107; margin-right: 8px;"></i>
@@ -201,21 +201,27 @@
           const xScale = chart.scales.x;
           const isMobile = window.innerWidth <= 768;
           
-          // Draw status labels
-          ctx.font = isMobile ? 'bold 10px Arial' : 'bold 12px Arial';
-          ctx.fillStyle = '#333';
+          // Draw status labels with colors
+          ctx.font = isMobile ? 'bold 14px Arial' : 'bold 16px Arial';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           const statusY = xScale.bottom + (isMobile ? 35 : 25);
           
           statuses.forEach((status, index) => {
             const x = xScale.getPixelForValue(index);
+            if (status === 'Above Threshold') {
+              ctx.fillStyle = '#d9534f';
+            } else if (status === 'Within Threshold') {
+              ctx.fillStyle = '#f0ad4e';
+            } else {
+              ctx.fillStyle = '#5cb85c';
+            }
             ctx.fillText(status, x, statusY);
           });
           
           // Draw recommendations
-          ctx.font = isMobile ? '9px Arial' : '11px Arial';
-          ctx.fillStyle = '#555';
+          ctx.font = isMobile ? '12px Arial' : '14px Arial';
+          ctx.fillStyle = '#333';
           const recY = statusY + (isMobile ? 20 : 25);
           const maxWidth = (chart.width / chartLabels.length) - 20;
           
@@ -308,6 +314,7 @@
           scales: { 
             y: { 
               beginAtZero: true,
+              max: Math.max({{ energy_moderate_max }} * 1.2, Math.max(...chartValues) * 1.15),
               title: {
                 display: false
               },
