@@ -321,7 +321,37 @@
         }
 
         daySelect.addEventListener('change', function() {
-          if (this.value) {
+          const selectedDay = daySelect.value;
+          if (selectedDay) {
+            const [month, day, year] = selectedDay.split('/');
+            const monthValue = parseInt(month).toString();
+            
+            if (monthSelect) {
+              let monthOption = monthSelect.querySelector(`option[value="${monthValue}"]`);
+              if (!monthOption) {
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                  'July', 'August', 'September', 'October', 'November', 'December'];
+                monthOption = document.createElement('option');
+                monthOption.value = monthValue;
+                monthOption.textContent = monthNames[parseInt(monthValue) - 1];
+                monthSelect.appendChild(monthOption);
+              }
+              monthSelect.value = monthValue;
+            }
+            
+            if (yearSelect) {
+              let yearOption = yearSelect.querySelector(`option[value="${year}"]`);
+              if (!yearOption) {
+                yearOption = document.createElement('option');
+                yearOption.value = year;
+                yearOption.textContent = year;
+                yearSelect.appendChild(yearOption);
+              }
+              yearSelect.value = year;
+            }
+            
+            weekSelect.value = '';
+          } else {
             monthSelect.value = '';
             yearSelect.value = '';
             weekSelect.value = '';
@@ -331,18 +361,17 @@
 
         monthSelect.addEventListener('change', function() {
           weekSelect.value = '';
-          daySelect.value = '';
           
           const selectedMonth = monthSelect.value;
           const selectedYear = yearSelect.value;
           
           if (selectedMonth) {
             updateDayOptions(selectedMonth, selectedYear);
-            updateFilters();
           } else {
+            daySelect.value = '';
             resetDayOptions();
-            updateFilters();
           }
+          updateFilters();
         });
         
 
@@ -352,13 +381,13 @@
             .then(response => response.json())
             .then(data => {
               if (data.status === 'success' && daySelect) {
-                const selectedDay = daySelect.value;
+                const currentSelected = daySelect.value;
                 daySelect.innerHTML = '<option value="">Day</option>';
                 data.days.forEach(day => {
                   const option = document.createElement('option');
                   option.value = day;
                   option.textContent = day;
-                  if (day === selectedDay) option.selected = true;
+                  if (day === currentSelected) option.selected = true;
                   daySelect.appendChild(option);
                 });
               }
@@ -368,14 +397,14 @@
         
         function resetDayOptions() {
           if (daySelect) {
-            const selectedDay = daySelect.value;
+            const currentSelected = daySelect.value;
             const allDays = {{ day_options|safe }};
             daySelect.innerHTML = '<option value="">Day</option>';
             allDays.forEach(day => {
               const option = document.createElement('option');
               option.value = day;
               option.textContent = day;
-              if (day === selectedDay) option.selected = true;
+              if (day === currentSelected) option.selected = true;
               daySelect.appendChild(option);
             });
           }

@@ -278,31 +278,54 @@
         // Add event listeners only if elements exist
         if (daySelect) {
           daySelect.addEventListener('change', function() {
-            // Clear month and year when day is selected
-            if (monthSelect) monthSelect.value = '';
-            if (yearSelect) yearSelect.value = '';
+            const selectedDay = daySelect.value;
+            if (selectedDay) {
+              const [month, day, year] = selectedDay.split('/');
+              const monthValue = parseInt(month).toString();
+              
+              if (monthSelect) {
+                let monthOption = monthSelect.querySelector(`option[value="${monthValue}"]`);
+                if (!monthOption) {
+                  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                    'July', 'August', 'September', 'October', 'November', 'December'];
+                  monthOption = document.createElement('option');
+                  monthOption.value = monthValue;
+                  monthOption.textContent = monthNames[parseInt(monthValue) - 1];
+                  monthSelect.appendChild(monthOption);
+                }
+                monthSelect.value = monthValue;
+              }
+              
+              if (yearSelect) {
+                let yearOption = yearSelect.querySelector(`option[value="${year}"]`);
+                if (!yearOption) {
+                  yearOption = document.createElement('option');
+                  yearOption.value = year;
+                  yearOption.textContent = year;
+                  yearSelect.appendChild(yearOption);
+                }
+                yearSelect.value = year;
+              }
+            } else {
+              if (monthSelect) monthSelect.value = '';
+              if (yearSelect) yearSelect.value = '';
+            }
             updateFilters();
           });
         }
         
         if (monthSelect) {
           monthSelect.addEventListener('change', function() {
-            // Clear day when month is selected
-            if (daySelect) daySelect.value = '';
-            
-            // Update day options based on selected month
             const selectedMonth = monthSelect.value;
             const selectedYear = yearSelect ? yearSelect.value : '';
             
             if (selectedMonth) {
               updateDayOptions(selectedMonth, selectedYear);
-              // Call updateFilters() to apply month filter immediately
-              updateFilters();
             } else {
-              // Reset to all days if no month selected
+              if (daySelect) daySelect.value = '';
               resetDayOptions();
-              updateFilters();
             }
+            updateFilters();
           });
         }
         
@@ -313,11 +336,13 @@
             .then(data => {
               console.log('Response data:', data);
               if (data.status === 'success' && daySelect) {
+                const currentSelected = daySelect.value;
                 daySelect.innerHTML = '<option value="">Day</option>';
                 data.days.forEach(day => {
                   const option = document.createElement('option');
                   option.value = day;
                   option.textContent = day;
+                  if (day === currentSelected) option.selected = true;
                   daySelect.appendChild(option);
                 });
                 console.log('Updated day options:', data.days.length, 'days');

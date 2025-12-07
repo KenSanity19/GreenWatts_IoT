@@ -79,7 +79,7 @@
       <!-- Filters -->
       <div class="filters">
         <select id="day-select">
-          <option value="">{{ latest_day_display|default:"Day" }}</option>
+          <option value="">Day</option>
           {% for day in day_options %}
           <option value="{{ day }}" {% if selected_day == day %}selected{% endif %}>{{ day }}</option>
           {% endfor %}
@@ -306,11 +306,13 @@
             .then(response => response.json())
             .then(data => {
               if (data.status === 'success' && daySelect) {
+                const currentSelected = daySelect.value;
                 daySelect.innerHTML = '<option value="">Day</option>';
                 data.days.forEach(day => {
                   const option = document.createElement('option');
                   option.value = day;
                   option.textContent = day;
+                  if (day === currentSelected) option.selected = true;
                   daySelect.appendChild(option);
                 });
               }
@@ -388,13 +390,7 @@
           updateWeekOptions(initialMonth, initialYear);
         }
         
-        // Set Day dropdown text to latest date if no day is selected
-        if (daySelect && !daySelect.value) {
-          const latestDay = '{{ latest_day_display|escapejs }}';
-          if (latestDay && latestDay !== 'None') {
-            daySelect.options[0].text = latestDay;
-          }
-        }
+
       });
 
       // Line Chart
