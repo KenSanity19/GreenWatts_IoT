@@ -149,22 +149,13 @@ AUTH_USER_MODEL = 'users.Office'
 
 LOGIN_URL = '/'
 
-# Cache configuration for login attempt tracking
+# Cache configuration - use in-memory for simplicity on free tier
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'greenwatts_cache_table',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'greenwatts-cache',
     }
 }
-
-# Auto-create cache table on startup
-import sys
-if 'runserver' in sys.argv or 'gunicorn' in sys.argv[0]:
-    from django.core.management import call_command
-    try:
-        call_command('createcachetable', verbosity=0)
-    except:
-        pass
 
 # Disable HTTPS redirects in development
 SECURE_SSL_REDIRECT = False
