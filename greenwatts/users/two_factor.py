@@ -75,3 +75,11 @@ GreenWatts Team
     except Exception as e:
         logger.error(f"Failed to send OTP email to {email}: {str(e)}")
         raise
+
+def send_otp_email_gmail(to_email, otp):
+    from utils.gmail_api import send_email_via_gmail
+    send_email_via_gmail(
+        to_email=to_email,
+        subject="Your GreenWatts Verification Code",
+        message_text=f"Your verification code is: {otp}"
+    )
