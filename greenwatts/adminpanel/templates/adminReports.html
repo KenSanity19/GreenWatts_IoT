@@ -189,29 +189,66 @@
       const chartValues = {{ chart_values|safe }};
       const chartColors = {{ chart_colors|safe }};
       const statuses = {{ statuses|safe }};
+      const recommendations = {{ recommendations|safe }};
 
-      // Custom plugin for status labels below bars
+      // Custom plugin for status labels and recommendations below bars
       const statusLabelsPlugin = {
         id: 'statusLabels',
         afterDraw: (chart) => {
           const ctx = chart.ctx;
           ctx.save();
-          ctx.font = window.innerWidth <= 768 ? 'bold 10px Arial' : 'bold 12px Arial';
+          
+          const xScale = chart.scales.x;
+          const isMobile = window.innerWidth <= 768;
+          
+          // Draw status labels
+          ctx.font = isMobile ? 'bold 10px Arial' : 'bold 12px Arial';
           ctx.fillStyle = '#333';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
-
-          const xScale = chart.scales.x;
-          const bottom = xScale.bottom + (window.innerWidth <= 768 ? 35 : 25);
-
+          const statusY = xScale.bottom + (isMobile ? 35 : 25);
+          
           statuses.forEach((status, index) => {
             const x = xScale.getPixelForValue(index);
-            ctx.fillText(status, x, bottom);
+            ctx.fillText(status, x, statusY);
+          });
+          
+          // Draw recommendations
+          ctx.font = isMobile ? '9px Arial' : '11px Arial';
+          ctx.fillStyle = '#555';
+          const recY = statusY + (isMobile ? 20 : 25);
+          const maxWidth = (chart.width / chartLabels.length) - 20;
+          
+          recommendations.forEach((rec, index) => {
+            const x = xScale.getPixelForValue(index);
+            const lines = wrapText(ctx, rec, maxWidth);
+            lines.forEach((line, lineIndex) => {
+              ctx.fillText(line, x, recY + (lineIndex * (isMobile ? 12 : 14)));
+            });
           });
 
           ctx.restore();
         }
       };
+      
+      function wrapText(ctx, text, maxWidth) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+        
+        words.forEach(word => {
+          const testLine = currentLine + (currentLine ? ' ' : '') + word;
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        });
+        if (currentLine) lines.push(currentLine);
+        return lines.slice(0, 3); // Max 3 lines
+      }
 
       // Register the custom plugin
       Chart.register(statusLabelsPlugin);
@@ -234,7 +271,7 @@
           maintainAspectRatio: false,
           layout: {
             padding: {
-              bottom: 80
+              bottom: window.innerWidth <= 768 ? 120 : 150
             }
           },
           plugins: { 
