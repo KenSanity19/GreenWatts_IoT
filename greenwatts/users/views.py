@@ -27,7 +27,25 @@ def index(request):
             if user is not None:
                 clear_attempts(username, 'user')
                 
-                # Temporarily disable 2FA - direct login
+                # Check if device is trusted
+                try:
+                    device_fingerprint = get_device_fingerprint(request)
+                    if not is_trusted_device(username, device_fingerprint):
+                        # New device - require 2FA
+                        otp = generate_otp()
+                        store_otp(username, otp)
+                        send_otp_email(office.email, otp, office.name)
+                        request.session['pending_2fa_user'] = username
+                        request.session['device_fingerprint'] = device_fingerprint
+                        messages.info(request, 'Verification code sent to your email.')
+                        return redirect('users:verify_otp')
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f'2FA error: {str(e)}')
+                    # If 2FA fails, allow direct login
+                    pass
+                
                 auth.login(request, user)
                 return redirect('users:dashboard')
             else:

@@ -157,6 +157,15 @@ CACHES = {
     }
 }
 
+# Auto-create cache table on startup
+import sys
+if 'runserver' in sys.argv or 'gunicorn' in sys.argv[0]:
+    from django.core.management import call_command
+    try:
+        call_command('createcachetable', verbosity=0)
+    except:
+        pass
+
 # Disable HTTPS redirects in development
 SECURE_SSL_REDIRECT = False
 
