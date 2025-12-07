@@ -1,5 +1,0 @@
-Run this command after deploying to Render:
-
-python manage.py createcachetable
-
-This creates the database table needed for caching OTP and login attempts.
