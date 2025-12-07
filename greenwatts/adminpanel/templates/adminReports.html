@@ -250,7 +250,6 @@
         return lines.slice(0, 3); // Max 3 lines
       }
 
-      // Register the custom plugin
       Chart.register(statusLabelsPlugin);
 
       const chart = new Chart(ctx, {
@@ -266,6 +265,35 @@
             },
           ],
         },
+        plugins: [{
+          id: 'thresholdLines',
+          afterDatasetsDraw: (chart) => {
+            const ctx = chart.ctx;
+            const yScale = chart.scales.y;
+            const xScale = chart.scales.x;
+            
+            const efficientMax = {{ energy_efficient_max }};
+            const moderateMax = {{ energy_moderate_max }};
+            
+            const lines = [
+              { value: efficientMax, color: '#5cb85c', label: 'Efficient Max' },
+              { value: moderateMax, color: '#f0ad4e', label: 'Moderate Max' }
+            ];
+            
+            lines.forEach(line => {
+              const y = yScale.getPixelForValue(line.value);
+              ctx.save();
+              ctx.strokeStyle = line.color;
+              ctx.lineWidth = 2;
+              ctx.setLineDash([5, 5]);
+              ctx.beginPath();
+              ctx.moveTo(xScale.left, y);
+              ctx.lineTo(xScale.right, y);
+              ctx.stroke();
+              ctx.restore();
+            });
+          }
+        }],
         options: {
           responsive: true,
           maintainAspectRatio: false,

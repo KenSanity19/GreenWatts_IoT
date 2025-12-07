@@ -891,6 +891,8 @@ def admin_reports(request):
         'chart_colors': json.dumps(colors),
         'statuses': json.dumps(statuses),
         'recommendations': json.dumps(recommendations),
+        'energy_efficient_max': energy_efficient_max,
+        'energy_moderate_max': energy_moderate_max,
         'day_options': day_options,
         'month_options': month_options,
         'year_options': year_options,
