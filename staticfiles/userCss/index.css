@@ -33,11 +33,11 @@ body {
     background-size: contain;
     background-repeat: no-repeat;
     background-position: left center;
-    width: 70%;
-    height: 76%;
+    width: 75%;
+    height: 20%;
     margin-left: 8px;
-    margin-bottom: -235px;
-    margin-top: -265px;
+    /* margin-bottom: -214px; */
+    margin-top: -55px;
 }
 
 .left-section p {
@@ -50,7 +50,7 @@ body {
 /* Right Section */
 .right-section {
     width: 50%;
-    background: url(/static/citc.jpg) no-repeat center center / cover;
+    background: url(/static/citc2.jpg) no-repeat center center / cover;
     position: relative;
     display: flex;
     justify-content: center;

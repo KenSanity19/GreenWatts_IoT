@@ -26,34 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selected.innerHTML = option.innerHTML;
         optionsContainer.classList.remove('active');
         dropdown.classList.remove('active');
-        
-        // Trigger filter update for month dropdown
-        const dropdownId = dropdown.id;
-        if (dropdownId === 'month-select' || dropdown.classList.contains('month-dropdown')) {
-          const selectedValue = option.getAttribute('data-value') || option.textContent.trim();
-          updateFiltersWithMonth(selectedValue);
-        }
       });
     });
   });
-  
-  // Function to update filters when month is selected
-  function updateFiltersWithMonth(monthValue) {
-    const params = new URLSearchParams();
-    const daySelect = document.getElementById('day-select');
-    const yearSelect = document.getElementById('year-select');
-    
-    // Clear day selection when month changes
-    if (daySelect) daySelect.value = '';
-    
-    if (monthValue && monthValue !== 'Month') {
-      params.append('selected_month', monthValue);
-    }
-    
-    const year = yearSelect ? yearSelect.value : '';
-    if (year) params.append('selected_year', year);
-    
-    const queryString = params.toString();
-    window.location.href = queryString ? `?${queryString}` : '?';
-  }
 });

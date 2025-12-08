@@ -38,7 +38,7 @@ header h1 {
 
 /* Office Table */
 .office-section {
-  margin: 20px 0;
+  margin: 10px 0;
   background: #1e1f47;
   padding: 20px;
   border-radius: 8px;
@@ -336,9 +336,6 @@ footer .tip span {
   padding: 20px;
   border-radius: 8px;
   color: #eee;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
 }
 
 /* Device header */
@@ -382,15 +379,11 @@ footer .tip span {
   color: black;
   border-radius: 8px;
   overflow: hidden;
-  display: table;
+  display: block;
 }
 
 .device-table thead, .device-table tbody {
-  display: table-header-group;
-}
-
-.device-table tbody {
-  display: table-row-group;
+  display: block;
 }
 
 .device-table tbody {
@@ -400,23 +393,24 @@ footer .tip span {
 }
 
 .device-table th, .device-table td {
+  width: 25%;
+  box-sizing: border-box;
   padding: 12px;
   text-align: left;
-  display: table-cell;
+  display: inline-block;
   vertical-align: top;
 }
 
-.device-table th:nth-child(4), .device-table td:nth-child(4) {
-  width: 10%;
-}
-
 .device-table thead tr {
+  width: 100%;
+  display: flex;
   background-color: #004080;
   color: white;
 }
 
 .device-table tbody tr {
-  display: table-row;
+  display: flex;
+  width: 100%;
 }
 
 .device-table tr:nth-child(even) {
@@ -460,47 +454,87 @@ button.edit-device-btn {
   align-items: center;
 }
 
+button.deactivate-device-btn {
+  background-color:  #d2691e;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  margin-right: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
 button.edit-device-btn:hover {
   background-color: #0056b3;
 }
 
-/* Office table container */
-.office-table-container {
-  background-color: white;
-  border-radius: 8px;
-  overflow: hidden;
-  max-height: 300px;
-  overflow-y: auto;
-  margin: 0;
-  padding: 0;
+button.deactivate-device-btn:hover {
+  background-color: #cc0000;
 }
 
 /* Office table */
 .office-table {
-  width: 100%;
-  border-collapse: collapse;
   background-color: white;
   color: black;
-  margin: 0;
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  display: block;
+}
+
+.office-table thead, .office-table tbody {
+  display: block;
+}
+
+.office-table tbody {
+  height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.office-table th, .office-table td {
+  width: 20%;
+  box-sizing: border-box;
+  padding: 10px;
+  text-align: left;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.office-table thead tr {
+  width: 100%;
+  display: flex;
+  background-color: white;
+  color: black;
+  border-bottom: 1px solid #ccc;
+}
+
+.office-table tbody tr {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid #ccc;
+}
+
+.office-table td:first-child {
+  font-weight: bold;
 }
 
 .office-table th {
-  background-color: #111338;
-  color: white;
-  padding: 12px;
-  text-align: left;
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+  background-color: white;
+  color: black;
 }
 
 .office-table td {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
+  padding: 10px;
 }
 
-.office-table tbody tr:hover {
-  background-color: #f5f5f5;
+.office-table tbody tr {
+  border-bottom: 1px solid #ccc;
 }
 
 .office-table td:first-child {
@@ -712,12 +746,79 @@ button.edit-device-btn:hover {
   }
 }
 
+@media (max-width: 768px) {
+  .office-section {
+    padding: 15px;
+    overflow-x: auto;
+  }
+  
+  .office-table {
+    min-width: 500px;
+    font-size: 12px;
+  }
+  
+  .office-table th,
+  .office-table td {
+    padding: 8px 4px;
+    text-align: left;
+  }
+  
+  .office-table th:nth-child(1),
+  .office-table td:nth-child(1) {
+    width: 20%;
+  }
+  
+  .office-table th:nth-child(2),
+  .office-table td:nth-child(2) {
+    width: 18%;
+  }
+  
+  .office-table th:nth-child(3),
+  .office-table td:nth-child(3) {
+    width: 37%;
+  }
+  
+  .office-table th:nth-child(4),
+  .office-table td:nth-child(4) {
+    width: 12%;
+  }
+  
+  .office-table th:nth-child(5),
+  .office-table td:nth-child(5) {
+    width: 13%;
+    text-align: center;
+  }
+  
+  .device-section .table-wrapper {
+    padding: 15px;
+    overflow-x: auto;
+  }
+  
+  .device-table {
+    min-width: 500px;
+    font-size: 12px;
+  }
+  
+  .device-table th,
+  .device-table td {
+    padding: 8px 4px;
+    width: auto;
+    min-width: 80px;
+  }
+  
+  .threshold-card {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  
+  .threshold-card input {
+    width: 50px;
+  }
+}
+
 /* Threshold History Section */
 .threshold-history-section {
-  background: #1e1f47;
-  color: #fff;
-  padding: 20px;
-  border-radius: 8px;
   margin-top: 30px;
 }
 
@@ -727,9 +828,9 @@ button.edit-device-btn:hover {
   border-radius: 8px;
 }
 
-.threshold-history-section h2 {
-  color: #fff;
-  margin-top: 0;
+.threshold-tabs {
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 .threshold-tab-btn {
@@ -738,14 +839,16 @@ button.edit-device-btn:hover {
   font-size: 16px;
   transition: all 0.3s;
   position: relative;
+  display: inline-block;
+  padding-bottom: 5px;
 }
 
 .threshold-tab-btn:hover {
-  color: #2c6dfc;
+  color: #d39e09;
 }
 
 .threshold-tab-btn.active {
-  color: #2c6dfc;
+  color: #58c744;
   font-weight: bold;
 }
 
@@ -757,6 +860,11 @@ button.edit-device-btn:hover {
   right: 0;
   height: 2px;
   background: #2c6dfc;
+}
+
+.threshold-separator {
+  color: #fff;
+  margin: 0 15px;
 }
 
 .threshold-history-table-container {
@@ -775,13 +883,14 @@ button.edit-device-btn:hover {
 }
 
 .threshold-history-table th {
-  background-color: #111338;
-  color: white;
+  background-color: white;
+  color: black;
   padding: 12px;
   text-align: left;
   position: sticky;
   top: 0;
   z-index: 1;
+  border-bottom: 2px solid #ddd;
 }
 
 .threshold-history-table td {
@@ -793,82 +902,47 @@ button.edit-device-btn:hover {
   background-color: #f5f5f5;
 }
 
-@media (max-width: 768px) {
-  .office-section {
-    padding: 15px;
-  }
-  
-  .office-table-container {
-    overflow-x: auto;
-  }
-  
-  .office-table {
-    min-width: 600px;
-    font-size: 14px;
-  }
-  
-  .office-table th,
-  .office-table td {
-    padding: 10px 8px;
-    white-space: nowrap;
-  }
-  
-  .office-table th:nth-child(1),
-  .office-table td:nth-child(1) {
-    min-width: 120px;
-  }
-  
-  .office-table th:nth-child(2),
-  .office-table td:nth-child(2) {
-    min-width: 100px;
-  }
-  
-  .office-table th:nth-child(3),
-  .office-table td:nth-child(3) {
-    min-width: 180px;
-  }
-  
-  .office-table th:nth-child(4),
-  .office-table td:nth-child(4) {
-    min-width: 80px;
-  }
-  
-  .office-table th:nth-child(5),
-  .office-table td:nth-child(5) {
-    min-width: 80px;
-    text-align: center;
-  }
-  
-  .device-section .table-wrapper {
-    padding: 15px;
-    overflow-x: auto;
-  }
-  
-  .device-table {
-    width: auto;
-    font-size: 12px;
-  }
-  
-  .device-table th,
-  .device-table td {
-    padding: 8px 4px;
-    width: auto;
-    min-width: 80px;
-  }
-  
-  .device-table th:nth-child(4),
-  .device-table td:nth-child(4) {
-    width: 60px;
-    min-width: 60px;
-  }
-  
-  .threshold-card {
-    width: 100%;
-    padding: 10px;
-    box-sizing: border-box;
-  }
-  
-  .threshold-card input {
-    width: 50px;
-  }
+.hidden {
+  display: none;
+}
+
+.active-status {
+  color: green;
+}
+
+.history-tip {
+  text-align: center;
+  margin-top: 15px;
+  color: #fff;
+}
+
+.tip-label {
+  color: #5cb85c;
+  font-weight: bold;
+}
+
+/* Device section */
+.device-section {
+  flex: 1;
+}
+
+.device-table-wrapper {
+  margin-top: 20px;
+}
+
+.device-search-input {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+/* Thresholds section */
+.thresholds {
+  flex: 1;
+}
+
+#save-energy-btn,
+#cancel-energy-btn,
+#save-co2-btn,
+#cancel-co2-btn {
+  display: none;
 }

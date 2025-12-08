@@ -305,7 +305,7 @@
 
       <!-- Thresholds and Device Management Side by Side -->
       <section class="thresholds-device-container">
-        <section class="device-section" style="flex: 1">
+        <section class="device-section">
           <!-- Modal for Add Device -->
           <div
             id="addDeviceModal"
@@ -371,26 +371,19 @@
             </div>
           </div>
 
-          <div class="table-wrapper" style="margin-top: 20px">
-            <div
-              class="device-header"
-              style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-              "
-            >
+          <div class="table-wrapper device-table-wrapper">
+            <div class="device-header">
               <input
                 type="text"
                 placeholder="Search Device"
-                style="flex-grow: 1; margin-right: 10px"
+                class="device-search-input"
               />
               <button class="add-device-btn" id="openAddDeviceModal">
                 + Add Device
               </button>
             </div>
             <div class="device-table-container">
-              <table class="device-table" style="width: 100%">
+              <table class="device-table">
                 <thead>
                   <tr>
                     <th>Installed Date</th>
@@ -424,7 +417,7 @@
             </div>
           </div>
         </section>
-        <section class="thresholds" style="flex: 1">
+        <section class="thresholds">
           <h2>SET THRESHOLDS</h2>
           <div class="threshold-boxes">
             <div class="threshold-card">
@@ -471,18 +464,10 @@
               </p>
               <div class="btn-group">
                 <button class="edit-btn" id="edit-energy-btn">Edit</button>
-                <button
-                  class="save-btn"
-                  id="save-energy-btn"
-                  style="display: none"
-                >
+                <button class="save-btn" id="save-energy-btn">
                   Save
                 </button>
-                <button
-                  class="cancel-btn"
-                  id="cancel-energy-btn"
-                  style="display: none"
-                >
+                <button class="cancel-btn" id="cancel-energy-btn">
                   Cancel
                 </button>
               </div>
@@ -532,18 +517,10 @@
               </p>
               <div class="btn-group">
                 <button class="edit-btn" id="edit-co2-btn">Edit</button>
-                <button
-                  class="save-btn"
-                  id="save-co2-btn"
-                  style="display: none"
-                >
+                <button class="save-btn" id="save-co2-btn">
                   Save
                 </button>
-                <button
-                  class="cancel-btn"
-                  id="cancel-co2-btn"
-                  style="display: none"
-                >
+                <button class="cancel-btn" id="cancel-co2-btn">
                   Cancel
                 </button>
               </div>
@@ -553,17 +530,17 @@
       </section>
 
       <!-- Threshold History -->
-      <section class="threshold-history-section" style="margin-top: 30px;">
+      <section class="threshold-history-section">
         <div class="table-wrapper">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <span class="threshold-tab-btn active" data-type="energy" style="display: inline-block; padding-bottom: 5px;">Energy Threshold History</span>
-            <span style="color: #fff; margin: 0 15px;">|</span>
-            <span class="threshold-tab-btn" data-type="co2" style="display: inline-block; padding-bottom: 5px;">CO2 Threshold History</span>
+          <div class="threshold-tabs">
+            <span class="threshold-tab-btn active" data-type="energy">Energy Threshold History</span>
+            <span class="threshold-separator">|</span>
+            <span class="threshold-tab-btn" data-type="co2">CO2 Threshold History</span>
           </div>
           
           <div id="energy-history-table" class="threshold-table-content">
             <div class="threshold-history-table-container">
-              <table class="threshold-history-table" style="width: 100%;">
+              <table class="threshold-history-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -582,7 +559,7 @@
                     <td>{{ history.moderate_max }} kWh</td>
                     <td>{{ history.high_max }} kWh</td>
                     <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
-                    <td>{% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span style="color: green;">Active</span>{% endif %}</td>
+                    <td>{% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span class="active-status">Active</span>{% endif %}</td>
                   </tr>
                   {% empty %}
                   <tr>
@@ -594,9 +571,9 @@
             </div>
           </div>
 
-          <div id="co2-history-table" class="threshold-table-content" style="display: none;">
+          <div id="co2-history-table" class="threshold-table-content hidden">
             <div class="threshold-history-table-container">
-              <table class="threshold-history-table" style="width: 100%;">
+              <table class="threshold-history-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -615,7 +592,7 @@
                     <td>{{ history.moderate_max }} kg</td>
                     <td>{{ history.high_max }} kg</td>
                     <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
-                    <td>{% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span style="color: green;">Active</span>{% endif %}</td>
+                    <td>{% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span class="active-status">Active</span>{% endif %}</td>
                   </tr>
                   {% empty %}
                   <tr>
@@ -627,8 +604,8 @@
             </div>
           </div>
 
-          <p class="tip" style="text-align: center; margin-top: 15px; color: #fff;">
-            <span style="color: #5cb85c; font-weight: bold;">Energy Tip:</span> {{ random_energy_tip }}
+          <p class="tip history-tip">
+            <span class="tip-label">Energy Tip:</span> {{ random_energy_tip }}
           </p>
         </div>
       </section>
@@ -1164,11 +1141,11 @@
           
           // Show/hide tables
           if (type === 'energy') {
-            document.getElementById('energy-history-table').style.display = 'block';
-            document.getElementById('co2-history-table').style.display = 'none';
+            document.getElementById('energy-history-table').classList.remove('hidden');
+            document.getElementById('co2-history-table').classList.add('hidden');
           } else {
-            document.getElementById('energy-history-table').style.display = 'none';
-            document.getElementById('co2-history-table').style.display = 'block';
+            document.getElementById('energy-history-table').classList.add('hidden');
+            document.getElementById('co2-history-table').classList.remove('hidden');
           }
         });
       });

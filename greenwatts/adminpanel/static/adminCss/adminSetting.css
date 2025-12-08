@@ -816,3 +816,133 @@ button.deactivate-device-btn:hover {
     width: 50px;
   }
 }
+
+/* Threshold History Section */
+.threshold-history-section {
+  margin-top: 30px;
+}
+
+.threshold-history-section .table-wrapper {
+  background: #1e1f47;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.threshold-tabs {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.threshold-tab-btn {
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 5px;
+}
+
+.threshold-tab-btn:hover {
+  color: #d39e09;
+}
+
+.threshold-tab-btn.active {
+  color: #58c744;
+  font-weight: bold;
+}
+
+.threshold-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #2c6dfc;
+}
+
+.threshold-separator {
+  color: #fff;
+  margin: 0 15px;
+}
+
+.threshold-history-table-container {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.threshold-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  color: black;
+}
+
+.threshold-history-table th {
+  background-color: white;
+  color: black;
+  padding: 12px;
+  text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 2px solid #ddd;
+}
+
+.threshold-history-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.threshold-history-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.hidden {
+  display: none;
+}
+
+.active-status {
+  color: green;
+}
+
+.history-tip {
+  text-align: center;
+  margin-top: 15px;
+  color: #fff;
+}
+
+.tip-label {
+  color: #4caf50 !important;
+  font-weight: bold;
+}
+
+/* Device section */
+.device-section {
+  flex: 1;
+}
+
+.device-table-wrapper {
+  margin-top: 20px;
+}
+
+.device-search-input {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+/* Thresholds section */
+.thresholds {
+  flex: 1;
+}
+
+#save-energy-btn,
+#cancel-energy-btn,
+#save-co2-btn,
+#cancel-co2-btn {
+  display: none;
+}
