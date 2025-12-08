@@ -99,7 +99,7 @@
       <!-- Filters -->
       <div class="filters">
         <select id="week-select">
-          <option value="">Week</option>
+          <option value="">{% if selected_week %}{{ selected_week|date:"M d, Y" }} - Week{% else %}Week{% endif %}</option>
           {% for week in week_options %}
           <option value="{{ week.value }}" {% if selected_week == week.value %}selected{% endif %}>{{ week.name }}</option>
           {% endfor %}
@@ -251,6 +251,7 @@
       });
     </script>
     <script src="{% static 'adminJs/sidebarToggle.js' %}"></script>
+    <script src="{% static 'adminJs/filterHandler.js' %}"></script>
     <script>
       function updateTime() {
         const now = new Date();

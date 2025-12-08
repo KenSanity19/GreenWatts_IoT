@@ -238,6 +238,7 @@
       </div>
     </div>
     <script src="{% static 'adminJs/sidebarToggle.js' %}"></script>
+    <script src="{% static 'adminJs/filterHandler.js' %}"></script>
     <script>
       function updateTime() {
         const now = new Date();
@@ -253,143 +254,7 @@
         document.getElementById("live-time").textContent = timeString;
       }
       setInterval(updateTime, 1000);
-      updateTime(); // initial call
-
-      // Handle filter dropdown changes
-      document.addEventListener('DOMContentLoaded', function() {
-        const daySelect = document.getElementById('day-select');
-        const monthSelect = document.getElementById('month-select');
-        const yearSelect = document.getElementById('year-select');
-
-        function updateFilters() {
-          const params = new URLSearchParams();
-          const day = daySelect ? daySelect.value : '';
-          const month = monthSelect ? monthSelect.value : '';
-          const year = yearSelect ? yearSelect.value : '';
-
-          if (day) params.append('selected_day', day);
-          if (month) params.append('selected_month', month);
-          if (year) params.append('selected_year', year);
-
-          const queryString = params.toString();
-          window.location.href = queryString ? `?${queryString}` : '?';
-        }
-
-        // Add event listeners only if elements exist
-        if (daySelect) {
-          daySelect.addEventListener('change', function() {
-            const selectedDay = daySelect.value;
-            if (selectedDay) {
-              const [month, day, year] = selectedDay.split('/');
-              const monthValue = parseInt(month).toString();
-              
-              if (monthSelect) {
-                let monthOption = monthSelect.querySelector(`option[value="${monthValue}"]`);
-                if (!monthOption) {
-                  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                                    'July', 'August', 'September', 'October', 'November', 'December'];
-                  monthOption = document.createElement('option');
-                  monthOption.value = monthValue;
-                  monthOption.textContent = monthNames[parseInt(monthValue) - 1];
-                  monthSelect.appendChild(monthOption);
-                }
-                monthSelect.value = monthValue;
-              }
-              
-              if (yearSelect) {
-                let yearOption = yearSelect.querySelector(`option[value="${year}"]`);
-                if (!yearOption) {
-                  yearOption = document.createElement('option');
-                  yearOption.value = year;
-                  yearOption.textContent = year;
-                  yearSelect.appendChild(yearOption);
-                }
-                yearSelect.value = year;
-              }
-            } else {
-              if (monthSelect) monthSelect.value = '';
-              if (yearSelect) yearSelect.value = '';
-            }
-            updateFilters();
-          });
-        }
-        
-        if (monthSelect) {
-          monthSelect.addEventListener('change', function() {
-            const selectedMonth = monthSelect.value;
-            const selectedYear = yearSelect ? yearSelect.value : '';
-            
-            if (selectedMonth) {
-              updateDayOptions(selectedMonth, selectedYear);
-            } else {
-              if (daySelect) daySelect.value = '';
-              resetDayOptions();
-            }
-            updateFilters();
-          });
-        }
-        
-        function updateDayOptions(month, year) {
-          console.log('Fetching days for month:', month, 'year:', year);
-          fetch(`/adminpanel/get-days/?month=${month}&year=${year || new Date().getFullYear()}`)
-            .then(response => response.json())
-            .then(data => {
-              console.log('Response data:', data);
-              if (data.status === 'success' && daySelect) {
-                const currentSelected = daySelect.value;
-                daySelect.innerHTML = '<option value="">Day</option>';
-                data.days.forEach(day => {
-                  const option = document.createElement('option');
-                  option.value = day;
-                  option.textContent = day;
-                  if (day === currentSelected) option.selected = true;
-                  daySelect.appendChild(option);
-                });
-                console.log('Updated day options:', data.days.length, 'days');
-              }
-            })
-            .catch(error => console.error('Error fetching days:', error));
-        }
-        
-        function resetDayOptions() {
-          if (daySelect) {
-            const currentSelected = daySelect.value;
-            const allDays = {{ day_options|safe }};
-            daySelect.innerHTML = '<option value="">Day</option>';
-            allDays.forEach(day => {
-              const option = document.createElement('option');
-              option.value = day;
-              option.textContent = day;
-              if (day === currentSelected) option.selected = true;
-              daySelect.appendChild(option);
-            });
-          }
-        }
-        
-        if (yearSelect) {
-          yearSelect.addEventListener('change', function() {
-            // Clear day when year is selected
-            if (daySelect) daySelect.value = '';
-            
-            // Update day options if month is also selected
-            const selectedMonth = monthSelect ? monthSelect.value : '';
-            const selectedYear = yearSelect.value;
-            
-            if (selectedMonth && selectedYear) {
-              updateDayOptions(selectedMonth, selectedYear);
-            }
-            
-            updateFilters();
-          });
-        }
-        
-        // Check if month is pre-selected on page load and filter days
-        const initialMonth = monthSelect ? monthSelect.value : '';
-        const initialYear = yearSelect ? yearSelect.value : '';
-        if (initialMonth) {
-          updateDayOptions(initialMonth, initialYear);
-        }
-      });
+      updateTime();
     </script>
   </body>
 </html>
