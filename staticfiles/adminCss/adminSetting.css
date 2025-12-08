@@ -49,7 +49,6 @@ header h1 {
   display: flex;
   justify-content: space-between;
   margin-bottom: 15px;
-  position: sticky;
   top: 0;
   background-color: #1e1f47;
   padding-top: 10px;
@@ -917,7 +916,7 @@ button.deactivate-device-btn:hover {
 }
 
 .tip-label {
-  color: #5cb85c;
+  color: #4caf50 !important;
   font-weight: bold;
 }
 
