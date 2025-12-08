@@ -3,7 +3,7 @@ from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.http import HttpResponse, JsonResponse
-from ..adminpanel.models import Threshold
+from ..adminpanel.models import EnergyThreshold, CO2Threshold
 from ..sensors.models import EnergyRecord
 import csv
 
@@ -173,11 +173,11 @@ def dashboard(request):
     ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
     # Active alerts: Show overall computation as single entry
-    threshold = Threshold.objects.first()
-    if threshold:
-        if energy_usage > threshold.energy_moderate_max:
+    energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
+    if energy_threshold:
+        if energy_usage > energy_threshold.moderate_max:
             status = 'High'
-        elif energy_usage > threshold.energy_efficient_max:
+        elif energy_usage > energy_threshold.efficient_max:
             status = 'Moderate'
         else:
             status = 'Efficient'
@@ -601,19 +601,19 @@ def office_usage(request):
         rank_change = 100.0 if current_week_energy > 0 else 0
 
     # Get threshold and determine status
-    threshold = Threshold.objects.first()
-    if threshold:
-        if office_energy > threshold.energy_moderate_max:
+    energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
+    if energy_threshold:
+        if office_energy > energy_threshold.moderate_max:
             energy_status = 'High'
             status_class = 'status-high'
-        elif office_energy > threshold.energy_efficient_max:
+        elif office_energy > energy_threshold.efficient_max:
             energy_status = 'Moderate'
             status_class = 'status-moderate'
         else:
             energy_status = 'Efficient'
             status_class = 'status-efficient'
         
-        is_over_limit = office_energy > threshold.energy_moderate_max
+        is_over_limit = office_energy > energy_threshold.moderate_max
     else:
         energy_status = 'Unknown'
         status_class = 'status-unknown'
@@ -962,24 +962,24 @@ def user_reports(request):
             best_performing_day = 'N/A'
 
     # Office status based on energy usage
-    threshold = Threshold.objects.first()
-    if threshold:
-        if total_energy_usage > threshold.energy_moderate_max:
+    energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
+    if energy_threshold:
+        if total_energy_usage > energy_threshold.moderate_max:
             office_status = 'HIGH'
-        elif total_energy_usage > threshold.energy_efficient_max:
+        elif total_energy_usage > energy_threshold.efficient_max:
             office_status = 'MODERATE'
         else:
             office_status = 'ACTIVE'
-        energy_efficient_max = threshold.energy_efficient_max
-        energy_moderate_max = threshold.energy_moderate_max
+        energy_efficient_max = energy_threshold.efficient_max
+        energy_moderate_max = energy_threshold.moderate_max
     else:
         office_status = 'ACTIVE'
         energy_efficient_max = 10.0
         energy_moderate_max = 20.0
 
     # Dynamic recommendation based on usage and threshold
-    def generate_recommendation(total_energy, threshold, level, chart_values):
-        if not threshold:
+    def generate_recommendation(total_energy, energy_threshold, level, chart_values):
+        if not energy_threshold:
             return "Energy usage is within acceptable limits. Keep up the good work!"
         
         # Calculate average and peak from chart data
@@ -987,24 +987,24 @@ def user_reports(request):
         peak_usage = max(chart_values) if chart_values else 0
         
         # Determine status
-        if total_energy > threshold.energy_moderate_max:
+        if total_energy > energy_threshold.moderate_max:
             # High usage - provide specific recommendations
-            excess = total_energy - threshold.energy_moderate_max
+            excess = total_energy - energy_threshold.moderate_max
             recommendations = [
-                f"Energy usage ({total_energy:.2f} kWh) exceeds the moderate threshold ({threshold.energy_moderate_max:.2f} kWh) by {excess:.2f} kWh. ",
+                f"Energy usage ({total_energy:.2f} kWh) exceeds the moderate threshold ({energy_threshold.moderate_max:.2f} kWh) by {excess:.2f} kWh. ",
             ]
             
             # Add specific tips based on peak usage
-            if peak_usage > threshold.energy_moderate_max:
+            if peak_usage > energy_threshold.moderate_max:
                 recommendations.append("Consider reducing consumption during peak hours by turning off unused equipment and optimizing HVAC settings.")
             else:
                 recommendations.append("Spread out energy-intensive activities throughout the day to avoid concentration of usage.")
                 
-        elif total_energy > threshold.energy_efficient_max:
+        elif total_energy > energy_threshold.efficient_max:
             # Moderate usage - provide improvement suggestions
             recommendations = [
                 f"Energy usage is moderate ({total_energy:.2f} kWh). ",
-                f"You're {((threshold.energy_moderate_max - total_energy) / threshold.energy_moderate_max * 100):.1f}% away from high usage. ",
+                f"You're {((energy_threshold.moderate_max - total_energy) / energy_threshold.moderate_max * 100):.1f}% away from high usage. ",
                 "Consider implementing energy-saving practices like using natural lighting and scheduling equipment usage during off-peak hours."
             ]
         else:
@@ -1016,7 +1016,7 @@ def user_reports(request):
         
         return "".join(recommendations)
     
-    recommendation = generate_recommendation(total_energy_usage, threshold, level, chart_values)
+    recommendation = generate_recommendation(total_energy_usage, energy_threshold, level, chart_values)
 
     # Get calendar data for current month
     from django.utils import timezone
@@ -1776,8 +1776,8 @@ def user_emmision(request):
             labels.append(label)
             week_data.append(date_dict.get(d, 0))
 
-    threshold = Threshold.objects.first()
-    threshold_value = threshold.co2_moderate_max if threshold else 180
+    co2_threshold = CO2Threshold.objects.filter(ended_at__isnull=True).first()
+    threshold_value = co2_threshold.moderate_max if co2_threshold else 180
 
     context = {
         'office': office,

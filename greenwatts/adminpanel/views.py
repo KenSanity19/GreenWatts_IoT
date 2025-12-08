@@ -4,11 +4,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.views.decorators.cache import cache_control
 from functools import wraps
-from .models import Admin, Threshold, ThresholdHistory
+from .models import Admin, EnergyThreshold, CO2Threshold
 from greenwatts.users.models import Office
 from ..sensors.models import Device
 from ..sensors.models import EnergyRecord
-from django.db.models import Sum, F, Max
+from django.db.models import Sum, F, Max, Q
+from django.utils import timezone
 from django.db.models.functions import ExtractYear, ExtractMonth
 from datetime import datetime, timedelta, date
 from .utils import get_random_energy_tip
@@ -18,6 +19,25 @@ import csv
 # Constants
 MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
                'July', 'August', 'September', 'October', 'November', 'December']
+
+def get_threshold_for_date(target_date):
+    """Get the threshold that was active on a specific date"""
+    # Get active thresholds (ended_at is null)
+    energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
+    co2_threshold = CO2Threshold.objects.filter(ended_at__isnull=True).first()
+    
+    # If no active threshold, get the latest one
+    if not energy_threshold:
+        energy_threshold = EnergyThreshold.objects.order_by('-created_at').first()
+    if not co2_threshold:
+        co2_threshold = CO2Threshold.objects.order_by('-created_at').first()
+    
+    return {
+        'energy_efficient_max': energy_threshold.efficient_max if energy_threshold else 50.0,
+        'energy_moderate_max': energy_threshold.moderate_max if energy_threshold else 100.0,
+        'co2_efficient_max': co2_threshold.efficient_max if co2_threshold else 8.0,
+        'co2_moderate_max': co2_threshold.moderate_max if co2_threshold else 13.0,
+    }
 
 def get_valid_office_ids():
     """Get all valid office ids from Office table"""
@@ -333,15 +353,10 @@ def admin_dashboard(request):
         total_energy=Sum('total_energy_kwh')
     ).order_by('-total_energy')
 
-    # Get thresholds from DB
-    try:
-        threshold = Threshold.objects.get(threshold_id=1)
-        energy_efficient_max = threshold.energy_efficient_max
-        energy_moderate_max = threshold.energy_moderate_max
-    except Threshold.DoesNotExist:
-        # Default values if not set
-        energy_efficient_max = 10.0
-        energy_moderate_max = 20.0
+    # Get thresholds for the selected date
+    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
+    energy_efficient_max = threshold_values['energy_efficient_max']
+    energy_moderate_max = threshold_values['energy_moderate_max']
 
     # Determine status based on total_energy thresholds
     active_alerts = []
@@ -473,14 +488,29 @@ def admin_dashboard(request):
 def admin_setting(request):
     offices = Office.objects.all()
     devices = Device.objects.select_related('office').all()
-    try:
-        threshold = Threshold.objects.get(threshold_id=1)
-    except Threshold.DoesNotExist:
-        threshold = None
+    
+    energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
+    co2_threshold = CO2Threshold.objects.filter(ended_at__isnull=True).first()
+    
+    class ThresholdData:
+        def __init__(self, energy, co2):
+            self.energy_efficient_max = energy.efficient_max if energy else 10.0
+            self.energy_moderate_max = energy.moderate_max if energy else 20.0
+            self.energy_high_max = energy.high_max if energy else 30.0
+            self.co2_efficient_max = co2.efficient_max if co2 else 8.0
+            self.co2_moderate_max = co2.moderate_max if co2 else 13.0
+            self.co2_high_max = co2.high_max if co2 else 18.0
+    
+    threshold = ThresholdData(energy_threshold, co2_threshold)
+    energy_history = EnergyThreshold.objects.all().order_by('-created_at')[:10]
+    co2_history = CO2Threshold.objects.all().order_by('-created_at')[:10]
+    
     return render(request, 'adminSetting.html', {
         'offices': offices, 
         'devices': devices, 
         'threshold': threshold,
+        'energy_history': energy_history,
+        'co2_history': co2_history,
         'random_energy_tip': get_random_energy_tip(),
     })
 
@@ -565,15 +595,10 @@ def office_usage(request):
         total_co2=Sum('carbon_emission_kgco2')
     ).order_by('-total_energy')
 
-    # Get thresholds from DB
-    try:
-        threshold = Threshold.objects.get(threshold_id=1)
-        energy_efficient_max = threshold.energy_efficient_max
-        energy_moderate_max = threshold.energy_moderate_max
-    except Threshold.DoesNotExist:
-        # Default values if not set
-        energy_efficient_max = 10.0
-        energy_moderate_max = 20.0
+    # Get thresholds for the selected date
+    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
+    energy_efficient_max = threshold_values['energy_efficient_max']
+    energy_moderate_max = threshold_values['energy_moderate_max']
 
     table_data = []
     for record in office_data:
@@ -821,12 +846,9 @@ def admin_reports(request):
     inactive_offices = list(all_offices - active_offices)
     inactive_offices_str = ', '.join(inactive_offices) if inactive_offices else 'NONE'
 
-    # Get thresholds from DB
-    try:
-        threshold = Threshold.objects.get(threshold_id=1)
-        energy_efficient_max = threshold.energy_efficient_max
-    except Threshold.DoesNotExist:
-        energy_efficient_max = 10.0
+    # Get thresholds for the selected date
+    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
+    energy_efficient_max = threshold_values['energy_efficient_max']
 
     # Best Performing Office (lowest energy, assuming Efficient < energy_efficient_max)
     best_office = None
@@ -838,14 +860,10 @@ def admin_reports(request):
             best_office = record['office_name']
     best_performing_office = best_office if best_office else 'NONE'
 
-    # Get thresholds from DB
-    try:
-        threshold = Threshold.objects.get(threshold_id=1)
-        energy_efficient_max = threshold.energy_efficient_max
-        energy_moderate_max = threshold.energy_moderate_max
-    except Threshold.DoesNotExist:
-        energy_efficient_max = 10.0
-        energy_moderate_max = 20.0
+    # Get thresholds for the selected date
+    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
+    energy_efficient_max = threshold_values['energy_efficient_max']
+    energy_moderate_max = threshold_values['energy_moderate_max']
 
     # Chart data: labels and values for bar chart
     chart_labels = [record['office_name'] for record in office_data]
@@ -1484,18 +1502,12 @@ def carbon_emission(request):
                 prev_month_data.append(0)
                 current_month_data.append(co2)
 
-    # Get CO2 threshold from DB
-    try:
-        threshold_obj = Threshold.objects.get(threshold_id=1)
-        threshold = threshold_obj.co2_high_max
-        co2_efficient_max = threshold_obj.co2_efficient_max
-        co2_moderate_max = threshold_obj.co2_moderate_max
-        co2_high_max = threshold_obj.co2_high_max
-    except Threshold.DoesNotExist:
-        threshold = 180.0  # Default value if not set
-        co2_efficient_max = 8.0
-        co2_moderate_max = 13.0
-        co2_high_max = 18.0
+    # Get CO2 threshold for the selected date
+    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
+    co2_efficient_max = threshold_values['co2_efficient_max']
+    co2_moderate_max = threshold_values['co2_moderate_max']
+    co2_high_max = co2_moderate_max * 1.5
+    threshold = co2_high_max
 
     total_co2 = aggregates['total_co2'] or 0
     avg_daily_co2 = total_co2 / num_days if num_days > 0 else 0
@@ -1646,28 +1658,18 @@ def edit_office(request, id):
 def save_thresholds(request):
     if request.method == 'GET':
         try:
-            threshold = Threshold.objects.get(threshold_id=1)
+            energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
+            co2_threshold = CO2Threshold.objects.filter(ended_at__isnull=True).first()
+            
             return JsonResponse({
                 'status': 'success',
                 'threshold': {
-                    'energy_efficient_max': threshold.energy_efficient_max,
-                    'energy_moderate_max': threshold.energy_moderate_max,
-                    'energy_high_max': threshold.energy_high_max,
-                    'co2_efficient_max': threshold.co2_efficient_max,
-                    'co2_moderate_max': threshold.co2_moderate_max,
-                    'co2_high_max': threshold.co2_high_max,
-                }
-            })
-        except Threshold.DoesNotExist:
-            return JsonResponse({
-                'status': 'success',
-                'threshold': {
-                    'energy_efficient_max': 10.0,
-                    'energy_moderate_max': 20.0,
-                    'energy_high_max': 30.0,
-                    'co2_efficient_max': 8.0,
-                    'co2_moderate_max': 13.0,
-                    'co2_high_max': 18.0,
+                    'energy_efficient_max': energy_threshold.efficient_max if energy_threshold else 10.0,
+                    'energy_moderate_max': energy_threshold.moderate_max if energy_threshold else 20.0,
+                    'energy_high_max': energy_threshold.high_max if energy_threshold else 30.0,
+                    'co2_efficient_max': co2_threshold.efficient_max if co2_threshold else 8.0,
+                    'co2_moderate_max': co2_threshold.moderate_max if co2_threshold else 13.0,
+                    'co2_high_max': co2_threshold.high_max if co2_threshold else 18.0,
                 }
             })
         except Exception as e:
@@ -1679,45 +1681,31 @@ def save_thresholds(request):
             except json.JSONDecodeError:
                 data = request.POST.dict()
 
-            threshold, created = Threshold.objects.get_or_create(
-                threshold_id=1,
-                defaults={
-                    'energy_efficient_max': 10.0,
-                    'energy_moderate_max': 20.0,
-                    'energy_high_max': 30.0,
-                    'co2_efficient_max': 8.0,
-                    'co2_moderate_max': 13.0,
-                    'co2_high_max': 18.0,
-                }
-            )
+            # Handle energy threshold
+            if 'energy_efficient_max' in data or 'energy_moderate_max' in data or 'energy_high_max' in data:
+                energy_efficient = float(data.get('energy_efficient_max', 10.0))
+                energy_moderate = float(data.get('energy_moderate_max', 20.0))
+                energy_high = float(data.get('energy_high_max', 30.0))
+                
+                EnergyThreshold.objects.filter(ended_at__isnull=True).update(ended_at=timezone.now())
+                EnergyThreshold.objects.create(
+                    efficient_max=energy_efficient,
+                    moderate_max=energy_moderate,
+                    high_max=energy_high
+                )
 
-            if 'energy_efficient_max' in data and data['energy_efficient_max']:
-                threshold.energy_efficient_max = float(data['energy_efficient_max'])
-            if 'energy_moderate_max' in data and data['energy_moderate_max']:
-                threshold.energy_moderate_max = float(data['energy_moderate_max'])
-            if 'energy_high_max' in data and data['energy_high_max']:
-                threshold.energy_high_max = float(data['energy_high_max'])
-            if 'co2_efficient_max' in data and data['co2_efficient_max']:
-                threshold.co2_efficient_max = float(data['co2_efficient_max'])
-            if 'co2_moderate_max' in data and data['co2_moderate_max']:
-                threshold.co2_moderate_max = float(data['co2_moderate_max'])
-            if 'co2_high_max' in data and data['co2_high_max']:
-                threshold.co2_high_max = float(data['co2_high_max'])
-
-            threshold.save()
-
-            # Update previous history record's ended_at
-            ThresholdHistory.objects.filter(ended_at__isnull=True).update(ended_at=timezone.now())
-
-            # Create new history record
-            ThresholdHistory.objects.create(
-                energy_efficient_max=threshold.energy_efficient_max,
-                energy_moderate_max=threshold.energy_moderate_max,
-                energy_high_max=threshold.energy_high_max,
-                co2_efficient_max=threshold.co2_efficient_max,
-                co2_moderate_max=threshold.co2_moderate_max,
-                co2_high_max=threshold.co2_high_max
-            )
+            # Handle CO2 threshold
+            if 'co2_efficient_max' in data or 'co2_moderate_max' in data or 'co2_high_max' in data:
+                co2_efficient = float(data.get('co2_efficient_max', 8.0))
+                co2_moderate = float(data.get('co2_moderate_max', 13.0))
+                co2_high = float(data.get('co2_high_max', 18.0))
+                
+                CO2Threshold.objects.filter(ended_at__isnull=True).update(ended_at=timezone.now())
+                CO2Threshold.objects.create(
+                    efficient_max=co2_efficient,
+                    moderate_max=co2_moderate,
+                    high_max=co2_high
+                )
 
             return JsonResponse({'status': 'success', 'message': 'Thresholds updated successfully'})
         except Exception as e:
@@ -1754,17 +1742,23 @@ def get_days(request):
 @admin_required
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def threshold_history(request):
-    history = ThresholdHistory.objects.all().order_by('-created_at')
+    energy_history = EnergyThreshold.objects.all().order_by('-created_at')
+    co2_history = CO2Threshold.objects.all().order_by('-created_at')
     return JsonResponse({
         'status': 'success',
-        'history': list(history.values(
-            'history_id',
-            'energy_efficient_max',
-            'energy_moderate_max',
-            'energy_high_max',
-            'co2_efficient_max',
-            'co2_moderate_max',
-            'co2_high_max',
+        'energy_history': list(energy_history.values(
+            'threshold_id',
+            'efficient_max',
+            'moderate_max',
+            'high_max',
+            'created_at',
+            'ended_at'
+        )),
+        'co2_history': list(co2_history.values(
+            'threshold_id',
+            'efficient_max',
+            'moderate_max',
+            'high_max',
             'created_at',
             'ended_at'
         ))

@@ -552,12 +552,86 @@
         </section>
       </section>
 
-      <!-- Footer -->
-      <footer>
-        <p class="tip">
-          <span>Energy Tip:</span> {{ random_energy_tip }}
-        </p>
-      </footer>
+      <!-- Threshold History -->
+      <section class="threshold-history-section" style="margin-top: 30px;">
+        <div class="table-wrapper">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <span class="threshold-tab-btn active" data-type="energy" style="display: inline-block; padding-bottom: 5px;">Energy Threshold History</span>
+            <span style="color: #fff; margin: 0 15px;">|</span>
+            <span class="threshold-tab-btn" data-type="co2" style="display: inline-block; padding-bottom: 5px;">CO2 Threshold History</span>
+          </div>
+          
+          <div id="energy-history-table" class="threshold-table-content">
+            <div class="threshold-history-table-container">
+              <table class="threshold-history-table" style="width: 100%;">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Efficient Max</th>
+                    <th>Moderate Max</th>
+                    <th>High Max</th>
+                    <th>Created At</th>
+                    <th>Ended At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for history in energy_history %}
+                  <tr>
+                    <td>{{ history.threshold_id }}</td>
+                    <td>{{ history.efficient_max }} kWh</td>
+                    <td>{{ history.moderate_max }} kWh</td>
+                    <td>{{ history.high_max }} kWh</td>
+                    <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
+                    <td>{% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span style="color: green;">Active</span>{% endif %}</td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="6">No energy threshold history found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="co2-history-table" class="threshold-table-content" style="display: none;">
+            <div class="threshold-history-table-container">
+              <table class="threshold-history-table" style="width: 100%;">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Efficient Max</th>
+                    <th>Moderate Max</th>
+                    <th>High Max</th>
+                    <th>Created At</th>
+                    <th>Ended At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for history in co2_history %}
+                  <tr>
+                    <td>{{ history.threshold_id }}</td>
+                    <td>{{ history.efficient_max }} kg</td>
+                    <td>{{ history.moderate_max }} kg</td>
+                    <td>{{ history.high_max }} kg</td>
+                    <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
+                    <td>{% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span style="color: green;">Active</span>{% endif %}</td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="6">No CO2 threshold history found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <p class="tip" style="text-align: center; margin-top: 15px; color: #fff;">
+            <span style="color: #5cb85c; font-weight: bold;">Energy Tip:</span> {{ random_energy_tip }}
+          </p>
+        </div>
+      </section>
     </div>
 
     <script>
@@ -1078,10 +1152,28 @@
 
       // Load thresholds on page load
       document.addEventListener("DOMContentLoaded", loadThresholds);
+
+      // Threshold history tab switching
+      document.querySelectorAll('.threshold-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const type = this.getAttribute('data-type');
+          
+          // Update active button
+          document.querySelectorAll('.threshold-tab-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Show/hide tables
+          if (type === 'energy') {
+            document.getElementById('energy-history-table').style.display = 'block';
+            document.getElementById('co2-history-table').style.display = 'none';
+          } else {
+            document.getElementById('energy-history-table').style.display = 'none';
+            document.getElementById('co2-history-table').style.display = 'block';
+          }
+        });
+      });
     </script>
 
     <script src="{% static 'adminJs/sidebarToggle.js' %}"></script>
-    <script>
-    </script>
   </body>
 </html>

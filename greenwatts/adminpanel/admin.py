@@ -1,13 +1,18 @@
 from django.contrib import admin
-from .models import Admin, Threshold, ThresholdHistory
+from .models import Admin, EnergyThreshold, CO2Threshold
 
 admin.site.register(Admin)
-admin.site.register(Threshold)
 
-@admin.register(ThresholdHistory)
-class ThresholdHistoryAdmin(admin.ModelAdmin):
-    list_display = ('history_id', 'energy_efficient_max', 'energy_moderate_max', 'energy_high_max', 
-                    'co2_efficient_max', 'co2_moderate_max', 'co2_high_max', 'created_at', 'ended_at')
+@admin.register(EnergyThreshold)
+class EnergyThresholdAdmin(admin.ModelAdmin):
+    list_display = ('threshold_id', 'efficient_max', 'moderate_max', 'high_max', 'created_at', 'ended_at')
     list_filter = ('created_at',)
-    readonly_fields = ('history_id', 'created_at', 'ended_at')
+    readonly_fields = ('threshold_id', 'created_at', 'ended_at')
+    ordering = ('-created_at',)
+
+@admin.register(CO2Threshold)
+class CO2ThresholdAdmin(admin.ModelAdmin):
+    list_display = ('threshold_id', 'efficient_max', 'moderate_max', 'high_max', 'created_at', 'ended_at')
+    list_filter = ('created_at',)
+    readonly_fields = ('threshold_id', 'created_at', 'ended_at')
     ordering = ('-created_at',)
