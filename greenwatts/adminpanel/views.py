@@ -1431,7 +1431,6 @@ def carbon_emission(request):
         end_date = date(int(selected_year or now.year), int(selected_month or now.month), last_day)
         chart_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
         labels = [d.strftime('%d') for d in chart_dates]
-        prev_month_data = []
         current_month_data = []
         for d in chart_dates:
             co2 = EnergyRecord.objects.filter(
@@ -1440,12 +1439,8 @@ def carbon_emission(request):
             ).exclude(
                 device__office__name='DS'
             ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
-            if d.month == prev_month and d.year == prev_year:
-                prev_month_data.append(co2)
-                current_month_data.append(0)
-            else:
-                prev_month_data.append(0)
-                current_month_data.append(co2)
+            current_month_data.append(co2)
+        prev_month_data = [0] * len(chart_dates)
     elif level == 'year':
         # Aggregate by month
         monthly_data = EnergyRecord.objects.filter(
@@ -1501,11 +1496,10 @@ def carbon_emission(request):
                 prev_month_data.append(0)
                 current_month_data.append(co2)
 
-    # Get CO2 threshold for the selected date and scale based on level
+    # Get CO2 threshold - use BASE (daily) thresholds for chart since we show daily data points
     base_thresholds = get_threshold_for_date(selected_date or datetime.now().date())
-    threshold_values = get_scaled_thresholds(base_thresholds, level)
-    co2_efficient_max = threshold_values['co2_efficient_max']
-    co2_moderate_max = threshold_values['co2_moderate_max']
+    co2_efficient_max = base_thresholds['co2_efficient_max']
+    co2_moderate_max = base_thresholds['co2_moderate_max']
     co2_high_max = co2_moderate_max * 1.5
     threshold = co2_high_max
 
