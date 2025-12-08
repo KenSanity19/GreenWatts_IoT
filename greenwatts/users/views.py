@@ -1625,6 +1625,7 @@ def user_emmision(request):
             'chart_labels': json.dumps([]),
             'week_data': json.dumps([]),
             'threshold': 180,
+            'co2_efficient_max': 8.0,
         }
         return render(request, 'users/userEmmision.html', context)
 
@@ -1779,10 +1780,9 @@ def user_emmision(request):
             labels.append(label)
             week_data.append(date_dict.get(d, 0))
 
-    # Get scaled CO2 threshold
+    # Get base (daily) CO2 threshold for chart since we show daily data points
     base_thresholds = get_base_thresholds()
-    scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
-    threshold_value = scaled_thresholds['co2_moderate_max']
+    threshold_value = base_thresholds['co2_moderate_max']
 
     context = {
         'office': office,
@@ -1802,6 +1802,7 @@ def user_emmision(request):
         'chart_labels': json.dumps(labels),
         'week_data': json.dumps(week_data),
         'threshold': threshold_value,
+        'co2_efficient_max': base_thresholds['co2_efficient_max'],
     }
     return render(request, 'users/userEmmision.html', context)
 
