@@ -74,17 +74,17 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select id="week-select">
+        <select id="week-select" onchange="filterEnergyCost()">
           {% for option in week_options %}
           <option value="{{ option.value }}" {% if option.value == selected_week %}selected{% endif %}>{{ option.name }}</option>
           {% endfor %}
         </select>
-        <select id="month-select">
+        <select id="month-select" onchange="filterEnergyCost()">
           {% for month in month_options %}
           <option value="{{ month.value }}" {% if month.value == selected_month %}selected{% endif %}>{{ month.name }}</option>
           {% endfor %}
         </select>
-        <select id="year-select">
+        <select id="year-select" onchange="filterEnergyCost()">
           {% for year in year_options %}
           <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
           {% endfor %}
@@ -246,24 +246,18 @@
       setInterval(updateTime, 1000);
       updateTime(); // initial call
 
-      // Handle dropdown changes
-      document.addEventListener('DOMContentLoaded', function() {
-        const weekSelect = document.getElementById('week-select');
-        const monthSelect = document.getElementById('month-select');
-        const yearSelect = document.getElementById('year-select');
+      function filterEnergyCost() {
+        const params = new URLSearchParams();
+        const week = document.getElementById('week-select').value;
+        const month = document.getElementById('month-select').value;
+        const year = document.getElementById('year-select').value;
         
-        function updateFilters() {
-          const params = new URLSearchParams();
-          if (weekSelect.value) params.set('selected_week', weekSelect.value);
-          if (monthSelect.value) params.set('selected_month', monthSelect.value);
-          if (yearSelect.value) params.set('selected_year', yearSelect.value);
-          window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
-        }
+        if (week) params.set('selected_week', week);
+        if (month) params.set('selected_month', month);
+        if (year) params.set('selected_year', year);
         
-        weekSelect.addEventListener('change', updateFilters);
-        monthSelect.addEventListener('change', updateFilters);
-        yearSelect.addEventListener('change', updateFilters);
-      });
+        window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
+      }
     </script>
     <script src="{% static 'userJs/sidebarToggle.js' %}"></script>
   </body>
