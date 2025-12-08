@@ -17,7 +17,11 @@
   <body>
     <!-- Sidebar -->
     <div class="sidebar">
-      <img src="{% static 'logo2.png' %}" alt="GreenWatts" class="logo-sidebar" />
+      <img
+        src="{% static 'logo2.png' %}"
+        alt="GreenWatts"
+        class="logo-sidebar"
+      />
       <div class="admin-section">
         <div class="admin-icon"><i class="fas fa-user-cog"></i></div>
         <p>ADMIN</p>
@@ -72,7 +76,11 @@
     <!-- Main Content -->
     <div class="main-content">
       <header>
-        <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+        <button
+          id="sidebarToggle"
+          class="sidebar-toggle"
+          aria-label="Toggle sidebar"
+        >
           <i class="fas fa-bars"></i>
         </button>
         <div class="header-left">
@@ -419,8 +427,18 @@
         </section>
         <section class="thresholds">
           <h2>SET THRESHOLDS</h2>
-          <p class="threshold-note" style="color: #666; font-size: 0.9em; margin-bottom: 15px; font-style: italic;">
-            <strong>Note:</strong> These thresholds are for daily values. They will be automatically scaled for weekly (×7), monthly (×30), and yearly (×365) views.
+          <p
+            class="threshold-note"
+            style="
+              color: #bdbdbd;
+              font-size: 0.9em;
+              margin-bottom: 15px;
+              font-style: italic;
+            "
+          >
+            <strong>Note:</strong> These thresholds are for daily values. They
+            will be automatically scaled for weekly (×7), monthly (×30), and
+            yearly (×365) views.
           </p>
           <div class="threshold-boxes">
             <div class="threshold-card">
@@ -467,9 +485,7 @@
               </p>
               <div class="btn-group">
                 <button class="edit-btn" id="edit-energy-btn">Edit</button>
-                <button class="save-btn" id="save-energy-btn">
-                  Save
-                </button>
+                <button class="save-btn" id="save-energy-btn">Save</button>
                 <button class="cancel-btn" id="cancel-energy-btn">
                   Cancel
                 </button>
@@ -520,12 +536,8 @@
               </p>
               <div class="btn-group">
                 <button class="edit-btn" id="edit-co2-btn">Edit</button>
-                <button class="save-btn" id="save-co2-btn">
-                  Save
-                </button>
-                <button class="cancel-btn" id="cancel-co2-btn">
-                  Cancel
-                </button>
+                <button class="save-btn" id="save-co2-btn">Save</button>
+                <button class="cancel-btn" id="cancel-co2-btn">Cancel</button>
               </div>
             </div>
           </div>
@@ -536,11 +548,15 @@
       <section class="threshold-history-section">
         <div class="table-wrapper">
           <div class="threshold-tabs">
-            <span class="threshold-tab-btn active" data-type="energy">Energy Threshold History</span>
+            <span class="threshold-tab-btn active" data-type="energy"
+              >Energy Threshold History</span
+            >
             <span class="threshold-separator">|</span>
-            <span class="threshold-tab-btn" data-type="co2">CO2 Threshold History</span>
+            <span class="threshold-tab-btn" data-type="co2"
+              >CO2 Threshold History</span
+            >
           </div>
-          
+
           <div id="energy-history-table" class="threshold-table-content">
             <div class="threshold-history-table-container">
               <table class="threshold-history-table">
@@ -562,7 +578,11 @@
                     <td>{{ history.moderate_max }} kWh</td>
                     <td>{{ history.high_max }} kWh</td>
                     <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
-                    <td>{% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span class="active-status">Active</span>{% endif %}</td>
+                    <td>
+                      {% if history.ended_at %}{{ history.ended_at|date:"M d, Y
+                      H:i" }}{% else %}<span class="active-status">Active</span
+                      >{% endif %}
+                    </td>
                   </tr>
                   {% empty %}
                   <tr>
@@ -595,7 +615,11 @@
                     <td>{{ history.moderate_max }} kg</td>
                     <td>{{ history.high_max }} kg</td>
                     <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
-                    <td>{% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span class="active-status">Active</span>{% endif %}</td>
+                    <td>
+                      {% if history.ended_at %}{{ history.ended_at|date:"M d, Y
+                      H:i" }}{% else %}<span class="active-status">Active</span
+                      >{% endif %}
+                    </td>
                   </tr>
                   {% empty %}
                   <tr>
@@ -1134,21 +1158,31 @@
       document.addEventListener("DOMContentLoaded", loadThresholds);
 
       // Threshold history tab switching
-      document.querySelectorAll('.threshold-tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const type = this.getAttribute('data-type');
-          
+      document.querySelectorAll(".threshold-tab-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const type = this.getAttribute("data-type");
+
           // Update active button
-          document.querySelectorAll('.threshold-tab-btn').forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-          
+          document
+            .querySelectorAll(".threshold-tab-btn")
+            .forEach((b) => b.classList.remove("active"));
+          this.classList.add("active");
+
           // Show/hide tables
-          if (type === 'energy') {
-            document.getElementById('energy-history-table').classList.remove('hidden');
-            document.getElementById('co2-history-table').classList.add('hidden');
+          if (type === "energy") {
+            document
+              .getElementById("energy-history-table")
+              .classList.remove("hidden");
+            document
+              .getElementById("co2-history-table")
+              .classList.add("hidden");
           } else {
-            document.getElementById('energy-history-table').classList.add('hidden');
-            document.getElementById('co2-history-table').classList.remove('hidden');
+            document
+              .getElementById("energy-history-table")
+              .classList.add("hidden");
+            document
+              .getElementById("co2-history-table")
+              .classList.remove("hidden");
           }
         });
       });
