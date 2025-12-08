@@ -12,7 +12,7 @@ from django.db.models import Sum, F, Max, Q
 from django.utils import timezone
 from django.db.models.functions import ExtractYear, ExtractMonth
 from datetime import datetime, timedelta, date
-from .utils import get_random_energy_tip
+from .utils import get_random_energy_tip, get_scaled_thresholds
 import json
 import csv
 
@@ -353,8 +353,9 @@ def admin_dashboard(request):
         total_energy=Sum('total_energy_kwh')
     ).order_by('-total_energy')
 
-    # Get thresholds for the selected date
-    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
+    # Get thresholds for the selected date and scale based on level
+    base_thresholds = get_threshold_for_date(selected_date or datetime.now().date())
+    threshold_values = get_scaled_thresholds(base_thresholds, level)
     energy_efficient_max = threshold_values['energy_efficient_max']
     energy_moderate_max = threshold_values['energy_moderate_max']
 
@@ -595,8 +596,9 @@ def office_usage(request):
         total_co2=Sum('carbon_emission_kgco2')
     ).order_by('-total_energy')
 
-    # Get thresholds for the selected date
-    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
+    # Get thresholds for the selected date and scale based on level
+    base_thresholds = get_threshold_for_date(selected_date or datetime.now().date())
+    threshold_values = get_scaled_thresholds(base_thresholds, level)
     energy_efficient_max = threshold_values['energy_efficient_max']
     energy_moderate_max = threshold_values['energy_moderate_max']
 
@@ -846,9 +848,11 @@ def admin_reports(request):
     inactive_offices = list(all_offices - active_offices)
     inactive_offices_str = ', '.join(inactive_offices) if inactive_offices else 'NONE'
 
-    # Get thresholds for the selected date
-    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
+    # Get thresholds for the selected date and scale based on level
+    base_thresholds = get_threshold_for_date(selected_date or datetime.now().date())
+    threshold_values = get_scaled_thresholds(base_thresholds, level)
     energy_efficient_max = threshold_values['energy_efficient_max']
+    energy_moderate_max = threshold_values['energy_moderate_max']
 
     # Best Performing Office (lowest energy, assuming Efficient < energy_efficient_max)
     best_office = None
@@ -859,11 +863,6 @@ def admin_reports(request):
             min_energy = energy
             best_office = record['office_name']
     best_performing_office = best_office if best_office else 'NONE'
-
-    # Get thresholds for the selected date
-    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
-    energy_efficient_max = threshold_values['energy_efficient_max']
-    energy_moderate_max = threshold_values['energy_moderate_max']
 
     # Chart data: labels and values for bar chart
     chart_labels = [record['office_name'] for record in office_data]
@@ -1502,8 +1501,9 @@ def carbon_emission(request):
                 prev_month_data.append(0)
                 current_month_data.append(co2)
 
-    # Get CO2 threshold for the selected date
-    threshold_values = get_threshold_for_date(selected_date or datetime.now().date())
+    # Get CO2 threshold for the selected date and scale based on level
+    base_thresholds = get_threshold_for_date(selected_date or datetime.now().date())
+    threshold_values = get_scaled_thresholds(base_thresholds, level)
     co2_efficient_max = threshold_values['co2_efficient_max']
     co2_moderate_max = threshold_values['co2_moderate_max']
     co2_high_max = co2_moderate_max * 1.5

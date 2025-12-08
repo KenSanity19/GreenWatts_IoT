@@ -254,18 +254,7 @@
                 }
               }
             },
-            afterBuildTicks: function(chart) {
-              const yScale = chart.scales.y;
-              yScale.ticks = [
-                { value: 0 },
-                { value: 50 },
-                { value: 120 },
-                { value: 170 },
-                { value: 250 },
-                { value: 320 },
-                { value: 400 },
-              ];
-            },
+
           },
           layout: {
             padding: {
@@ -275,7 +264,6 @@
           scales: {
             y: {
               beginAtZero: true,
-              max: 400,
               ticks: {
                 callback: function (value) {
                   return value + " kg";

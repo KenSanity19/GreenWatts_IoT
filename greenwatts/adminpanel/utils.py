@@ -1,5 +1,33 @@
 import random
 
+def get_scaled_thresholds(base_thresholds, level):
+    """
+    Scale thresholds based on the time period filter.
+    Base thresholds are for daily data.
+    
+    Args:
+        base_thresholds: dict with keys like 'energy_efficient_max', 'co2_efficient_max', etc.
+        level: str - 'day', 'week', 'month', or 'year'
+    
+    Returns:
+        dict with scaled threshold values
+    """
+    scale_factors = {
+        'day': 1,
+        'week': 7,
+        'month': 30,
+        'year': 365
+    }
+    
+    factor = scale_factors.get(level, 1)
+    
+    return {
+        'energy_efficient_max': base_thresholds['energy_efficient_max'] * factor,
+        'energy_moderate_max': base_thresholds['energy_moderate_max'] * factor,
+        'co2_efficient_max': base_thresholds['co2_efficient_max'] * factor,
+        'co2_moderate_max': base_thresholds['co2_moderate_max'] * factor,
+    }
+
 def get_random_energy_tip():
     """
     Returns a random energy saving tip for display on admin pages.

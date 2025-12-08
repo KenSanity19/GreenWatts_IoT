@@ -4,8 +4,21 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.http import HttpResponse, JsonResponse
 from ..adminpanel.models import EnergyThreshold, CO2Threshold
+from ..adminpanel.utils import get_scaled_thresholds
 from ..sensors.models import EnergyRecord
 import csv
+
+def get_base_thresholds():
+    """Get base (daily) threshold values"""
+    energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
+    co2_threshold = CO2Threshold.objects.filter(ended_at__isnull=True).first()
+    
+    return {
+        'energy_efficient_max': energy_threshold.efficient_max if energy_threshold else 10.0,
+        'energy_moderate_max': energy_threshold.moderate_max if energy_threshold else 20.0,
+        'co2_efficient_max': co2_threshold.efficient_max if co2_threshold else 8.0,
+        'co2_moderate_max': co2_threshold.moderate_max if co2_threshold else 13.0,
+    }
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
@@ -172,15 +185,14 @@ def dashboard(request):
         **filter_kwargs
     ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
-    # Active alerts: Show overall computation as single entry
-    energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
-    if energy_threshold:
-        if energy_usage > energy_threshold.moderate_max:
-            status = 'High'
-        elif energy_usage > energy_threshold.efficient_max:
-            status = 'Moderate'
-        else:
-            status = 'Efficient'
+    # Active alerts: Show overall computation as single entry with scaled thresholds
+    base_thresholds = get_base_thresholds()
+    scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
+    
+    if energy_usage > scaled_thresholds['energy_moderate_max']:
+        status = 'High'
+    elif energy_usage > scaled_thresholds['energy_efficient_max']:
+        status = 'Moderate'
     else:
         status = 'Efficient'
     active_alerts = [{
@@ -600,24 +612,21 @@ def office_usage(request):
     else:
         rank_change = 100.0 if current_week_energy > 0 else 0
 
-    # Get threshold and determine status
-    energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
-    if energy_threshold:
-        if office_energy > energy_threshold.moderate_max:
-            energy_status = 'High'
-            status_class = 'status-high'
-        elif office_energy > energy_threshold.efficient_max:
-            energy_status = 'Moderate'
-            status_class = 'status-moderate'
-        else:
-            energy_status = 'Efficient'
-            status_class = 'status-efficient'
-        
-        is_over_limit = office_energy > energy_threshold.moderate_max
+    # Get threshold and determine status with scaled thresholds
+    base_thresholds = get_base_thresholds()
+    scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
+    
+    if office_energy > scaled_thresholds['energy_moderate_max']:
+        energy_status = 'High'
+        status_class = 'status-high'
+    elif office_energy > scaled_thresholds['energy_efficient_max']:
+        energy_status = 'Moderate'
+        status_class = 'status-moderate'
     else:
-        energy_status = 'Unknown'
-        status_class = 'status-unknown'
-        is_over_limit = False
+        energy_status = 'Efficient'
+        status_class = 'status-efficient'
+    
+    is_over_limit = office_energy > scaled_thresholds['energy_moderate_max']
 
     # Format rank with proper suffix
     rank_suffix = 'th'
@@ -961,50 +970,44 @@ def user_reports(request):
             highest_usage_day = 'N/A'
             best_performing_day = 'N/A'
 
-    # Office status based on energy usage
-    energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
-    if energy_threshold:
-        if total_energy_usage > energy_threshold.moderate_max:
-            office_status = 'HIGH'
-        elif total_energy_usage > energy_threshold.efficient_max:
-            office_status = 'MODERATE'
-        else:
-            office_status = 'ACTIVE'
-        energy_efficient_max = energy_threshold.efficient_max
-        energy_moderate_max = energy_threshold.moderate_max
+    # Office status based on energy usage with scaled thresholds
+    base_thresholds = get_base_thresholds()
+    scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
+    energy_efficient_max = scaled_thresholds['energy_efficient_max']
+    energy_moderate_max = scaled_thresholds['energy_moderate_max']
+    
+    if total_energy_usage > energy_moderate_max:
+        office_status = 'HIGH'
+    elif total_energy_usage > energy_efficient_max:
+        office_status = 'MODERATE'
     else:
         office_status = 'ACTIVE'
-        energy_efficient_max = 10.0
-        energy_moderate_max = 20.0
 
     # Dynamic recommendation based on usage and threshold
-    def generate_recommendation(total_energy, energy_threshold, level, chart_values):
-        if not energy_threshold:
-            return "Energy usage is within acceptable limits. Keep up the good work!"
-        
+    def generate_recommendation(total_energy, energy_efficient_max, energy_moderate_max, level, chart_values):
         # Calculate average and peak from chart data
         avg_usage = sum(chart_values) / len(chart_values) if chart_values else 0
         peak_usage = max(chart_values) if chart_values else 0
         
         # Determine status
-        if total_energy > energy_threshold.moderate_max:
+        if total_energy > energy_moderate_max:
             # High usage - provide specific recommendations
-            excess = total_energy - energy_threshold.moderate_max
+            excess = total_energy - energy_moderate_max
             recommendations = [
-                f"Energy usage ({total_energy:.2f} kWh) exceeds the moderate threshold ({energy_threshold.moderate_max:.2f} kWh) by {excess:.2f} kWh. ",
+                f"Energy usage ({total_energy:.2f} kWh) exceeds the moderate threshold ({energy_moderate_max:.2f} kWh) by {excess:.2f} kWh. ",
             ]
             
             # Add specific tips based on peak usage
-            if peak_usage > energy_threshold.moderate_max:
+            if peak_usage > energy_moderate_max:
                 recommendations.append("Consider reducing consumption during peak hours by turning off unused equipment and optimizing HVAC settings.")
             else:
                 recommendations.append("Spread out energy-intensive activities throughout the day to avoid concentration of usage.")
                 
-        elif total_energy > energy_threshold.efficient_max:
+        elif total_energy > energy_efficient_max:
             # Moderate usage - provide improvement suggestions
             recommendations = [
                 f"Energy usage is moderate ({total_energy:.2f} kWh). ",
-                f"You're {((energy_threshold.moderate_max - total_energy) / energy_threshold.moderate_max * 100):.1f}% away from high usage. ",
+                f"You're {((energy_moderate_max - total_energy) / energy_moderate_max * 100):.1f}% away from high usage. ",
                 "Consider implementing energy-saving practices like using natural lighting and scheduling equipment usage during off-peak hours."
             ]
         else:
@@ -1016,7 +1019,7 @@ def user_reports(request):
         
         return "".join(recommendations)
     
-    recommendation = generate_recommendation(total_energy_usage, energy_threshold, level, chart_values)
+    recommendation = generate_recommendation(total_energy_usage, energy_efficient_max, energy_moderate_max, level, chart_values)
 
     # Get calendar data for current month
     from django.utils import timezone
@@ -1776,8 +1779,10 @@ def user_emmision(request):
             labels.append(label)
             week_data.append(date_dict.get(d, 0))
 
-    co2_threshold = CO2Threshold.objects.filter(ended_at__isnull=True).first()
-    threshold_value = co2_threshold.moderate_max if co2_threshold else 180
+    # Get scaled CO2 threshold
+    base_thresholds = get_base_thresholds()
+    scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
+    threshold_value = scaled_thresholds['co2_moderate_max']
 
     context = {
         'office': office,
