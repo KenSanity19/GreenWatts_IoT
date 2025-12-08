@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.views.decorators.cache import cache_control
 from functools import wraps
-from .models import Admin, Threshold
+from .models import Admin, Threshold, ThresholdHistory
 from greenwatts.users.models import Office
 from ..sensors.models import Device
 from ..sensors.models import EnergyRecord
@@ -1674,16 +1674,13 @@ def save_thresholds(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
     elif request.method == 'POST':
         try:
-            # Try to parse as JSON first
             try:
                 data = json.loads(request.body)
             except json.JSONDecodeError:
-                # If not JSON, assume form data
                 data = request.POST.dict()
 
-            # Get or create the threshold instance (assuming single row)
             threshold, created = Threshold.objects.get_or_create(
-                threshold_id=1,  # Use a fixed ID for single threshold record
+                threshold_id=1,
                 defaults={
                     'energy_efficient_max': 10.0,
                     'energy_moderate_max': 20.0,
@@ -1694,7 +1691,6 @@ def save_thresholds(request):
                 }
             )
 
-            # Update only the provided fields
             if 'energy_efficient_max' in data and data['energy_efficient_max']:
                 threshold.energy_efficient_max = float(data['energy_efficient_max'])
             if 'energy_moderate_max' in data and data['energy_moderate_max']:
@@ -1709,6 +1705,19 @@ def save_thresholds(request):
                 threshold.co2_high_max = float(data['co2_high_max'])
 
             threshold.save()
+
+            # Update previous history record's ended_at
+            ThresholdHistory.objects.filter(ended_at__isnull=True).update(ended_at=timezone.now())
+
+            # Create new history record
+            ThresholdHistory.objects.create(
+                energy_efficient_max=threshold.energy_efficient_max,
+                energy_moderate_max=threshold.energy_moderate_max,
+                energy_high_max=threshold.energy_high_max,
+                co2_efficient_max=threshold.co2_efficient_max,
+                co2_moderate_max=threshold.co2_moderate_max,
+                co2_high_max=threshold.co2_high_max
+            )
 
             return JsonResponse({'status': 'success', 'message': 'Thresholds updated successfully'})
         except Exception as e:
@@ -1741,6 +1750,25 @@ def get_days(request):
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
+
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def threshold_history(request):
+    history = ThresholdHistory.objects.all().order_by('-created_at')
+    return JsonResponse({
+        'status': 'success',
+        'history': list(history.values(
+            'history_id',
+            'energy_efficient_max',
+            'energy_moderate_max',
+            'energy_high_max',
+            'co2_efficient_max',
+            'co2_moderate_max',
+            'co2_high_max',
+            'created_at',
+            'ended_at'
+        ))
+    })
 
 @admin_required
 def get_weeks(request):

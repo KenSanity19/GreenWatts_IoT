@@ -39,3 +39,21 @@ class Threshold(models.Model):
 
     def __str__(self):
         return f"Thresholds: Energy Eff<{self.energy_efficient_max}, Mod<{self.energy_moderate_max}; CO2 Eff<{self.co2_efficient_max}, Mod<{self.co2_moderate_max}"
+
+class ThresholdHistory(models.Model):
+    history_id = models.AutoField(primary_key=True)
+    energy_efficient_max = models.FloatField()
+    energy_moderate_max = models.FloatField()
+    energy_high_max = models.FloatField()
+    co2_efficient_max = models.FloatField()
+    co2_moderate_max = models.FloatField()
+    co2_high_max = models.FloatField()
+    created_at = models.DateTimeField(default=timezone.now)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "tbl_threshold_history"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Threshold History {self.history_id} - {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
