@@ -63,17 +63,17 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select id="week-select">
+        <select id="week-select" onchange="filterReports()">
           {% for option in week_options %}
           <option value="{{ option.value }}" {% if option.value == selected_week %}selected{% endif %}>{{ option.name }}</option>
           {% endfor %}
         </select>
-        <select id="month-select">
+        <select id="month-select" onchange="filterReports()">
           {% for option in month_options %}
           <option value="{{ option.value }}" {% if option.value == selected_month %}selected{% endif %}>{{ option.name }}</option>
           {% endfor %}
         </select>
-        <select id="year-select">
+        <select id="year-select" onchange="filterReports()">
           {% for option in year_options %}
           <option value="{{ option }}" {% if option == selected_year %}selected{% endif %}>{{ option }}</option>
           {% endfor %}
@@ -255,52 +255,35 @@
         document.getElementById("live-time").textContent = timeString;
       }
       setInterval(updateTime, 1000);
-      updateTime(); // initial call
-
-      // Handle dropdown changes
+      updateTime();
+    </script>
+    <script>
+      function filterReports() {
+        const params = new URLSearchParams();
+        const week = document.getElementById('week-select').value;
+        const month = document.getElementById('month-select').value;
+        const year = document.getElementById('year-select').value;
+        
+        if (week) params.append('selected_week', week);
+        if (month) params.append('selected_month', month);
+        if (year) params.append('selected_year', year);
+        
+        window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
+      }
+      
       document.addEventListener('DOMContentLoaded', function() {
-        const weekSelect = document.getElementById('week-select');
-        const monthSelect = document.getElementById('month-select');
-        const yearSelect = document.getElementById('year-select');
-        
-        function updateFilters() {
+        document.getElementById('export-btn').addEventListener('click', function() {
           const params = new URLSearchParams();
+          const week = document.getElementById('week-select').value;
+          const month = document.getElementById('month-select').value;
+          const year = document.getElementById('year-select').value;
           
-          const selectedWeek = weekSelect.value;
-          const selectedMonth = monthSelect.value;
-          const selectedYear = yearSelect.value;
+          if (week) params.append('selected_week', week);
+          if (month) params.append('selected_month', month);
+          if (year) params.append('selected_year', year);
           
-          if (selectedWeek) params.append('selected_week', selectedWeek);
-          if (selectedMonth) params.append('selected_month', selectedMonth);
-          if (selectedYear) params.append('selected_year', selectedYear);
-          
-          const queryString = params.toString();
-          window.location.href = '?' + queryString;
-        }
-        
-        weekSelect.addEventListener('change', updateFilters);
-        monthSelect.addEventListener('change', updateFilters);
-        yearSelect.addEventListener('change', updateFilters);
-        
-        // Export button functionality
-        const exportBtn = document.getElementById('export-btn');
-        if (exportBtn) {
-          exportBtn.addEventListener('click', function() {
-            const params = new URLSearchParams();
-            
-            const selectedWeek = weekSelect.value;
-            const selectedMonth = monthSelect.value;
-            const selectedYear = yearSelect.value;
-            
-            if (selectedWeek) params.append('selected_week', selectedWeek);
-            if (selectedMonth) params.append('selected_month', selectedMonth);
-            if (selectedYear) params.append('selected_year', selectedYear);
-            
-            const queryString = params.toString();
-            const exportUrl = '{% url "users:export_user_reports" %}' + (queryString ? `?${queryString}` : '');
-            window.open(exportUrl, '_blank');
-          });
-        }
+          window.open('{% url "users:export_user_reports" %}' + (params.toString() ? '?' + params.toString() : ''), '_blank');
+        });
       });
     </script>
     

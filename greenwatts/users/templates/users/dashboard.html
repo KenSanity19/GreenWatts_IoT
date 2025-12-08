@@ -240,8 +240,7 @@
           if (month) params.append('selected_month', month);
           if (year) params.append('selected_year', year);
 
-          const queryString = params.toString();
-          window.location.href = queryString ? `?${queryString}` : '?';
+          window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
         }
 
         // Add event listeners only if elements exist

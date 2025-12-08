@@ -269,7 +269,7 @@
           if (monthSelect.value) params.set('selected_month', monthSelect.value);
           if (yearSelect.value) params.set('selected_year', yearSelect.value);
           
-          window.location.href = '?' + params.toString();
+          window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
         }
         
         weekSelect.addEventListener('change', updateFilters);

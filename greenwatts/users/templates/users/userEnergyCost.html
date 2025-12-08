@@ -254,66 +254,15 @@
         
         function updateFilters() {
           const params = new URLSearchParams();
-          
           if (weekSelect.value) params.set('selected_week', weekSelect.value);
           if (monthSelect.value) params.set('selected_month', monthSelect.value);
           if (yearSelect.value) params.set('selected_year', yearSelect.value);
-          
-          window.location.href = '?' + params.toString();
+          window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
         }
         
-        function clearOtherSelections(except) {
-          if (except !== 'week') weekSelect.value = '';
-          if (except !== 'month') monthSelect.value = '';
-          if (except !== 'year') yearSelect.value = '';
-        }
-        
-        weekSelect.addEventListener('change', function() {
-          if (this.value) {
-            clearOtherSelections('week');
-            updateFilters();
-          }
-        });
-        
-        monthSelect.addEventListener('change', function() {
-          if (this.value) {
-            clearOtherSelections('month');
-            updateFilters();
-          }
-        });
-        
-        yearSelect.addEventListener('change', function() {
-          if (this.value) {
-            clearOtherSelections('year');
-            updateFilters();
-          }
-        });
-        
-        // Update dependent dropdowns when month/year changes
-        function updateDependentDropdowns() {
-          const month = monthSelect.value;
-          const year = yearSelect.value;
-          
-          if (month && year) {
-            // Update weeks
-            fetch(`/users/get_user_weeks/?month=${month}&year=${year}`)
-              .then(response => response.json())
-              .then(data => {
-                if (data.status === 'success') {
-                  weekSelect.innerHTML = '<option value="">Week</option>';
-                  data.weeks.forEach(week => {
-                    const option = document.createElement('option');
-                    option.value = week.value;
-                    option.textContent = week.name;
-                    weekSelect.appendChild(option);
-                  });
-                }
-              });
-          }
-        }
-        
-        monthSelect.addEventListener('change', updateDependentDropdowns);
-        yearSelect.addEventListener('change', updateDependentDropdowns);
+        weekSelect.addEventListener('change', updateFilters);
+        monthSelect.addEventListener('change', updateFilters);
+        yearSelect.addEventListener('change', updateFilters);
       });
     </script>
     <script src="{% static 'userJs/sidebarToggle.js' %}"></script>
