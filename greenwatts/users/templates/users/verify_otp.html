@@ -26,6 +26,33 @@
       .input-icon {
         margin-right: 8px;
       }
+      .resend-section {
+        text-align: center;
+        margin: 15px 0;
+      }
+      .resend-link {
+        color: #2c2c6c;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .resend-link:hover {
+        text-decoration: underline;
+      }
+      .resend-link.disabled {
+        color: #999;
+        pointer-events: none;
+        text-decoration: none;
+      }
+      .resend-cooldown {
+        font-size: 14px;
+        color: #666;
+      }
+      a.admin-login:hover {
+        color: #1b1b50;
+        text-decoration: underline;
+        transition: color 0.3s ease;
+      }
       .info-text {
         color: #666;
         font-size: 14px;
@@ -83,11 +110,58 @@
           </a>
         </form>
 
+        <div class="resend-section">
+          <a href="{% url 'users:resend_otp' %}" class="resend-link" id="resend-link">
+            Resend Code
+          </a>
+          <span class="resend-cooldown" id="resend-cooldown" style="display: none; color: #666; font-size: 14px;">
+            Resend available in <span id="countdown"></span>
+          </span>
+        </div>
+
         <p class="lower-text">
           Code expires in 10 minutes.<br>
           Didn't receive the code? Check your spam folder.
         </p>
       </div>
     </div>
+    <script>
+      // Check if there's a cooldown message and start countdown
+      const messages = document.querySelectorAll('.messages li');
+      let cooldownSeconds = 0;
+      
+      messages.forEach(message => {
+        const text = message.textContent;
+        const match = text.match(/Please wait (\d+)m (\d+)s/);
+        if (match) {
+          const minutes = parseInt(match[1]);
+          const seconds = parseInt(match[2]);
+          cooldownSeconds = minutes * 60 + seconds;
+          startCooldown(cooldownSeconds);
+        }
+      });
+      
+      function startCooldown(seconds) {
+        const resendLink = document.getElementById('resend-link');
+        const cooldownSpan = document.getElementById('resend-cooldown');
+        const countdown = document.getElementById('countdown');
+        
+        resendLink.style.display = 'none';
+        cooldownSpan.style.display = 'block';
+        
+        const timer = setInterval(() => {
+          const minutes = Math.floor(seconds / 60);
+          const secs = seconds % 60;
+          countdown.textContent = `${minutes}m ${secs}s`;
+          
+          if (seconds <= 0) {
+            clearInterval(timer);
+            resendLink.style.display = 'inline';
+            cooldownSpan.style.display = 'none';
+          }
+          seconds--;
+        }, 1000);
+      }
+    </script>
   </body>
 </html>

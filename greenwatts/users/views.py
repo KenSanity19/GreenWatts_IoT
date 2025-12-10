@@ -2035,6 +2035,44 @@ def get_user_weeks(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def resend_otp(request):
+    from .two_factor import send_otp
+    from django.core.cache import cache
+    from django.utils import timezone
+    
+    if 'pending_2fa_user' not in request.session:
+        return redirect('users:index')
+    
+    username = request.session.get('pending_2fa_user')
+    cooldown_key = f"resend_cooldown_{username}"
+    
+    # Check cooldown
+    last_sent = cache.get(cooldown_key)
+    if last_sent:
+        remaining = 300 - (timezone.now().timestamp() - last_sent)  # 5 minutes = 300 seconds
+        if remaining > 0:
+            minutes = int(remaining // 60)
+            seconds = int(remaining % 60)
+            messages.error(request, f'Please wait {minutes}m {seconds}s before requesting another code.')
+            return redirect('users:verify_otp')
+    
+    try:
+        from .models import Office
+        office = Office.objects.get(username=username)
+        
+        if send_otp(username, office.email):
+            # Set cooldown
+            cache.set(cooldown_key, timezone.now().timestamp(), timeout=300)
+            messages.success(request, 'Verification code sent successfully.')
+        else:
+            messages.error(request, 'Failed to send verification code. Please try again.')
+    except Office.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('users:index')
+    
+    return redirect('users:verify_otp')
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def verify_otp(request):
     from .two_factor import verify_otp as check_otp, trust_device
     
