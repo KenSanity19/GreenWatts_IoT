@@ -129,24 +129,26 @@
           </select>
         </div>
 
-        <table>
-          <tr>
-            <th>Office</th>
-            <th>Energy Usage</th>
-            <th>Cost Estimate</th>
-            <th>CO₂ Emissions</th>
-            <th>Status</th>
-          </tr>
-          {% for item in table_data %}
-          <tr class="{{ item.status_class }}">
-            <td>{{ item.office }}</td>
-            <td>{{ item.energy }}</td>
-            <td>{{ item.cost }}</td>
-            <td>{{ item.co2 }}</td>
-            <td>{{ item.status }}</td>
-          </tr>
-          {% endfor %}
-        </table>
+        <div class="table-wrapper">
+          <table>
+            <tr>
+              <th>Office</th>
+              <th>Energy Usage</th>
+              <th>Cost Estimate</th>
+              <th>CO₂ Emissions</th>
+              <th>Status</th>
+            </tr>
+            {% for item in table_data %}
+            <tr class="{{ item.status_class }}">
+              <td>{{ item.office }}</td>
+              <td>{{ item.energy }}</td>
+              <td>{{ item.cost }}</td>
+              <td>{{ item.co2 }}</td>
+              <td>{{ item.status }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
       </div>
 
       <!-- Charts Section -->
