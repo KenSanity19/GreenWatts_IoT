@@ -1839,23 +1839,9 @@ def send_notification(request):
                 is_global=True
             )
         
-        return redirect('adminpanel:send_notification')
+        return redirect('adminpanel:admin_reports')
     
-    offices = Office.objects.all()
-    
-    # Get notification statistics
-    total_notifications = Notification.objects.count()
-    info_count = Notification.objects.filter(notification_type='info').count()
-    warning_alert_count = Notification.objects.filter(notification_type__in=['warning', 'alert']).count()
-    
-    context = {
-        'offices': offices,
-        'total_notifications': total_notifications,
-        'info_count': info_count,
-        'warning_alert_count': warning_alert_count,
-    }
-    
-    return render(request, 'send_notification.html', context)
+    return redirect('adminpanel:admin_reports')
 
 def admin_logout(request):
     request.session.flush()  # Clear the session

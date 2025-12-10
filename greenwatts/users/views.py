@@ -9,6 +9,13 @@ from ..adminpanel.utils import get_scaled_thresholds
 from ..sensors.models import EnergyRecord
 import csv
 
+def get_unread_notifications_count(office):
+    """Helper function to get unread notifications count for an office"""
+    return Notification.objects.filter(
+        models.Q(target_office=office) | models.Q(is_global=True),
+        is_read=False
+    ).count()
+
 def get_base_thresholds():
     """Get base (daily) threshold values"""
     energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
@@ -91,6 +98,23 @@ def dashboard(request):
 
     office = request.user
     devices = office.devices.all()
+    
+    # Get unread notifications count and notifications data
+    unread_notifications_count = get_unread_notifications_count(office)
+    
+    # Get notifications for modal
+    admin_notifications = Notification.objects.filter(
+        models.Q(target_office=office) | models.Q(is_global=True)
+    ).order_by('-created_at')[:10]
+    
+    notifications = []
+    for notif in admin_notifications:
+        notifications.append({
+            'title': notif.title,
+            'message': notif.message,
+            'type': notif.notification_type,
+            'timestamp': notif.created_at
+        })
     
 
     
@@ -330,6 +354,8 @@ def dashboard(request):
         'month_so_far_co2': f"{month_so_far_co2:.2f}",
         'predicted_co2': f"{predicted_co2:.2f}",
         'progress_percentage': f"{progress_percentage:.1f}",
+        'unread_notifications_count': unread_notifications_count,
+        'notifications': notifications,
     }
 
     return render(request, 'users/dashboard.html', context)
@@ -339,10 +365,19 @@ def dashboard(request):
 def notifications(request):
     office = request.user
     
+    # Get unread notifications count before marking as read
+    unread_notifications_count = get_unread_notifications_count(office)
+    
     # Get admin notifications for this office
     admin_notifications = Notification.objects.filter(
         models.Q(target_office=office) | models.Q(is_global=True)
     ).order_by('-created_at')[:10]
+    
+    # Mark notifications as read when user visits notifications page
+    Notification.objects.filter(
+        models.Q(target_office=office) | models.Q(is_global=True),
+        is_read=False
+    ).update(is_read=True)
     
     # Convert to list format
     notifications = []
@@ -356,7 +391,8 @@ def notifications(request):
     
     context = {
         'office': office,
-        'notifications': notifications
+        'notifications': notifications,
+        'unread_notifications_count': 0  # Set to 0 since we just marked all as read
     }
     
     return render(request, 'users/notifications.html', context)
@@ -374,6 +410,9 @@ def office_usage(request):
 
     office = request.user
     devices = office.devices.all()
+    
+    # Get unread notifications count
+    unread_notifications_count = get_unread_notifications_count(office)
     
     # Get selected day, month, year, week from request
     selected_day = request.GET.get('selected_day')
@@ -708,6 +747,7 @@ def office_usage(request):
         'chart_data': json.dumps(chart_data),
         'pie_chart_labels': json.dumps(pie_chart_labels),
         'pie_chart_data': json.dumps(pie_chart_data),
+        'unread_notifications_count': unread_notifications_count,
     }
     return render(request, 'users/userUsage.html', context)
 
@@ -724,6 +764,9 @@ def user_reports(request):
 
     office = request.user
     devices = office.devices.all()
+    
+    # Get unread notifications count
+    unread_notifications_count = get_unread_notifications_count(office)
 
     # Get selected day, month, year, week from request
     selected_day = request.GET.get('selected_day')
@@ -1096,6 +1139,7 @@ def user_reports(request):
         'calendar_month': calendar_month,
         'energy_efficient_max': energy_efficient_max,
         'energy_moderate_max': energy_moderate_max,
+        'unread_notifications_count': unread_notifications_count,
     }
     return render(request, 'users/userReports.html', context)
 
@@ -1115,6 +1159,9 @@ def user_energy_cost(request):
 
     office = request.user
     devices = office.devices.all()
+    
+    # Get unread notifications count
+    unread_notifications_count = get_unread_notifications_count(office)
     
     # Get selected day, month, year, week from request
     selected_day = request.GET.get('selected_day')
@@ -1481,6 +1528,7 @@ def user_energy_cost(request):
         'savings': f"₱{savings:.2f}",
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
+        'unread_notifications_count': unread_notifications_count,
     }
     return render(request, 'users/userEnergyCost.html', context)
 
@@ -1499,6 +1547,9 @@ def user_emmision(request):
 
     office = request.user
     devices = office.devices.all()
+    
+    # Get unread notifications count
+    unread_notifications_count = get_unread_notifications_count(office)
 
     # Get selected day, month, year, week from request
     selected_day = request.GET.get('selected_day')
@@ -1831,6 +1882,7 @@ def user_emmision(request):
         'week_data': json.dumps(week_data),
         'threshold': threshold_value,
         'co2_efficient_max': base_thresholds['co2_efficient_max'],
+        'unread_notifications_count': unread_notifications_count,
     }
     return render(request, 'users/userEmmision.html', context)
 
@@ -1967,6 +2019,18 @@ def get_user_days(request):
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
+@login_required
+def mark_notifications_read(request):
+    if request.method == 'POST':
+        office = request.user
+        Notification.objects.filter(
+            models.Q(target_office=office) | models.Q(is_global=True),
+            is_read=False
+        ).update(is_read=True)
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'})
 
 @login_required
 def get_user_weeks(request):
