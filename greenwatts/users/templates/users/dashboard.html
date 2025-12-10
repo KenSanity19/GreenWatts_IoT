@@ -94,7 +94,7 @@
         <button id="notificationsBtn">
           <i class="fas fa-bell"></i> Notifications
           {% if unread_notifications_count > 0 %}
-            <span class="notification-badge">{{ unread_notifications_count }}</span>
+            <span class="notification-indicator">!</span>
           {% endif %}
         </button>
       </div>
@@ -409,10 +409,14 @@
       notificationsBtn.addEventListener('click', function() {
         notificationsModal.style.display = 'block';
         // Mark notifications as read
-        fetch('/mark-notifications-read/', { method: 'POST', headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value } });
-        // Hide badge
-        const badge = document.querySelector('.notification-badge');
-        if (badge) badge.style.display = 'none';
+        fetch('/mark-notifications-read/', { method: 'POST', headers: { 'X-CSrfToken': document.querySelector('[name=csrfmiddlewaretoken]').value } });
+        // Hide indicator and mark notifications as read visually
+        const indicator = document.querySelector('.notification-indicator');
+        if (indicator) indicator.style.display = 'none';
+        // Add read class to all notification items
+        document.querySelectorAll('.notification-item').forEach(item => {
+          item.classList.add('read');
+        });
       });
 
       closeBtn.addEventListener('click', function() {

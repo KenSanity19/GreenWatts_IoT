@@ -440,6 +440,13 @@ span.green-text {
   cursor: pointer;
   position: relative;
   font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+#notificationsBtn:hover {
+  background: #0f0f2a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 .notification-badge {
@@ -456,6 +463,35 @@ span.green-text {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.notification-indicator {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: #dc3545;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .custom-container {
@@ -515,6 +551,113 @@ span.green-text {
   margin-bottom: 10px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: relative;
+  animation: slideIn 0.3s ease-out;
+}
+
+.notification-item:not(.read) {
+  background: #0b1444;
+  color: white;
+  border: 2px solid #ffc107;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+.notifications-list .notification-item:first-child:not(.read) {
+  background: #28a745 !important;
+  border: 3px solid #20c997 !important;
+  box-shadow: 0 8px 25px rgba(40, 167, 69, 0.5) !important;
+  transform: scale(1.02) !important;
+}
+
+.notifications-list .notification-item:first-child:not(.read)::after {
+  content: '🔥 LATEST';
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  background: #dc3545;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 12px;
+  animation: pulse-latest 1.5s infinite;
+}
+
+@keyframes pulse-latest {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.notification-item:not(.read) .notification-text h4 {
+  color: white;
+}
+
+.notification-item:not(.read) .notification-text p {
+  color: #e0e0e0;
+}
+
+.notification-item:not(.read) .notification-text small {
+  color: #b0b0b0;
+}
+
+.notification-item:not(.read)::before {
+  content: 'NEW';
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  background: #dc3545;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  animation: bounce 1s infinite;
+}
+
+.notification-item.read {
+  background: #f5f5f5;
+  opacity: 0.8;
+}
+
+.notification-item.read .notification-text h4 {
+  color: #6c757d;
+}
+
+.notification-item.read .notification-text p {
+  color: #adb5bd;
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+  }
+  to {
+    box-shadow: 0 6px 20px rgba(255, 193, 7, 0.6);
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .notification-item.alert {
@@ -592,6 +735,14 @@ span.green-text {
   margin: 0;
 }
 
+/* Responsive Styles */
+@media (max-width: 1200px) {
+  .modal-content {
+    width: 90%;
+    margin: 3% auto;
+  }
+}
+
 @media (max-width: 900px) {
   .filters {
     flex-wrap: wrap;
@@ -601,6 +752,41 @@ span.green-text {
   .filters select {
     min-width: 100px;
     flex: 1;
+  }
+
+  #notificationsBtn {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .notification-badge,
+  .notification-indicator {
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+
+  .modal-content {
+    width: 95%;
+    margin: 2% auto;
+    padding: 15px;
+    max-height: 90vh;
+  }
+
+  .modal-header h2 {
+    font-size: 18px;
+  }
+
+  .notification-item {
+    padding: 12px;
+  }
+
+  .notification-text h4 {
+    font-size: 14px;
+  }
+
+  .notification-text p {
+    font-size: 13px;
   }
 
   .report-cards {
@@ -660,5 +846,92 @@ span.green-text {
 
   .info-item {
     flex: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters > div:first-child {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #notificationsBtn {
+    padding: 10px;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .modal-content {
+    width: 98%;
+    margin: 1% auto;
+    padding: 10px;
+    border-radius: 4px;
+  }
+
+  .modal-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .close {
+    align-self: flex-end;
+    font-size: 24px;
+  }
+
+  .notification-item {
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .notification-content {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .notification-icon {
+    margin-left: 0;
+    align-self: flex-start;
+  }
+
+  .notifications-list .notification-item:first-child:not(.read)::after {
+    font-size: 9px;
+    padding: 2px 4px;
+  }
+}
+
+@media (max-width: 400px) {
+  .modal-content {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .modal-header h2 {
+    font-size: 16px;
+  }
+
+  .notification-text h4 {
+    font-size: 13px;
+  }
+
+  .notification-text p {
+    font-size: 12px;
+  }
+
+  .notification-text small {
+    font-size: 11px;
+  }
+
+  #notificationsBtn {
+    font-size: 12px;
+    padding: 8px;
   }
 }
