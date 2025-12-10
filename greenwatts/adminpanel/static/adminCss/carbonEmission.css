@@ -227,6 +227,21 @@ span#live-time {
 }
 
 @media (max-width: 768px) {
+    .filters {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: stretch;
+    }
+    
+    .filters select {
+        min-width: 75px;
+        flex: 1;
+        width: auto;
+        padding: 8px 25px 8px 10px;
+        font-size: 12px;
+    }
+    
     .report-cards {
         flex-direction: column;
         gap: 10px;

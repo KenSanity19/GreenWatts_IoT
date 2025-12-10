@@ -45,6 +45,11 @@ header h1 {
   color: #fff;
 }
 
+.office-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .office-header {
   display: flex;
   justify-content: space-between;
@@ -332,7 +337,6 @@ footer .tip span {
 /* Table wrapper */
 .table-wrapper {
   background-color: #1e1f47;
-  padding: 0px 20px 20px 20px;
   border-radius: 8px;
   color: #eee;
 }
@@ -368,6 +372,11 @@ footer .tip span {
 
 .device-header button.add-device-btn:hover {
   background-color: #009400;
+}
+
+.device-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Device table */
@@ -748,7 +757,11 @@ button.deactivate-device-btn:hover {
 @media (max-width: 768px) {
   .office-section {
     padding: 15px;
+  }
+  
+  .office-table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .office-table {
@@ -790,7 +803,11 @@ button.deactivate-device-btn:hover {
   
   .device-section .table-wrapper {
     padding: 15px;
+  }
+  
+  .device-table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .device-table {
