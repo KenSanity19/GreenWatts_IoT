@@ -1,12 +1,5 @@
 /*
- * ESP32 PZEM-004T Energy Meter to Supabase (With Offline Queue)
- * ESP32 PZEM-004T Energy Meter to Supabase
- *
- * Hardware Connections:
- * PZEM-004T RX -> ESP32 GPIO 16 (RX2)
- * PZEM-004T TX -> ESP32 GPIO 17 (TX2)
- * PZEM-004T GND -> ESP32 GND
- * PZEM-004T VCC -> 5V Power Supply
+ * ESP32 PZEM-004T Energy Meter to Supabase (Daily Upload at 1:00 PM)
  */
 
 #include <WiFi.h>
@@ -37,16 +30,18 @@ PZEM004Tv30 pzem(pzemSerial, PZEM_RX, PZEM_TX);
 const unsigned long READ_INTERVAL = 60000; // 1 minute
 unsigned long lastReadTime = 0;
 
+// ------------------ DAILY UPLOAD FLAG ------------------
+bool uploadedToday = false;
+
 // ------------------ Accumulators ------------------
-float totalEnergy = 0;
-float peakPower = 0;
-float totalCarbon = 0;
-float totalCost = 0;
-bool sentToday = false;
+float totalEnergy = 0; // kWh
+float peakPower = 0;   // W
+float totalCarbon = 0; // kg
+float totalCost = 0;   // PHP
 
 // ------------------ NTP Settings ------------------
 const char *ntpServer = "pool.ntp.org";
-const long gmtOffset_sec = 28800;
+const long gmtOffset_sec = 28800; // UTC+8
 const int daylightOffset_sec = 0;
 
 // =========================================================
@@ -57,10 +52,8 @@ void ensureWiFiConnected()
   if (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("WiFi lost! Reconnecting...");
-
     WiFi.disconnect();
     WiFi.begin(ssid, password);
-
     int retries = 0;
     while (WiFi.status() != WL_CONNECTED && retries < 20)
     {
@@ -68,15 +61,7 @@ void ensureWiFiConnected()
       Serial.print(".");
       retries++;
     }
-
-    if (WiFi.status() == WL_CONNECTED)
-    {
-      Serial.println("\nWiFi reconnected!");
-    }
-    else
-    {
-      Serial.println("\nWiFi reconnect failed!");
-    }
+    Serial.println(WiFi.status() == WL_CONNECTED ? "\nWiFi reconnected!" : "\nWiFi reconnect failed!");
   }
 }
 
@@ -99,7 +84,7 @@ void syncTime()
 }
 
 // =========================================================
-// SAVE FAILED PAYLOAD TO QUEUE (SPIFFS)
+// SAVE FAILED PAYLOAD (SPIFFS)
 // =========================================================
 void saveToQueue(String payload)
 {
@@ -115,7 +100,7 @@ void saveToQueue(String payload)
 }
 
 // =========================================================
-// RESEND QUEUED DATA
+// RESEND QUEUE
 // =========================================================
 void resendQueue()
 {
@@ -168,27 +153,26 @@ void resendQueue()
     SPIFFS.remove("/queue.txt");
     Serial.println("Queue cleared.");
   }
-  else
-  {
-    Serial.println("Keeping remaining data in queue.");
-  }
 }
 
 // =========================================================
-// SEND TO SUPABASE (WITH DEBUG + FAIL QUEUE)
+// SEND TO SUPABASE
 // =========================================================
 void sendToSupabase(float energy_kwh, float peak_power_w, float carbon_kg, float cost_php)
 {
-  // Get timestamp
+
   struct tm timeinfo;
   time_t now = time(nullptr);
+
+  // Use yesterday’s date
+  now -= 24 * 60 * 60;
   localtime_r(&now, &timeinfo);
+
   char buf[25];
   strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
 
-  // Build JSON payload
   String payload = "{";
-  payload += "\"date\":\"" + String(buf) + "\","; 
+  payload += "\"date\":\"" + String(buf) + "\",";
   payload += "\"total_energy_kwh\":" + String(energy_kwh, 3) + ",";
   payload += "\"peak_power_w\":" + String(peak_power_w, 2) + ",";
   payload += "\"carbon_emission_kgco2\":" + String(carbon_kg, 3) + ",";
@@ -196,20 +180,16 @@ void sendToSupabase(float energy_kwh, float peak_power_w, float carbon_kg, float
   payload += "\"device_id\":\"" + String(deviceId) + "\"";
   payload += "}";
 
-  // Debug print
   Serial.println("\n=== JSON Payload ===");
   Serial.println(payload);
-  Serial.println("====================");
 
-  // If WiFi is down → save to queue
   if (WiFi.status() != WL_CONNECTED)
   {
-    Serial.println("WiFi is offline — saving data to queue.");
+    Serial.println("WiFi offline — saving to queue.");
     saveToQueue(payload);
     return;
   }
 
-  // Send to Supabase
   HTTPClient http;
   http.begin(supabaseUrl);
   http.addHeader("Content-Type", "application/json");
@@ -217,13 +197,11 @@ void sendToSupabase(float energy_kwh, float peak_power_w, float carbon_kg, float
   http.addHeader("Authorization", String("Bearer ") + supabaseApiKey);
 
   int httpCode = http.POST(payload);
-
   Serial.print("Supabase HTTP Response: ");
   Serial.println(httpCode);
 
   if (httpCode != 201)
   {
-    Serial.println("Send failed — saving to queue.");
     saveToQueue(payload);
   }
   else
@@ -241,33 +219,25 @@ void setup()
 {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("ESP32 PZEM-004T Energy Meter -> Supabase with Offline Queue");
 
-  // Init SPIFFS
   if (!SPIFFS.begin(true))
-  {
     Serial.println("SPIFFS Mount Failed!");
-  }
 
-  // Init PZEM serial
   pzemSerial.begin(PZEM_BAUD, SERIAL_8N1, PZEM_RX, PZEM_TX);
 
-  // Connect WiFi
-  Serial.print("Connecting to WiFi");
   WiFi.begin(ssid, password);
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
 
+  Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWiFi connected! IP: " + WiFi.localIP().toString());
+  Serial.println("\nWiFi Connected!");
 
   syncTime();
-
-  // Try resending old data on boot
   resendQueue();
 }
 
@@ -280,71 +250,79 @@ void loop()
 
   unsigned long currentMillis = millis();
 
-  // Read PZEM every 1 minute and accumulate data
-if (currentMillis - lastReadTime >= READ_INTERVAL)
-{
-    lastReadTime = currentMillis;
+  // Read PZEM every 1 minute
+  if (currentMillis - lastReadTime >= READ_INTERVAL)
+  {
 
-    static float lastEnergy = 0;
+    // Calculate actual elapsed time
+    unsigned long elapsed = currentMillis - lastReadTime; // in ms
+    lastReadTime = currentMillis;
 
     float voltage = pzem.voltage();
     float current = pzem.current();
     float power = pzem.power();
-    float currentEnergy = pzem.energy() / 1000.0; // kWh (total since first power-up)
 
-    // Calculate only the change since last reading
-    if (currentEnergy >= lastEnergy) {
-        float deltaEnergy = currentEnergy - lastEnergy;
-        totalEnergy += deltaEnergy;
-        totalCarbon += deltaEnergy * 0.475;
-        totalCost += deltaEnergy * 12.0;
+    // ------------------ Updated energy calculation ------------------
+    float deltaEnergy = power * (elapsed / 3600000.0); // W * hours = kWh
+
+    if (deltaEnergy > 0 && deltaEnergy < 1)
+    {
+      totalEnergy += deltaEnergy;
+      totalCarbon += deltaEnergy * 0.475;
+      totalCost += deltaEnergy * 12.0;
     }
 
-    lastEnergy = currentEnergy;
+    if (power > peakPower)
+      peakPower = power;
 
-    if (power > peakPower) peakPower = power;
+    // ------------------ DEBUG PRINT ------------------
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo))
+    {
+      char timeStr[20];
+      strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
+      Serial.print("[");
+      Serial.print(timeStr);
+      Serial.print("] ");
+      Serial.print("Voltage: ");
+      Serial.print(voltage);
+      Serial.print(" V, ");
+      Serial.print("Current: ");
+      Serial.print(current);
+      Serial.print(" A, ");
+      Serial.print("Power: ");
+      Serial.print(power);
+      Serial.println(" W");
+    }
+  }
 
-    // Debug
-    Serial.println("\n--- Accumulated PZEM Reading ---");
-    Serial.print("Voltage: "); Serial.println(voltage);
-    Serial.print("Current: "); Serial.println(current);
-    Serial.print("Power: "); Serial.println(power);
-    Serial.print("Today's Total Energy: "); Serial.println(totalEnergy);
-    Serial.print("Peak Power: "); Serial.println(peakPower);
-}
-
-  // Get current time
+  // Daily upload at exactly 3:00 PM (15:00)
   struct tm timeinfo;
-  if (!getLocalTime(&timeinfo))
+  if (getLocalTime(&timeinfo))
   {
-    delay(1000);
-    return;
+    if (timeinfo.tm_hour == 15 && timeinfo.tm_min == 0)
+    {
+      if (!uploadedToday)
+      {
+        Serial.println("\n--- Sending Daily Summary ---");
+        sendToSupabase(totalEnergy, peakPower, totalCarbon, totalCost);
+
+        totalEnergy = 0;
+        peakPower = 0;
+        totalCarbon = 0;
+        totalCost = 0;
+
+        uploadedToday = true;
+      }
+    }
+    else
+    {
+      uploadedToday = false;
+    }
   }
 
-  // Send daily summary at 12:00 AM
-  if (timeinfo.tm_hour == 0 && timeinfo.tm_min == 0 && !sentToday)
-  {
-    Serial.println("\n--- Sending Daily Summary at 12:00 AM ---");
-    sendToSupabase(totalEnergy, peakPower, totalCarbon, totalCost);
-
-    // Reset accumulators for next day
-    totalEnergy = 0;
-    peakPower = 0;
-    totalCarbon = 0;
-    totalCost = 0;
-
-    sentToday = true;
-  }
-  else if (timeinfo.tm_hour != 0 || timeinfo.tm_min != 0)
-  {
-    sentToday = false; // Reset flag after midnight
-  }
-
-  // Resend queued data if WiFi is connected
   if (WiFi.status() == WL_CONNECTED)
-  {
     resendQueue();
-  }
 
-  delay(1000); // loop every second
+  delay(1000);
 }
