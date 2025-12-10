@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('verify-otp/', views.verify_otp, name='verify_otp'),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('notifications/', views.notifications, name='notifications'),
     path('office-usage/', views.office_usage, name='office_usage'),
     path('user-reports/', views.user_reports, name='user_reports'),
     path('user-energy-cost/', views.user_energy_cost, name='user_energy_cost'),

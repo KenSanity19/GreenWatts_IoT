@@ -335,6 +335,59 @@ def dashboard(request):
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
+def notifications(request):
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    office = request.user
+    devices = office.devices.all()
+    
+    # Generate sample notifications based on recent energy usage
+    notifications = []
+    
+    # Get recent energy data for notifications
+    from ..sensors.models import EnergyRecord
+    from django.db.models import Sum
+    
+    recent_data = EnergyRecord.objects.filter(
+        device__in=devices,
+        date__gte=timezone.now().date() - timedelta(days=7)
+    ).aggregate(total_energy=Sum('total_energy_kwh'))['total_energy'] or 0
+    
+    base_thresholds = get_base_thresholds()
+    
+    # Create notifications based on energy usage
+    if recent_data > base_thresholds['energy_moderate_max'] * 7:  # Weekly threshold
+        notifications.append({
+            'title': 'High Energy Usage Alert',
+            'message': f'Your office has consumed {recent_data:.2f} kWh this week, exceeding the recommended threshold.',
+            'type': 'high',
+            'timestamp': timezone.now()
+        })
+    elif recent_data > base_thresholds['energy_efficient_max'] * 7:
+        notifications.append({
+            'title': 'Moderate Energy Usage',
+            'message': f'Your office energy usage is at {recent_data:.2f} kWh this week. Consider energy-saving measures.',
+            'type': 'moderate',
+            'timestamp': timezone.now()
+        })
+    else:
+        notifications.append({
+            'title': 'Efficient Energy Usage',
+            'message': f'Great job! Your office is using energy efficiently at {recent_data:.2f} kWh this week.',
+            'type': 'info',
+            'timestamp': timezone.now()
+        })
+    
+    context = {
+        'office': office,
+        'notifications': notifications
+    }
+    
+    return render(request, 'users/notifications.html', context)
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@login_required
 def office_usage(request):
     from django.db.models import Sum, F, Max
     from django.db.models.functions import ExtractYear, ExtractMonth
