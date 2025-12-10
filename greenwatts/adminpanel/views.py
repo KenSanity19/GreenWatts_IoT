@@ -1839,7 +1839,6 @@ def send_notification(request):
                 is_global=True
             )
         
-        messages.success(request, 'Notification sent successfully!')
         return redirect('adminpanel:send_notification')
     
     offices = Office.objects.all()

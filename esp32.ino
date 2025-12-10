@@ -29,6 +29,7 @@ PZEM004Tv30 pzem(pzemSerial, PZEM_RX, PZEM_TX);
 // ------------------ Reading Interval ------------------
 const unsigned long READ_INTERVAL = 60000; // 1 minute
 unsigned long lastReadTime = 0;
+unsigned long lastValidReadTime = 0;
 
 // ------------------ DAILY UPLOAD FLAG ------------------
 bool uploadedToday = false;
@@ -38,6 +39,13 @@ float totalEnergy = 0; // kWh
 float peakPower = 0;   // W
 float totalCarbon = 0; // kg
 float totalCost = 0;   // PHP
+
+// ------------------ Power Outage Handling ------------------
+bool deviceWasReset = true;
+float storedEnergy = 0;
+float storedCarbon = 0;
+float storedCost = 0;
+float storedPeakPower = 0;
 
 // ------------------ NTP Settings ------------------
 const char *ntpServer = "pool.ntp.org";
@@ -84,6 +92,33 @@ void syncTime()
 }
 
 // =========================================================
+// SAVE/LOAD ACCUMULATED DATA (SPIFFS)
+// =========================================================
+void saveAccumulatedData()
+{
+  File f = SPIFFS.open("/accumulated.txt", FILE_WRITE);
+  if (!f) return;
+  f.println(String(totalEnergy, 6));
+  f.println(String(peakPower, 2));
+  f.println(String(totalCarbon, 6));
+  f.println(String(totalCost, 2));
+  f.close();
+}
+
+void loadAccumulatedData()
+{
+  if (!SPIFFS.exists("/accumulated.txt")) return;
+  File f = SPIFFS.open("/accumulated.txt", FILE_READ);
+  if (!f) return;
+  if (f.available()) totalEnergy = f.readStringUntil('\n').toFloat();
+  if (f.available()) peakPower = f.readStringUntil('\n').toFloat();
+  if (f.available()) totalCarbon = f.readStringUntil('\n').toFloat();
+  if (f.available()) totalCost = f.readStringUntil('\n').toFloat();
+  f.close();
+  Serial.println("Restored accumulated data from storage.");
+}
+
+// =========================================================
 // SAVE FAILED PAYLOAD (SPIFFS)
 // =========================================================
 void saveToQueue(String payload)
@@ -104,29 +139,31 @@ void saveToQueue(String payload)
 // =========================================================
 void resendQueue()
 {
-  if (!SPIFFS.exists("/queue.txt"))
+  if (!SPIFFS.exists("/queue.txt") || WiFi.status() != WL_CONNECTED)
     return;
 
   File f = SPIFFS.open("/queue.txt", FILE_READ);
-  if (!f)
-    return;
+  if (!f) return;
 
   Serial.println("\nTrying to resend queued data...");
-
+  String allLines = "";
+  String tempLines = "";
+  
   HTTPClient http;
   http.begin(supabaseUrl);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("apikey", supabaseApiKey);
   http.addHeader("Authorization", String("Bearer ") + supabaseApiKey);
-
-  bool allSuccess = true;
+  http.setTimeout(10000);
 
   while (f.available())
   {
     String line = f.readStringUntil('\n');
-    if (line.length() < 5)
-      continue;
-
+    line.trim();
+    if (line.length() < 5) continue;
+    
+    allLines += line + "\n";
+    
     Serial.print("Re-sending: ");
     Serial.println(line);
 
@@ -140,18 +177,28 @@ void resendQueue()
     {
       Serial.print("Failed again: ");
       Serial.println(code);
-      allSuccess = false;
-      break;
+      tempLines += line + "\n";
     }
+    delay(100);
   }
 
   f.close();
   http.end();
 
-  if (allSuccess)
+  // Rewrite queue with only failed items
+  SPIFFS.remove("/queue.txt");
+  if (tempLines.length() > 0)
   {
-    SPIFFS.remove("/queue.txt");
-    Serial.println("Queue cleared.");
+    File newF = SPIFFS.open("/queue.txt", FILE_WRITE);
+    if (newF)
+    {
+      newF.print(tempLines);
+      newF.close();
+    }
+  }
+  else
+  {
+    Serial.println("All queued data sent successfully!");
   }
 }
 
@@ -238,6 +285,11 @@ void setup()
   Serial.println("\nWiFi Connected!");
 
   syncTime();
+  
+  // Load accumulated data if device was reset
+  loadAccumulatedData();
+  deviceWasReset = false;
+  
   resendQueue();
 }
 
@@ -253,65 +305,83 @@ void loop()
   // Read PZEM every 1 minute
   if (currentMillis - lastReadTime >= READ_INTERVAL)
   {
-
-    // Calculate actual elapsed time
-    unsigned long elapsed = currentMillis - lastReadTime; // in ms
-    lastReadTime = currentMillis;
-
     float voltage = pzem.voltage();
     float current = pzem.current();
     float power = pzem.power();
 
-    // ------------------ Updated energy calculation ------------------
-    float deltaEnergy = power * (elapsed / 3600000.0); // W * hours = kWh
-
-    if (deltaEnergy > 0 && deltaEnergy < 1)
+    // Only process valid readings
+    if (!isnan(voltage) && !isnan(current) && !isnan(power) && voltage > 0)
     {
-      totalEnergy += deltaEnergy;
-      totalCarbon += deltaEnergy * 0.475;
-      totalCost += deltaEnergy * 12.0;
+      // Calculate energy based on actual time elapsed (corrected calculation)
+      unsigned long elapsed = (lastValidReadTime > 0) ? (currentMillis - lastValidReadTime) : READ_INTERVAL;
+      float deltaEnergy = (power * elapsed) / 3600000.0; // W * ms / (1000*3600) = kWh
+
+      if (deltaEnergy > 0 && deltaEnergy < 10) // Reasonable bounds check
+      {
+        totalEnergy += deltaEnergy;
+        totalCarbon += deltaEnergy * 0.475; // Philippines grid factor
+        totalCost += deltaEnergy * 12.0;    // PHP per kWh
+      }
+
+      if (power > peakPower)
+        peakPower = power;
+
+      lastValidReadTime = currentMillis;
+      
+      // Save accumulated data every 10 readings (10 minutes)
+      static int readingCount = 0;
+      if (++readingCount >= 10)
+      {
+        saveAccumulatedData();
+        readingCount = 0;
+      }
+
+      // ------------------ DEBUG PRINT ------------------
+      struct tm timeinfo;
+      if (getLocalTime(&timeinfo))
+      {
+        char timeStr[20];
+        strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
+        Serial.print("[");
+        Serial.print(timeStr);
+        Serial.print("] V:");
+        Serial.print(voltage, 1);
+        Serial.print("V I:");
+        Serial.print(current, 3);
+        Serial.print("A P:");
+        Serial.print(power, 1);
+        Serial.print("W E:");
+        Serial.print(totalEnergy, 4);
+        Serial.println("kWh");
+      }
     }
-
-    if (power > peakPower)
-      peakPower = power;
-
-    // ------------------ DEBUG PRINT ------------------
-    struct tm timeinfo;
-    if (getLocalTime(&timeinfo))
+    else
     {
-      char timeStr[20];
-      strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
-      Serial.print("[");
-      Serial.print(timeStr);
-      Serial.print("] ");
-      Serial.print("Voltage: ");
-      Serial.print(voltage);
-      Serial.print(" V, ");
-      Serial.print("Current: ");
-      Serial.print(current);
-      Serial.print(" A, ");
-      Serial.print("Power: ");
-      Serial.print(power);
-      Serial.println(" W");
+      Serial.println("Invalid PZEM reading - skipping");
     }
+    
+    lastReadTime = currentMillis;
   }
 
-  // Daily upload at exactly 3:00 PM (15:00)
+  // Daily upload at exactly 12:00 AM (00:00)
   struct tm timeinfo;
   if (getLocalTime(&timeinfo))
   {
-    if (timeinfo.tm_hour == 15 && timeinfo.tm_min == 0)
+    if (timeinfo.tm_hour == 0 && timeinfo.tm_min == 0)
     {
       if (!uploadedToday)
       {
         Serial.println("\n--- Sending Daily Summary ---");
         sendToSupabase(totalEnergy, peakPower, totalCarbon, totalCost);
 
+        // Reset accumulators
         totalEnergy = 0;
         peakPower = 0;
         totalCarbon = 0;
         totalCost = 0;
-
+        
+        // Clear stored data
+        SPIFFS.remove("/accumulated.txt");
         uploadedToday = true;
       }
     }
@@ -321,8 +391,13 @@ void loop()
     }
   }
 
-  if (WiFi.status() == WL_CONNECTED)
+  // Try to resend queue if WiFi is connected
+  static unsigned long lastQueueCheck = 0;
+  if (WiFi.status() == WL_CONNECTED && (currentMillis - lastQueueCheck > 30000))
+  {
     resendQueue();
+    lastQueueCheck = currentMillis;
+  }
 
   delay(1000);
 }
