@@ -918,6 +918,7 @@ def admin_reports(request):
         'selected_year': selected_year,
         'random_energy_tip': get_random_energy_tip(),
         'recommendation': recommendation,
+        'offices': Office.objects.all(),
     }
     return render(request, 'adminReports.html', context)
 

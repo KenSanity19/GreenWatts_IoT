@@ -3,6 +3,7 @@
 /* Main Content */
 header h1 {
   margin: 0;
+  margin-bottom: 0;
   font-size: var(--font-size-xl);
 }
 

@@ -117,7 +117,10 @@
           {% endfor %}
         </select>
 
-        <button class="export-btn" id="export-btn"><i class="fas fa-download"></i> Export</button>
+        <div class="button-group">
+          <button class="notification-btn" id="notification-btn"><i class="fas fa-bell"></i> Send Notification</button>
+          <button class="export-btn" id="export-btn"><i class="fas fa-download"></i> Export</button>
+        </div>
       </div>
 
       <!-- Top Report Cards -->
@@ -181,6 +184,48 @@
         </div>
       </div>
     
+    </div>
+
+    <!-- Send Notification Modal -->
+    <div id="notificationModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Send Notification</h2>
+          <span class="close">&times;</span>
+        </div>
+        <form method="post" action="{% url 'adminpanel:send_notification' %}" class="notification-form">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>Title:</label>
+            <input type="text" name="title" required />
+          </div>
+          <div class="form-group">
+            <label>Message:</label>
+            <textarea name="message" required rows="4"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Type:</label>
+            <select name="notification_type">
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="alert">Alert</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Target:</label>
+            <select name="target_office">
+              <option value="">All Offices</option>
+              {% for office in offices %}
+              <option value="{{ office.office_id }}">{{ office.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" class="cancel-btn">Cancel</button>
+            <button type="submit" class="submit-btn">Send Notification</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- Chart Script -->
@@ -506,9 +551,37 @@
             window.open(exportUrl, '_blank');
           });
         }
+        
+        // Modal functionality
+        const modal = document.getElementById('notificationModal');
+        const notificationBtn = document.getElementById('notification-btn');
+        const closeBtn = document.querySelector('.close');
+        const cancelBtn = document.querySelector('.cancel-btn');
+        
+        if (notificationBtn) {
+          notificationBtn.addEventListener('click', function() {
+            modal.style.display = 'block';
+          });
+        }
+        
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+          });
+        }
+        
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+          });
+        }
+        
+        window.addEventListener('click', function(event) {
+          if (event.target === modal) {
+            modal.style.display = 'none';
+          }
+        });
       });
     </script>
-  </body>
-</html>
   </body>
 </html>
