@@ -856,7 +856,6 @@ span.green-text {
   }
 
   .filters > div:first-child {
-    flex-direction: column;
     gap: 10px;
   }
 
