@@ -3,7 +3,8 @@ from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.http import HttpResponse, JsonResponse
-from ..adminpanel.models import EnergyThreshold, CO2Threshold
+from django.db import models
+from ..adminpanel.models import EnergyThreshold, CO2Threshold, Notification
 from ..adminpanel.utils import get_scaled_thresholds
 from ..sensors.models import EnergyRecord
 import csv
@@ -336,47 +337,21 @@ def dashboard(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @login_required
 def notifications(request):
-    from django.utils import timezone
-    from datetime import timedelta
-    
     office = request.user
-    devices = office.devices.all()
     
-    # Generate sample notifications based on recent energy usage
+    # Get admin notifications for this office
+    admin_notifications = Notification.objects.filter(
+        models.Q(target_office=office) | models.Q(is_global=True)
+    ).order_by('-created_at')[:10]
+    
+    # Convert to list format
     notifications = []
-    
-    # Get recent energy data for notifications
-    from ..sensors.models import EnergyRecord
-    from django.db.models import Sum
-    
-    recent_data = EnergyRecord.objects.filter(
-        device__in=devices,
-        date__gte=timezone.now().date() - timedelta(days=7)
-    ).aggregate(total_energy=Sum('total_energy_kwh'))['total_energy'] or 0
-    
-    base_thresholds = get_base_thresholds()
-    
-    # Create notifications based on energy usage
-    if recent_data > base_thresholds['energy_moderate_max'] * 7:  # Weekly threshold
+    for notif in admin_notifications:
         notifications.append({
-            'title': 'High Energy Usage Alert',
-            'message': f'Your office has consumed {recent_data:.2f} kWh this week, exceeding the recommended threshold.',
-            'type': 'high',
-            'timestamp': timezone.now()
-        })
-    elif recent_data > base_thresholds['energy_efficient_max'] * 7:
-        notifications.append({
-            'title': 'Moderate Energy Usage',
-            'message': f'Your office energy usage is at {recent_data:.2f} kWh this week. Consider energy-saving measures.',
-            'type': 'moderate',
-            'timestamp': timezone.now()
-        })
-    else:
-        notifications.append({
-            'title': 'Efficient Energy Usage',
-            'message': f'Great job! Your office is using energy efficiently at {recent_data:.2f} kWh this week.',
-            'type': 'info',
-            'timestamp': timezone.now()
+            'title': notif.title,
+            'message': notif.message,
+            'type': notif.notification_type,
+            'timestamp': notif.created_at
         })
     
     context = {

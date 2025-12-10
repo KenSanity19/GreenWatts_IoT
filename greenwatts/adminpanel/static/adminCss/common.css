@@ -86,6 +86,22 @@ body {
   transition: margin-left 0.3s ease;
 }
 
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.date-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
 .sidebar-toggle {
   display: none;
   background: var(--bg-sidebar);

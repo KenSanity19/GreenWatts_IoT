@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.views.decorators.cache import cache_control
 from functools import wraps
-from .models import Admin, EnergyThreshold, CO2Threshold
+from .models import Admin, EnergyThreshold, CO2Threshold, Notification
 from greenwatts.users.models import Office
 from ..sensors.models import Device
 from ..sensors.models import EnergyRecord
@@ -1812,6 +1812,50 @@ def export_reports(request):
         ])
     
     return response
+
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def send_notification(request):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        notification_type = request.POST.get('notification_type')
+        target_office_id = request.POST.get('target_office')
+        
+        if target_office_id:
+            target_office = Office.objects.get(office_id=target_office_id)
+            Notification.objects.create(
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                target_office=target_office
+            )
+        else:
+            Notification.objects.create(
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                is_global=True
+            )
+        
+        messages.success(request, 'Notification sent successfully!')
+        return redirect('adminpanel:send_notification')
+    
+    offices = Office.objects.all()
+    
+    # Get notification statistics
+    total_notifications = Notification.objects.count()
+    info_count = Notification.objects.filter(notification_type='info').count()
+    warning_alert_count = Notification.objects.filter(notification_type__in=['warning', 'alert']).count()
+    
+    context = {
+        'offices': offices,
+        'total_notifications': total_notifications,
+        'info_count': info_count,
+        'warning_alert_count': warning_alert_count,
+    }
+    
+    return render(request, 'send_notification.html', context)
 
 def admin_logout(request):
     request.session.flush()  # Clear the session

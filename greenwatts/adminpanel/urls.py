@@ -6,6 +6,7 @@ app_name = 'adminpanel'
 urlpatterns = [
     path('adminLogin/', views.admin_login, name='admin_login'),
     path('adminSetting/', views.admin_setting, name='admin_setting'),
+    path('send-notification/', views.send_notification, name='send_notification'),
     path('dashboard/', views.admin_dashboard, name='admin_dashboard'), 
     path('officeUsage/', views.office_usage, name='office_usage'), 
     path('adminReports/', views.admin_reports, name='admin_reports'), 
