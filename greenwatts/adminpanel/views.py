@@ -1588,6 +1588,7 @@ def create_device(request):
             installed_date = data.get("installed_date")
             status = data.get("status")
             office_id = data.get("office_id")
+            appliance_type = data.get("appliance_type")
 
             from greenwatts.users.models import Office
             from ..sensors.models import Device
@@ -1597,7 +1598,8 @@ def create_device(request):
             device = Device(
                 installed_date=installed_date,
                 status=status,
-                office=office
+                office=office,
+                appliance_type=appliance_type
             )
             device.save()
             return JsonResponse({"status": "success", "message": "Device created successfully"})
@@ -1605,6 +1607,45 @@ def create_device(request):
             return JsonResponse({"status": "error", "message": "Office not found"})
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Invalid request method"})
+
+@admin_required
+@csrf_exempt
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def edit_device(request, id):
+    try:
+        device = Device.objects.get(device_id=id)
+    except Device.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Device not found"})
+
+    if request.method == "GET":
+        device_data = {
+            "id": device.device_id,
+            "installed_date": device.installed_date.strftime('%Y-%m-%d') if device.installed_date else '',
+            "status": device.status,
+            "office_id": device.office.office_id if device.office else None,
+            "appliance_type": device.appliance_type
+        }
+        return JsonResponse({"status": "success", "device": device_data})
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            device.installed_date = data.get("installed_date", device.installed_date)
+            device.status = data.get("status", device.status)
+            device.appliance_type = data.get("appliance_type", device.appliance_type)
+            
+            office_id = data.get("office_id")
+            if office_id:
+                from greenwatts.users.models import Office
+                device.office = Office.objects.get(office_id=office_id)
+            
+            device.save()
+            return JsonResponse({"status": "success", "message": "Device updated successfully"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+
     else:
         return JsonResponse({"status": "error", "message": "Invalid request method"})
 

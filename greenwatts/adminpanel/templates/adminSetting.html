@@ -89,7 +89,7 @@
           <span id="live-time"></span>
         </div>
       </header>
-      
+
       <p class="note">
         <span class="red-text">Noted!</span> The data will be captured every
         12:00am midnight
@@ -373,9 +373,83 @@
                     {% endfor %}
                   </select>
                 </div>
+                <div class="form-group">
+                  <label for="appliance_type">Appliance Type</label>
+                  <input
+                    type="text"
+                    id="appliance_type"
+                    name="appliance_type"
+                    required
+                    aria-required="true"
+                  />
+                </div>
                 <button type="submit" class="submit-button">Submit</button>
               </form>
               <div id="deviceFormMessage" role="alert" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <!-- Edit Device Modal -->
+          <div
+            id="editDeviceModal"
+            class="modal"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div class="modal-content">
+              <button
+                id="closeEditDeviceModal"
+                aria-label="Close modal"
+                class="close-button"
+              >
+                &times;
+              </button>
+              <h2>Edit Device</h2>
+              <p>Please update the device details below.</p>
+              <form id="editDeviceForm" novalidate>
+                <input type="hidden" id="editDeviceId" name="id" />
+                <div class="form-group">
+                  <label for="editInstalledDate">Installed Date</label>
+                  <input
+                    type="date"
+                    id="editInstalledDate"
+                    name="installed_date"
+                    required
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="editStatus">Status</label>
+                  <select id="editStatus" name="status" required>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="editOffice">Office</label>
+                  <select id="editOffice" name="office" required>
+                    {% for office in offices %}
+                    <option value="{{ office.office_id }}">
+                      {{ office.name }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="editApplianceType">Appliance Type</label>
+                  <input
+                    type="text"
+                    id="editApplianceType"
+                    name="appliance_type"
+                    required
+                  />
+                </div>
+                <button type="submit" class="submit-button">Update</button>
+              </form>
+              <div
+                id="editDeviceFormMessage"
+                role="alert"
+                aria-live="polite"
+              ></div>
             </div>
           </div>
 
@@ -394,18 +468,22 @@
               <table class="device-table">
                 <thead>
                   <tr>
+                    <th>Device ID</th>
+                    <th>Office</th>
+                    <th>Appliance Type</th>
                     <th>Installed Date</th>
                     <th>Status</th>
-                    <th>Office</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for device in devices %}
                   <tr>
+                    <td>{{ device.device_id }}</td>
+                    <td>{{ device.office.name }}</td>
+                    <td>{{ device.appliance_type }}</td>
                     <td>{{ device.installed_date }}</td>
                     <td>{{ device.status }}</td>
-                    <td>{{ device.office.name }}</td>
                     <td>
                       <button
                         class="edit-device-btn"
@@ -417,7 +495,7 @@
                   </tr>
                   {% empty %}
                   <tr>
-                    <td colspan="4">No devices found.</td>
+                    <td colspan="6">No devices found.</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -429,7 +507,9 @@
           <div class="section-header">
             <h2>SET THRESHOLDS</h2>
             <div class="header-buttons">
-              <button class="text-btn" id="set-threshold-btn">Set Threshold</button>
+              <button class="text-btn" id="set-threshold-btn">
+                Set Threshold
+              </button>
               <button class="text-btn" id="set-ratings-btn">Set Ratings</button>
             </div>
           </div>
@@ -446,7 +526,7 @@
             will be automatically scaled for weekly (×7), monthly (×30), and
             yearly (×365) views.
           </p>
-          <div class="threshold-boxes">
+          <div class="energy-threshold-boxes">
             <div class="threshold-card">
               <h3>Energy Consumption Threshold</h3>
               <p>
@@ -550,23 +630,43 @@
         </section>
 
         <!-- Ratings Section -->
-        <section class="ratings" id="ratings-section" style="display: none;">
+        <section class="ratings" id="ratings-section" style="display: none">
           <div class="section-header">
             <h2>SET RATINGS</h2>
             <div class="header-buttons">
-              <button class="text-btn" id="back-to-threshold-btn">Set Threshold</button>
-              <button class="text-btn active" id="ratings-active-btn">Set Ratings</button>
+              <button class="text-btn" id="back-to-threshold-btn">
+                Set Threshold
+              </button>
+              <button class="text-btn active" id="ratings-active-btn">
+                Set Ratings
+              </button>
             </div>
           </div>
-          <p class="threshold-note" style="color: #bdbdbd; font-size: 0.9em; margin-bottom: 15px; font-style: italic;">
-            <strong>Note:</strong> These ratings are used for calculating energy costs and CO2 emissions.
+          <p
+            class="threshold-note"
+            style="
+              color: #bdbdbd;
+              font-size: 0.9em;
+              margin-bottom: 15px;
+              font-style: italic;
+            "
+          >
+            <strong>Note:</strong> These ratings are used for calculating energy
+            costs and CO2 emissions.
           </p>
           <div class="threshold-boxes">
             <div class="threshold-card">
               <h3>Energy Cost Rating</h3>
               <p>
-                Cost per kWh: 
-                <input type="number" id="cost_per_kwh" step="0.01" readonly value="12.50" /> PHP
+                Cost per kWh:
+                <input
+                  type="number"
+                  id="cost_per_kwh"
+                  step="0.01"
+                  readonly
+                  value="12.50"
+                />
+                PHP
               </p>
               <div class="btn-group">
                 <button class="edit-btn" id="edit-cost-btn">Edit</button>
@@ -578,13 +678,22 @@
             <div class="threshold-card">
               <h3>CO2 Emission Rating</h3>
               <p>
-                CO2 per kWh: 
-                <input type="number" id="co2_per_kwh" step="0.01" readonly value="0.50" /> kg CO2
+                CO2 per kWh:
+                <input
+                  type="number"
+                  id="co2_per_kwh"
+                  step="0.01"
+                  readonly
+                  value="0.50"
+                />
+                kg CO2
               </p>
               <div class="btn-group">
                 <button class="edit-btn" id="edit-emission-btn">Edit</button>
                 <button class="save-btn" id="save-emission-btn">Save</button>
-                <button class="cancel-btn" id="cancel-emission-btn">Cancel</button>
+                <button class="cancel-btn" id="cancel-emission-btn">
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
@@ -596,8 +705,12 @@
         <div class="section-header">
           <h2>HISTORY</h2>
           <div class="header-buttons">
-            <button class="text-btn active" id="threshold-history-btn">Threshold History</button>
-            <button class="text-btn" id="ratings-history-btn">Ratings History</button>
+            <button class="text-btn active" id="threshold-history-btn">
+              Threshold History
+            </button>
+            <button class="text-btn" id="ratings-history-btn">
+              Ratings History
+            </button>
           </div>
         </div>
 
@@ -689,7 +802,11 @@
         </div>
 
         <!-- Ratings History -->
-        <div class="table-wrapper" id="ratings-history-wrapper" style="display: none;">
+        <div
+          class="table-wrapper"
+          id="ratings-history-wrapper"
+          style="display: none"
+        >
           <div class="threshold-tabs">
             <span class="threshold-tab-btn active" data-type="cost"
               >Cost Rating History</span
@@ -723,7 +840,10 @@
             </div>
           </div>
 
-          <div id="emission-history-table" class="threshold-table-content hidden">
+          <div
+            id="emission-history-table"
+            class="threshold-table-content hidden"
+          >
             <div class="threshold-history-table-container">
               <table class="threshold-history-table">
                 <thead>
@@ -775,6 +895,16 @@
       const addDeviceForm = document.getElementById("addDeviceForm");
       const deviceFormMessage = document.getElementById("deviceFormMessage");
 
+      // Edit device modal elements
+      const editDeviceModal = document.getElementById("editDeviceModal");
+      const closeEditDeviceModal = document.getElementById(
+        "closeEditDeviceModal"
+      );
+      const editDeviceForm = document.getElementById("editDeviceForm");
+      const editDeviceFormMessage = document.getElementById(
+        "editDeviceFormMessage"
+      );
+
       // Open office modal on button click
       addBtn.onclick = function () {
         modal.style.display = "block";
@@ -801,6 +931,11 @@
         addDeviceModal.style.display = "none";
       };
 
+      // Close edit device modal on close button click
+      closeEditDeviceModal.onclick = function () {
+        editDeviceModal.style.display = "none";
+      };
+
       // Close modals if user clicks outside modal content
       window.onclick = function (event) {
         if (event.target == modal) {
@@ -811,6 +946,9 @@
         }
         if (event.target == addDeviceModal) {
           addDeviceModal.style.display = "none";
+        }
+        if (event.target == editDeviceModal) {
+          editDeviceModal.style.display = "none";
         }
       };
 
@@ -969,6 +1107,7 @@
           installed_date: addDeviceForm.installed_date.value,
           status: addDeviceForm.status.value,
           office_id: addDeviceForm.office.value,
+          appliance_type: addDeviceForm.appliance_type.value,
         };
 
         try {
@@ -1004,6 +1143,99 @@
           deviceFormMessage.classList.add("error-message");
           deviceFormMessage.classList.remove("success-message");
           deviceFormMessage.innerHTML = "An error occurred. Please try again.";
+        }
+      };
+
+      // Handle edit device button clicks
+      document.querySelectorAll(".edit-device-btn").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const deviceId = button.getAttribute("data-device-id");
+          try {
+            const response = await fetch(
+              `/adminpanel/editDevice/${deviceId}/`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": "{{ csrf_token }}",
+                },
+              }
+            );
+            const result = await response.json();
+            if (result.status === "success") {
+              const device = result.device;
+              document.getElementById("editDeviceId").value = device.id;
+              document.getElementById("editInstalledDate").value =
+                device.installed_date;
+              document.getElementById("editStatus").value = device.status;
+              document.getElementById("editOffice").value = device.office_id;
+              document.getElementById("editApplianceType").value =
+                device.appliance_type || "";
+              editDeviceFormMessage.innerHTML = "";
+              editDeviceFormMessage.classList.remove(
+                "success-message",
+                "error-message"
+              );
+              editDeviceModal.style.display = "block";
+            } else {
+              alert("Failed to fetch device data.");
+            }
+          } catch (error) {
+            alert("An error occurred. Please try again.");
+          }
+        });
+      });
+
+      // Handle edit device form submission
+      editDeviceForm.onsubmit = async function (e) {
+        e.preventDefault();
+        editDeviceFormMessage.innerHTML = "";
+        editDeviceFormMessage.classList.remove(
+          "success-message",
+          "error-message"
+        );
+
+        const deviceId = document.getElementById("editDeviceId").value;
+        const formData = {
+          installed_date: editDeviceForm.installed_date.value,
+          status: editDeviceForm.status.value,
+          office_id: editDeviceForm.office.value,
+          appliance_type: editDeviceForm.appliance_type.value,
+        };
+
+        try {
+          const response = await fetch(`/adminpanel/editDevice/${deviceId}/`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify(formData),
+          });
+          const result = await response.json();
+          if (result.status === "success") {
+            editDeviceFormMessage.classList.add("success-message");
+            editDeviceFormMessage.classList.remove("error-message");
+            editDeviceFormMessage.innerHTML = result.message;
+            setTimeout(() => {
+              editDeviceModal.style.display = "none";
+              editDeviceFormMessage.innerHTML = "";
+              editDeviceFormMessage.classList.remove(
+                "success-message",
+                "error-message"
+              );
+              location.reload();
+            }, 1500);
+          } else {
+            editDeviceFormMessage.classList.add("error-message");
+            editDeviceFormMessage.classList.remove("success-message");
+            editDeviceFormMessage.innerHTML = result.message;
+          }
+        } catch (error) {
+          editDeviceFormMessage.classList.add("error-message");
+          editDeviceFormMessage.classList.remove("success-message");
+          editDeviceFormMessage.innerHTML =
+            "An error occurred. Please try again.";
         }
       };
     </script>
@@ -1273,147 +1505,225 @@
       document.addEventListener("DOMContentLoaded", loadThresholds);
 
       // Section switching functionality
-      document.getElementById("set-threshold-btn").addEventListener("click", function() {
-        document.querySelector(".thresholds").style.display = "block";
-        document.getElementById("ratings-section").style.display = "none";
-        // Update button states
-        document.getElementById("set-threshold-btn").classList.add("active");
-        document.getElementById("set-ratings-btn").classList.remove("active");
-      });
+      document
+        .getElementById("set-threshold-btn")
+        .addEventListener("click", function () {
+          document.querySelector(".thresholds").style.display = "block";
+          document.getElementById("ratings-section").style.display = "none";
+          // Update button states
+          document.getElementById("set-threshold-btn").classList.add("active");
+          document.getElementById("set-ratings-btn").classList.remove("active");
+        });
 
-      document.getElementById("set-ratings-btn").addEventListener("click", function() {
-        document.querySelector(".thresholds").style.display = "none";
-        document.getElementById("ratings-section").style.display = "block";
-        // Update button states
-        document.getElementById("set-ratings-btn").classList.add("active");
-        document.getElementById("set-threshold-btn").classList.remove("active");
-      });
+      document
+        .getElementById("set-ratings-btn")
+        .addEventListener("click", function () {
+          document.querySelector(".thresholds").style.display = "none";
+          document.getElementById("ratings-section").style.display = "block";
+          // Update button states
+          document.getElementById("set-ratings-btn").classList.add("active");
+          document
+            .getElementById("set-threshold-btn")
+            .classList.remove("active");
+        });
 
-      document.getElementById("back-to-threshold-btn").addEventListener("click", function() {
-        document.querySelector(".thresholds").style.display = "block";
-        document.getElementById("ratings-section").style.display = "none";
-        // Update button states
-        document.getElementById("set-threshold-btn").classList.add("active");
-        document.getElementById("set-ratings-btn").classList.remove("active");
-      });
+      document
+        .getElementById("back-to-threshold-btn")
+        .addEventListener("click", function () {
+          document.querySelector(".thresholds").style.display = "block";
+          document.getElementById("ratings-section").style.display = "none";
+          // Update button states
+          document.getElementById("set-threshold-btn").classList.add("active");
+          document.getElementById("set-ratings-btn").classList.remove("active");
+        });
 
       // Cost rating functionality
-      document.getElementById("edit-cost-btn").addEventListener("click", function() {
-        document.getElementById("cost_per_kwh").readOnly = false;
-        document.getElementById("edit-cost-btn").style.display = "none";
-        document.getElementById("save-cost-btn").style.display = "inline-block";
-        document.getElementById("cancel-cost-btn").style.display = "inline-block";
-      });
+      document
+        .getElementById("edit-cost-btn")
+        .addEventListener("click", function () {
+          document.getElementById("cost_per_kwh").readOnly = false;
+          document.getElementById("edit-cost-btn").style.display = "none";
+          document.getElementById("save-cost-btn").style.display =
+            "inline-block";
+          document.getElementById("cancel-cost-btn").style.display =
+            "inline-block";
+        });
 
-      document.getElementById("save-cost-btn").addEventListener("click", function() {
-        const costValue = parseFloat(document.getElementById("cost_per_kwh").value);
-        if (costValue <= 0) {
-          alert("Cost per kWh must be greater than 0.");
-          return;
-        }
-        // Here you would normally save to backend
-        alert("Cost rating saved successfully! (Frontend only - no backend implementation yet)");
-        document.getElementById("cost_per_kwh").readOnly = true;
-        document.getElementById("edit-cost-btn").style.display = "inline-block";
-        document.getElementById("save-cost-btn").style.display = "none";
-        document.getElementById("cancel-cost-btn").style.display = "none";
-      });
+      document
+        .getElementById("save-cost-btn")
+        .addEventListener("click", function () {
+          const costValue = parseFloat(
+            document.getElementById("cost_per_kwh").value
+          );
+          if (costValue <= 0) {
+            alert("Cost per kWh must be greater than 0.");
+            return;
+          }
+          // Here you would normally save to backend
+          alert(
+            "Cost rating saved successfully! (Frontend only - no backend implementation yet)"
+          );
+          document.getElementById("cost_per_kwh").readOnly = true;
+          document.getElementById("edit-cost-btn").style.display =
+            "inline-block";
+          document.getElementById("save-cost-btn").style.display = "none";
+          document.getElementById("cancel-cost-btn").style.display = "none";
+        });
 
-      document.getElementById("cancel-cost-btn").addEventListener("click", function() {
-        document.getElementById("cost_per_kwh").value = "12.50"; // Reset to default
-        document.getElementById("cost_per_kwh").readOnly = true;
-        document.getElementById("edit-cost-btn").style.display = "inline-block";
-        document.getElementById("save-cost-btn").style.display = "none";
-        document.getElementById("cancel-cost-btn").style.display = "none";
-      });
+      document
+        .getElementById("cancel-cost-btn")
+        .addEventListener("click", function () {
+          document.getElementById("cost_per_kwh").value = "12.50"; // Reset to default
+          document.getElementById("cost_per_kwh").readOnly = true;
+          document.getElementById("edit-cost-btn").style.display =
+            "inline-block";
+          document.getElementById("save-cost-btn").style.display = "none";
+          document.getElementById("cancel-cost-btn").style.display = "none";
+        });
 
       // CO2 emission rating functionality
-      document.getElementById("edit-emission-btn").addEventListener("click", function() {
-        document.getElementById("co2_per_kwh").readOnly = false;
-        document.getElementById("edit-emission-btn").style.display = "none";
-        document.getElementById("save-emission-btn").style.display = "inline-block";
-        document.getElementById("cancel-emission-btn").style.display = "inline-block";
-      });
+      document
+        .getElementById("edit-emission-btn")
+        .addEventListener("click", function () {
+          document.getElementById("co2_per_kwh").readOnly = false;
+          document.getElementById("edit-emission-btn").style.display = "none";
+          document.getElementById("save-emission-btn").style.display =
+            "inline-block";
+          document.getElementById("cancel-emission-btn").style.display =
+            "inline-block";
+        });
 
-      document.getElementById("save-emission-btn").addEventListener("click", function() {
-        const emissionValue = parseFloat(document.getElementById("co2_per_kwh").value);
-        if (emissionValue <= 0) {
-          alert("CO2 per kWh must be greater than 0.");
-          return;
-        }
-        // Here you would normally save to backend
-        alert("CO2 emission rating saved successfully! (Frontend only - no backend implementation yet)");
-        document.getElementById("co2_per_kwh").readOnly = true;
-        document.getElementById("edit-emission-btn").style.display = "inline-block";
-        document.getElementById("save-emission-btn").style.display = "none";
-        document.getElementById("cancel-emission-btn").style.display = "none";
-      });
+      document
+        .getElementById("save-emission-btn")
+        .addEventListener("click", function () {
+          const emissionValue = parseFloat(
+            document.getElementById("co2_per_kwh").value
+          );
+          if (emissionValue <= 0) {
+            alert("CO2 per kWh must be greater than 0.");
+            return;
+          }
+          // Here you would normally save to backend
+          alert(
+            "CO2 emission rating saved successfully! (Frontend only - no backend implementation yet)"
+          );
+          document.getElementById("co2_per_kwh").readOnly = true;
+          document.getElementById("edit-emission-btn").style.display =
+            "inline-block";
+          document.getElementById("save-emission-btn").style.display = "none";
+          document.getElementById("cancel-emission-btn").style.display = "none";
+        });
 
-      document.getElementById("cancel-emission-btn").addEventListener("click", function() {
-        document.getElementById("co2_per_kwh").value = "0.50"; // Reset to default
-        document.getElementById("co2_per_kwh").readOnly = true;
-        document.getElementById("edit-emission-btn").style.display = "inline-block";
-        document.getElementById("save-emission-btn").style.display = "none";
-        document.getElementById("cancel-emission-btn").style.display = "none";
-      });
+      document
+        .getElementById("cancel-emission-btn")
+        .addEventListener("click", function () {
+          document.getElementById("co2_per_kwh").value = "0.50"; // Reset to default
+          document.getElementById("co2_per_kwh").readOnly = true;
+          document.getElementById("edit-emission-btn").style.display =
+            "inline-block";
+          document.getElementById("save-emission-btn").style.display = "none";
+          document.getElementById("cancel-emission-btn").style.display = "none";
+        });
 
       // Initialize threshold section as active
-      document.addEventListener("DOMContentLoaded", function() {
+      document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("set-threshold-btn").classList.add("active");
       });
 
       // History section switching
-      document.getElementById("threshold-history-btn").addEventListener("click", function() {
-        document.getElementById("threshold-history-wrapper").style.display = "block";
-        document.getElementById("ratings-history-wrapper").style.display = "none";
-        document.getElementById("threshold-history-btn").classList.add("active");
-        document.getElementById("ratings-history-btn").classList.remove("active");
-      });
+      document
+        .getElementById("threshold-history-btn")
+        .addEventListener("click", function () {
+          document.getElementById("threshold-history-wrapper").style.display =
+            "block";
+          document.getElementById("ratings-history-wrapper").style.display =
+            "none";
+          document
+            .getElementById("threshold-history-btn")
+            .classList.add("active");
+          document
+            .getElementById("ratings-history-btn")
+            .classList.remove("active");
+        });
 
-      document.getElementById("ratings-history-btn").addEventListener("click", function() {
-        document.getElementById("threshold-history-wrapper").style.display = "none";
-        document.getElementById("ratings-history-wrapper").style.display = "block";
-        document.getElementById("ratings-history-btn").classList.add("active");
-        document.getElementById("threshold-history-btn").classList.remove("active");
-      });
+      document
+        .getElementById("ratings-history-btn")
+        .addEventListener("click", function () {
+          document.getElementById("threshold-history-wrapper").style.display =
+            "none";
+          document.getElementById("ratings-history-wrapper").style.display =
+            "block";
+          document
+            .getElementById("ratings-history-btn")
+            .classList.add("active");
+          document
+            .getElementById("threshold-history-btn")
+            .classList.remove("active");
+        });
 
       // Threshold history tab switching
-      document.querySelectorAll("#threshold-history-wrapper .threshold-tab-btn").forEach((btn) => {
-        btn.addEventListener("click", function () {
-          const type = this.getAttribute("data-type");
-          const wrapper = document.getElementById("threshold-history-wrapper");
+      document
+        .querySelectorAll("#threshold-history-wrapper .threshold-tab-btn")
+        .forEach((btn) => {
+          btn.addEventListener("click", function () {
+            const type = this.getAttribute("data-type");
+            const wrapper = document.getElementById(
+              "threshold-history-wrapper"
+            );
 
-          wrapper.querySelectorAll(".threshold-tab-btn").forEach((b) => b.classList.remove("active"));
-          this.classList.add("active");
+            wrapper
+              .querySelectorAll(".threshold-tab-btn")
+              .forEach((b) => b.classList.remove("active"));
+            this.classList.add("active");
 
-          if (type === "energy") {
-            wrapper.querySelector("#energy-history-table").classList.remove("hidden");
-            wrapper.querySelector("#co2-history-table").classList.add("hidden");
-          } else {
-            wrapper.querySelector("#energy-history-table").classList.add("hidden");
-            wrapper.querySelector("#co2-history-table").classList.remove("hidden");
-          }
+            if (type === "energy") {
+              wrapper
+                .querySelector("#energy-history-table")
+                .classList.remove("hidden");
+              wrapper
+                .querySelector("#co2-history-table")
+                .classList.add("hidden");
+            } else {
+              wrapper
+                .querySelector("#energy-history-table")
+                .classList.add("hidden");
+              wrapper
+                .querySelector("#co2-history-table")
+                .classList.remove("hidden");
+            }
+          });
         });
-      });
 
       // Ratings history tab switching
-      document.querySelectorAll("#ratings-history-wrapper .threshold-tab-btn").forEach((btn) => {
-        btn.addEventListener("click", function () {
-          const type = this.getAttribute("data-type");
-          const wrapper = document.getElementById("ratings-history-wrapper");
+      document
+        .querySelectorAll("#ratings-history-wrapper .threshold-tab-btn")
+        .forEach((btn) => {
+          btn.addEventListener("click", function () {
+            const type = this.getAttribute("data-type");
+            const wrapper = document.getElementById("ratings-history-wrapper");
 
-          wrapper.querySelectorAll(".threshold-tab-btn").forEach((b) => b.classList.remove("active"));
-          this.classList.add("active");
+            wrapper
+              .querySelectorAll(".threshold-tab-btn")
+              .forEach((b) => b.classList.remove("active"));
+            this.classList.add("active");
 
-          if (type === "cost") {
-            wrapper.querySelector("#cost-history-table").classList.remove("hidden");
-            wrapper.querySelector("#emission-history-table").classList.add("hidden");
-          } else {
-            wrapper.querySelector("#cost-history-table").classList.add("hidden");
-            wrapper.querySelector("#emission-history-table").classList.remove("hidden");
-          }
+            if (type === "cost") {
+              wrapper
+                .querySelector("#cost-history-table")
+                .classList.remove("hidden");
+              wrapper
+                .querySelector("#emission-history-table")
+                .classList.add("hidden");
+            } else {
+              wrapper
+                .querySelector("#cost-history-table")
+                .classList.add("hidden");
+              wrapper
+                .querySelector("#emission-history-table")
+                .classList.remove("hidden");
+            }
+          });
         });
-      });
     </script>
 
     <script src="{% static 'adminJs/sidebarToggle.js' %}"></script>

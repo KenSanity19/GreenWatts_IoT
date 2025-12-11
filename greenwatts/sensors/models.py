@@ -5,7 +5,7 @@ from greenwatts.users.models import Office
 
 class Device(models.Model):
     device_id = models.AutoField(primary_key=True)
-    # Additional fields can be added here as needed, e.g. device name, type, etc.
+    appliance_type = models.CharField(max_length=100, null=True, blank=True)
     installed_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=50, default="Active")
     office = models.ForeignKey(Office, on_delete=models.CASCADE, related_name="devices", null=True, blank=True)
@@ -14,7 +14,7 @@ class Device(models.Model):
         db_table = "tbl_device"
 
     def __str__(self):
-        return self.name if self.name else f"Device {self.device_id}"
+        return self.appliance_type if self.appliance_type else f"Device {self.device_id}"
 
 class SensorReading(models.Model):
     """

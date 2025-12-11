@@ -15,6 +15,7 @@ urlpatterns = [
     path('createOffice/', views.create_office, name='create_office'),
     path('editOffice/<int:id>/', views.edit_office, name='edit_office'),
     path('createDevice/', views.create_device, name='create_device'),
+    path('editDevice/<int:id>/', views.edit_device, name='edit_device'),
     path('saveThresholds/', views.save_thresholds, name='save_thresholds'),
     path('thresholdHistory/', views.threshold_history, name='threshold_history'),
     path('get-days/', views.get_days, name='get_days'),
