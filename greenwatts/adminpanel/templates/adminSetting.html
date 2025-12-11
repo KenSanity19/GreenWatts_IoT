@@ -426,7 +426,13 @@
           </div>
         </section>
         <section class="thresholds">
-          <h2>SET THRESHOLDS</h2>
+          <div class="section-header">
+            <h2>SET THRESHOLDS</h2>
+            <div class="header-buttons">
+              <button class="text-btn" id="set-threshold-btn">Set Threshold</button>
+              <button class="text-btn" id="set-ratings-btn">Set Ratings</button>
+            </div>
+          </div>
           <p
             class="threshold-note"
             style="
@@ -538,6 +544,47 @@
                 <button class="edit-btn" id="edit-co2-btn">Edit</button>
                 <button class="save-btn" id="save-co2-btn">Save</button>
                 <button class="cancel-btn" id="cancel-co2-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Ratings Section -->
+        <section class="ratings" id="ratings-section" style="display: none;">
+          <div class="section-header">
+            <h2>SET RATINGS</h2>
+            <div class="header-buttons">
+              <button class="text-btn" id="back-to-threshold-btn">Set Threshold</button>
+              <button class="text-btn active" id="ratings-active-btn">Set Ratings</button>
+            </div>
+          </div>
+          <p class="threshold-note" style="color: #bdbdbd; font-size: 0.9em; margin-bottom: 15px; font-style: italic;">
+            <strong>Note:</strong> These ratings are used for calculating energy costs and CO2 emissions.
+          </p>
+          <div class="threshold-boxes">
+            <div class="threshold-card">
+              <h3>Energy Cost Rating</h3>
+              <p>
+                Cost per kWh: 
+                <input type="number" id="cost_per_kwh" step="0.01" readonly value="12.50" /> PHP
+              </p>
+              <div class="btn-group">
+                <button class="edit-btn" id="edit-cost-btn">Edit</button>
+                <button class="save-btn" id="save-cost-btn">Save</button>
+                <button class="cancel-btn" id="cancel-cost-btn">Cancel</button>
+              </div>
+            </div>
+
+            <div class="threshold-card">
+              <h3>CO2 Emission Rating</h3>
+              <p>
+                CO2 per kWh: 
+                <input type="number" id="co2_per_kwh" step="0.01" readonly value="0.50" /> kg CO2
+              </p>
+              <div class="btn-group">
+                <button class="edit-btn" id="edit-emission-btn">Edit</button>
+                <button class="save-btn" id="save-emission-btn">Save</button>
+                <button class="cancel-btn" id="cancel-emission-btn">Cancel</button>
               </div>
             </div>
           </div>
@@ -1156,6 +1203,96 @@
 
       // Load thresholds on page load
       document.addEventListener("DOMContentLoaded", loadThresholds);
+
+      // Section switching functionality
+      document.getElementById("set-threshold-btn").addEventListener("click", function() {
+        document.querySelector(".thresholds").style.display = "block";
+        document.getElementById("ratings-section").style.display = "none";
+        // Update button states
+        document.getElementById("set-threshold-btn").classList.add("active");
+        document.getElementById("set-ratings-btn").classList.remove("active");
+      });
+
+      document.getElementById("set-ratings-btn").addEventListener("click", function() {
+        document.querySelector(".thresholds").style.display = "none";
+        document.getElementById("ratings-section").style.display = "block";
+        // Update button states
+        document.getElementById("set-ratings-btn").classList.add("active");
+        document.getElementById("set-threshold-btn").classList.remove("active");
+      });
+
+      document.getElementById("back-to-threshold-btn").addEventListener("click", function() {
+        document.querySelector(".thresholds").style.display = "block";
+        document.getElementById("ratings-section").style.display = "none";
+        // Update button states
+        document.getElementById("set-threshold-btn").classList.add("active");
+        document.getElementById("set-ratings-btn").classList.remove("active");
+      });
+
+      // Cost rating functionality
+      document.getElementById("edit-cost-btn").addEventListener("click", function() {
+        document.getElementById("cost_per_kwh").readOnly = false;
+        document.getElementById("edit-cost-btn").style.display = "none";
+        document.getElementById("save-cost-btn").style.display = "inline-block";
+        document.getElementById("cancel-cost-btn").style.display = "inline-block";
+      });
+
+      document.getElementById("save-cost-btn").addEventListener("click", function() {
+        const costValue = parseFloat(document.getElementById("cost_per_kwh").value);
+        if (costValue <= 0) {
+          alert("Cost per kWh must be greater than 0.");
+          return;
+        }
+        // Here you would normally save to backend
+        alert("Cost rating saved successfully! (Frontend only - no backend implementation yet)");
+        document.getElementById("cost_per_kwh").readOnly = true;
+        document.getElementById("edit-cost-btn").style.display = "inline-block";
+        document.getElementById("save-cost-btn").style.display = "none";
+        document.getElementById("cancel-cost-btn").style.display = "none";
+      });
+
+      document.getElementById("cancel-cost-btn").addEventListener("click", function() {
+        document.getElementById("cost_per_kwh").value = "12.50"; // Reset to default
+        document.getElementById("cost_per_kwh").readOnly = true;
+        document.getElementById("edit-cost-btn").style.display = "inline-block";
+        document.getElementById("save-cost-btn").style.display = "none";
+        document.getElementById("cancel-cost-btn").style.display = "none";
+      });
+
+      // CO2 emission rating functionality
+      document.getElementById("edit-emission-btn").addEventListener("click", function() {
+        document.getElementById("co2_per_kwh").readOnly = false;
+        document.getElementById("edit-emission-btn").style.display = "none";
+        document.getElementById("save-emission-btn").style.display = "inline-block";
+        document.getElementById("cancel-emission-btn").style.display = "inline-block";
+      });
+
+      document.getElementById("save-emission-btn").addEventListener("click", function() {
+        const emissionValue = parseFloat(document.getElementById("co2_per_kwh").value);
+        if (emissionValue <= 0) {
+          alert("CO2 per kWh must be greater than 0.");
+          return;
+        }
+        // Here you would normally save to backend
+        alert("CO2 emission rating saved successfully! (Frontend only - no backend implementation yet)");
+        document.getElementById("co2_per_kwh").readOnly = true;
+        document.getElementById("edit-emission-btn").style.display = "inline-block";
+        document.getElementById("save-emission-btn").style.display = "none";
+        document.getElementById("cancel-emission-btn").style.display = "none";
+      });
+
+      document.getElementById("cancel-emission-btn").addEventListener("click", function() {
+        document.getElementById("co2_per_kwh").value = "0.50"; // Reset to default
+        document.getElementById("co2_per_kwh").readOnly = true;
+        document.getElementById("edit-emission-btn").style.display = "inline-block";
+        document.getElementById("save-emission-btn").style.display = "none";
+        document.getElementById("cancel-emission-btn").style.display = "none";
+      });
+
+      // Initialize threshold section as active
+      document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById("set-threshold-btn").classList.add("active");
+      });
 
       // Threshold history tab switching
       document.querySelectorAll(".threshold-tab-btn").forEach((btn) => {

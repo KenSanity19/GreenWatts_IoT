@@ -45,6 +45,11 @@ header h1 {
   color: #fff;
 }
 
+.office-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .office-header {
   display: flex;
   justify-content: space-between;
@@ -114,7 +119,10 @@ table thead {
   margin-top: 20px;
   border-radius: 8px;
   text-align: center;
-  overflow-x: auto; /* enable horizontal scroll for overflow */
+  overflow-x: auto;
+  width: 807.5px;
+  height: 430px;
+  box-sizing: border-box;
 }
 
 .threshold-boxes {
@@ -127,12 +135,78 @@ table thead {
   padding-bottom: 10px;
 }
 
+/* Section header with buttons */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* Text button styles */
+.text-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  text-decoration: underline;
+}
+
+.text-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #58c744;
+}
+
+.text-btn.active {
+  color: #58c744;
+  font-weight: bold;
+  text-decoration: none;
+  background-color: rgba(88, 199, 68, 0.1);
+}
+
+/* Ratings section - match threshold styling */
+.ratings {
+  background: #1e1f47;
+  color: var(--text-white);
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 8px;
+  text-align: center;
+  overflow-x: auto;
+  width: 807.5px;
+  box-sizing: border-box;
+}
+
 @media (max-width: 900px) {
+  .thresholds,
+  .ratings {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+  }
+  
   .threshold-boxes {
     flex-direction: column;
     max-width: 100%;
     overflow-x: visible;
     padding-bottom: 0;
+  }
+  
+  .threshold-card {
+    width: 100%;
   }
 }
 
@@ -332,7 +406,6 @@ footer .tip span {
 /* Table wrapper */
 .table-wrapper {
   background-color: #1e1f47;
-  padding: 20px;
   border-radius: 8px;
   color: #eee;
 }
@@ -368,6 +441,11 @@ footer .tip span {
 
 .device-header button.add-device-btn:hover {
   background-color: #009400;
+}
+
+.device-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Device table */
@@ -748,7 +826,11 @@ button.deactivate-device-btn:hover {
 @media (max-width: 768px) {
   .office-section {
     padding: 15px;
+  }
+  
+  .office-table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .office-table {
@@ -790,7 +872,11 @@ button.deactivate-device-btn:hover {
   
   .device-section .table-wrapper {
     padding: 15px;
+  }
+  
+  .device-table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .device-table {
@@ -803,6 +889,13 @@ button.deactivate-device-btn:hover {
     padding: 8px 4px;
     width: auto;
     min-width: 80px;
+  }
+  
+  .thresholds,
+  .ratings {
+    width: 100%;
+    padding: 15px;
+    height: auto;
   }
   
   .threshold-card {
@@ -872,13 +965,26 @@ button.deactivate-device-btn:hover {
   overflow: hidden;
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: auto;
 }
 
 .threshold-history-table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   background-color: white;
   color: black;
+}
+
+@media (max-width: 768px) {
+  .threshold-history-table {
+    font-size: 12px;
+  }
+  
+  .threshold-history-table th,
+  .threshold-history-table td {
+    padding: 8px 6px;
+  }
 }
 
 .threshold-history-table th {
@@ -942,6 +1048,17 @@ button.deactivate-device-btn:hover {
 #save-energy-btn,
 #cancel-energy-btn,
 #save-co2-btn,
-#cancel-co2-btn {
+#cancel-co2-btn,
+#save-cost-btn,
+#cancel-cost-btn,
+#save-emission-btn,
+#cancel-emission-btn {
+  display: none;
+}
+/* Hide save/cancel buttons for ratings by default */
+#save-cost-rating-btn,
+#cancel-cost-rating-btn,
+#save-co2-rating-btn,
+#cancel-co2-rating-btn {
   display: none;
 }

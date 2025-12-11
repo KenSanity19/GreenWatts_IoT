@@ -25,7 +25,7 @@ class SensorReading(models.Model):
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="sensor_readings")
     voltage = models.FloatField()  # Voltage in Volts
     current = models.FloatField()  # Current in Amperes
-    date = models.DateField(default=timezone.now)  # When the reading was taken
+    date = models.DateField()  # When the reading was taken
 
     class Meta:
         db_table = "tbl_sensor_reading"
