@@ -188,10 +188,8 @@
     <!-- Send Notification Modal -->
     <div id="notificationModal" class="modal">
       <div class="modal-content">
-        <div class="modal-header">
-          <h2>Send Notification</h2>
-          <span class="close">&times;</span>
-        </div>
+        <h2>Send Notification</h2>
+        <span class="close">&times;</span>
         <form method="post" action="{% url 'adminpanel:send_notification' %}" class="notification-form">
           {% csrf_token %}
           <div class="form-group">
