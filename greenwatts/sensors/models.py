@@ -25,20 +25,18 @@ class SensorReading(models.Model):
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="sensor_readings")
     voltage = models.FloatField()  # Voltage in Volts
     current = models.FloatField()  # Current in Amperes
-    timestamp = models.DateTimeField()  # When the reading was taken
-    created_at = models.DateTimeField(auto_now_add=True)  # When it was stored in DB
+    date = models.DateField(default=timezone.now)  # When the reading was taken
 
     class Meta:
         db_table = "tbl_sensor_reading"
-        ordering = ['-timestamp']
+        ordering = ['-date']
         indexes = [
-            models.Index(fields=['device', 'timestamp']),
-            models.Index(fields=['device', 'created_at']),
-            models.Index(fields=['timestamp']),
+            models.Index(fields=['device', 'date']),
+            models.Index(fields=['date']),
         ]
 
     def __str__(self):
-        return f"Reading {self.reading_id} - Device {self.device.device_id} - {self.timestamp}"
+        return f"Reading {self.reading_id} - Device {self.device.device_id} - {self.date}"
 
 
 class EnergyRecord(models.Model):
