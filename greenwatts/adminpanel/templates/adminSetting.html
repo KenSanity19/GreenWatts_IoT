@@ -591,9 +591,18 @@
         </section>
       </section>
 
-      <!-- Threshold History -->
-      <section class="threshold-history-section">
-        <div class="table-wrapper">
+      <!-- History Section -->
+      <section class="history-section">
+        <div class="section-header">
+          <h2>HISTORY</h2>
+          <div class="header-buttons">
+            <button class="text-btn active" id="threshold-history-btn">Threshold History</button>
+            <button class="text-btn" id="ratings-history-btn">Ratings History</button>
+          </div>
+        </div>
+
+        <!-- Threshold History -->
+        <div class="table-wrapper" id="threshold-history-wrapper">
           <div class="threshold-tabs">
             <span class="threshold-tab-btn active" data-type="energy"
               >Energy Threshold History</span
@@ -677,11 +686,70 @@
               </table>
             </div>
           </div>
-
-          <p class="tip history-tip">
-            <span class="tip-label">Energy Tip:</span> {{ random_energy_tip }}
-          </p>
         </div>
+
+        <!-- Ratings History -->
+        <div class="table-wrapper" id="ratings-history-wrapper" style="display: none;">
+          <div class="threshold-tabs">
+            <span class="threshold-tab-btn active" data-type="cost"
+              >Cost Rating History</span
+            >
+            <span class="threshold-separator">|</span>
+            <span class="threshold-tab-btn" data-type="emission"
+              >CO2 Rating History</span
+            >
+          </div>
+
+          <div id="cost-history-table" class="threshold-table-content">
+            <div class="threshold-history-table-container">
+              <table class="threshold-history-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Cost per kWh</th>
+                    <th>Created At</th>
+                    <th>Ended At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>12.50 PHP</td>
+                    <td>Jan 15, 2025 10:30</td>
+                    <td><span class="active-status">Active</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="emission-history-table" class="threshold-table-content hidden">
+            <div class="threshold-history-table-container">
+              <table class="threshold-history-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>CO2 per kWh</th>
+                    <th>Created At</th>
+                    <th>Ended At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>0.50 kg CO2</td>
+                    <td>Jan 15, 2025 10:30</td>
+                    <td><span class="active-status">Active</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <p class="tip history-tip">
+          <span class="tip-label">Energy Tip:</span> {{ random_energy_tip }}
+        </p>
       </section>
     </div>
 
@@ -1294,32 +1362,55 @@
         document.getElementById("set-threshold-btn").classList.add("active");
       });
 
+      // History section switching
+      document.getElementById("threshold-history-btn").addEventListener("click", function() {
+        document.getElementById("threshold-history-wrapper").style.display = "block";
+        document.getElementById("ratings-history-wrapper").style.display = "none";
+        document.getElementById("threshold-history-btn").classList.add("active");
+        document.getElementById("ratings-history-btn").classList.remove("active");
+      });
+
+      document.getElementById("ratings-history-btn").addEventListener("click", function() {
+        document.getElementById("threshold-history-wrapper").style.display = "none";
+        document.getElementById("ratings-history-wrapper").style.display = "block";
+        document.getElementById("ratings-history-btn").classList.add("active");
+        document.getElementById("threshold-history-btn").classList.remove("active");
+      });
+
       // Threshold history tab switching
-      document.querySelectorAll(".threshold-tab-btn").forEach((btn) => {
+      document.querySelectorAll("#threshold-history-wrapper .threshold-tab-btn").forEach((btn) => {
         btn.addEventListener("click", function () {
           const type = this.getAttribute("data-type");
+          const wrapper = document.getElementById("threshold-history-wrapper");
 
-          // Update active button
-          document
-            .querySelectorAll(".threshold-tab-btn")
-            .forEach((b) => b.classList.remove("active"));
+          wrapper.querySelectorAll(".threshold-tab-btn").forEach((b) => b.classList.remove("active"));
           this.classList.add("active");
 
-          // Show/hide tables
           if (type === "energy") {
-            document
-              .getElementById("energy-history-table")
-              .classList.remove("hidden");
-            document
-              .getElementById("co2-history-table")
-              .classList.add("hidden");
+            wrapper.querySelector("#energy-history-table").classList.remove("hidden");
+            wrapper.querySelector("#co2-history-table").classList.add("hidden");
           } else {
-            document
-              .getElementById("energy-history-table")
-              .classList.add("hidden");
-            document
-              .getElementById("co2-history-table")
-              .classList.remove("hidden");
+            wrapper.querySelector("#energy-history-table").classList.add("hidden");
+            wrapper.querySelector("#co2-history-table").classList.remove("hidden");
+          }
+        });
+      });
+
+      // Ratings history tab switching
+      document.querySelectorAll("#ratings-history-wrapper .threshold-tab-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const type = this.getAttribute("data-type");
+          const wrapper = document.getElementById("ratings-history-wrapper");
+
+          wrapper.querySelectorAll(".threshold-tab-btn").forEach((b) => b.classList.remove("active"));
+          this.classList.add("active");
+
+          if (type === "cost") {
+            wrapper.querySelector("#cost-history-table").classList.remove("hidden");
+            wrapper.querySelector("#emission-history-table").classList.add("hidden");
+          } else {
+            wrapper.querySelector("#cost-history-table").classList.add("hidden");
+            wrapper.querySelector("#emission-history-table").classList.remove("hidden");
           }
         });
       });

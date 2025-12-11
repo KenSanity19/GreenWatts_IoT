@@ -532,7 +532,116 @@ button.edit-device-btn {
 }
 
 button.deactivate-device-btn {
-  background-color:  #d2691e;
+  background-color: #d2691e;
+}
+
+/* History Section - Combined */
+.history-section {
+  margin: 10px 0;
+  background: #1e1f47;
+  padding: 20px;
+  border-radius: 8px;
+  color: #fff;
+}
+
+.history-section .table-wrapper {
+  background-color: #1e1f47;
+  border-radius: 8px;
+  color: #eee;
+}
+
+.history-section .threshold-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+  gap: 10px;
+}
+
+.history-section .threshold-tab-btn {
+  background: none;
+  border: none;
+  color: #bbb;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.history-section .threshold-tab-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.history-section .threshold-tab-btn.active {
+  color: #58c744;
+  font-weight: bold;
+  background-color: rgba(88, 199, 68, 0.1);
+}
+
+.history-section .threshold-separator {
+  color: #666;
+  font-size: 16px;
+}
+
+.history-section .threshold-table-content {
+  display: block;
+}
+
+.history-section .threshold-table-content.hidden {
+  display: none;
+}
+
+.history-section .threshold-history-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.history-section .threshold-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  color: black;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.history-section .threshold-history-table th,
+.history-section .threshold-history-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.history-section .threshold-history-table thead {
+  background-color: #004080;
+  color: white;
+}
+
+.history-section .threshold-history-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.history-section .threshold-history-table tbody tr:hover {
+  background-color: #f0f0f0;
+}
+
+.history-section .active-status {
+  color: #58c744;
+  font-weight: bold;
+}
+
+.history-section .tip {
+  margin-top: 15px;
+  font-size: 14px;
+  color: #bbb;
+  font-style: italic;
+}
+
+.history-section .tip-label {
+  color: #58c744;
+  font-weight: bold;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -921,37 +1030,33 @@ button.deactivate-device-btn:hover {
 }
 
 .threshold-tabs {
-  text-align: center;
-  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+  gap: 10px;
 }
 
 .threshold-tab-btn {
-  color: #888;
+  background: none;
+  border: none;
+  color: #bbb;
   cursor: pointer;
   font-size: 16px;
-  transition: all 0.3s;
-  position: relative;
-  display: inline-block;
-  padding-bottom: 5px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
 .threshold-tab-btn:hover {
-  color: #d39e09;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .threshold-tab-btn.active {
   color: #58c744;
   font-weight: bold;
-}
-
-.threshold-tab-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #2c6dfc;
+  background-color: rgba(88, 199, 68, 0.1);
 }
 
 .threshold-separator {

@@ -729,12 +729,18 @@ span.green-text {
 
 .no-notifications h3 {
   margin: 0 0 10px 0;
-  font-size: 18px;
 }
 
 .no-notifications p {
   margin: 0;
-  font-size: 14px;
+}
+
+/* Responsive Styles */
+@media (max-width: 1200px) {
+  .modal-content {
+    width: 90%;
+    margin: 3% auto;
+  }
 }
 
 @media (max-width: 900px) {
@@ -746,6 +752,41 @@ span.green-text {
   .filters select {
     min-width: 100px;
     flex: 1;
+  }
+
+  #notificationsBtn {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .notification-badge,
+  .notification-indicator {
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+
+  .modal-content {
+    width: 95%;
+    margin: 2% auto;
+    padding: 15px;
+    max-height: 90vh;
+  }
+
+  .modal-header h2 {
+    font-size: 18px;
+  }
+
+  .notification-item {
+    padding: 12px;
+  }
+
+  .notification-text h4 {
+    font-size: 14px;
+  }
+
+  .notification-text p {
+    font-size: 13px;
   }
 
   .report-cards {
@@ -805,5 +846,91 @@ span.green-text {
 
   .info-item {
     flex: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters > div:first-child {
+    gap: 10px;
+  }
+
+  #notificationsBtn {
+    padding: 10px;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .modal-content {
+    width: 98%;
+    margin: 1% auto;
+    padding: 10px;
+    border-radius: 4px;
+  }
+
+  .modal-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .close {
+    align-self: flex-end;
+    font-size: 24px;
+  }
+
+  .notification-item {
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .notification-content {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .notification-icon {
+    margin-left: 0;
+    align-self: flex-start;
+  }
+
+  .notifications-list .notification-item:first-child:not(.read)::after {
+    font-size: 9px;
+    padding: 2px 4px;
+  }
+}
+
+@media (max-width: 400px) {
+  .modal-content {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .modal-header h2 {
+    font-size: 16px;
+  }
+
+  .notification-text h4 {
+    font-size: 13px;
+  }
+
+  .notification-text p {
+    font-size: 12px;
+  }
+
+  .notification-text small {
+    font-size: 11px;
+  }
+
+  #notificationsBtn {
+    font-size: 12px;
+    padding: 8px;
   }
 }
