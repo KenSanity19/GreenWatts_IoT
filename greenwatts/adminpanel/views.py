@@ -488,7 +488,7 @@ def admin_dashboard(request):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_setting(request):
     offices = Office.objects.all()
-    devices = Device.objects.select_related('office').all()
+    devices = Device.objects.select_related('office').all().order_by('device_id')
     
     energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
     co2_threshold = CO2Threshold.objects.filter(ended_at__isnull=True).first()

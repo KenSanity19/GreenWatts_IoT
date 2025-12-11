@@ -215,6 +215,7 @@ p.threshold-note {
     height: auto;
   }
   
+  .energy-threshold-boxes,
   .threshold-boxes {
     flex-direction: column;
     max-width: 100%;
@@ -699,6 +700,7 @@ footer .tip span {
   text-align: center;
   display: inline-block;
   vertical-align: top;
+  text-transform: capitalize;
 }
 
 .device-table th:nth-child(1), .device-table td:nth-child(1) { width: 15%; } /* Device ID */
@@ -793,7 +795,7 @@ button.deactivate-device-btn {
   color: #bbb;
   cursor: pointer;
   font-size: 16px;
-  padding: 8px 12px;
+  padding: 8px 0px;
   border-radius: 4px;
   transition: all 0.3s ease;
 }
