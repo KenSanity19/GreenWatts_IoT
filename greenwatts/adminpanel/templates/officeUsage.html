@@ -13,12 +13,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
-    <style>
-      .filters select option {
-        color: white !important;
-        background-color: #2c3e50 !important;
-      }
-    </style>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
 
@@ -120,7 +115,10 @@
       <!-- Office Table -->
       <div class="office-usage">
         <div class="table-header">
-          <input type="text" placeholder="Search Office" />
+          <div class="search-group">
+            <input type="text" id="search-input" placeholder="Search Office" />
+            <button type="button" id="search-button">Search</button>
+          </div>
           <select>
             <option>Sort by Status</option>
             <option>Efficient</option>
@@ -285,6 +283,34 @@
     <script src="{% static 'adminJs/sidebarToggle.js' %}"></script>
     <script src="{% static 'adminJs/filterHandler.js' %}"></script>
     <script>
+      // Search functionality
+      document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const table = document.querySelector('.table-wrapper table');
+        const rows = table.querySelectorAll('tr');
+
+        function filterTable() {
+          const searchTerm = searchInput.value.toLowerCase().trim();
+          rows.forEach((row, index) => {
+            if (index === 0) return; // Skip header row
+            const officeName = row.cells[0].textContent.toLowerCase();
+            if (officeName.includes(searchTerm)) {
+              row.style.display = '';
+            } else {
+              row.style.display = 'none';
+            }
+          });
+        }
+
+        searchButton.addEventListener('click', filterTable);
+        searchInput.addEventListener('keyup', function(event) {
+          if (event.key === 'Enter') {
+            filterTable();
+          }
+        });
+      });
+
       function updateTime() {
         const now = new Date();
         const options = {

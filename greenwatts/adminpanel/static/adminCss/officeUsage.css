@@ -75,6 +75,32 @@ header h1 {
   font-size: 14px;
 }
 
+/* Search group styling */  
+.search-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.search-group input {
+  flex: 1;
+}
+
+.search-group button {
+  padding: 8px 12px;
+  border: 2px solid #ffffff;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #16163f;
+  color: rgb(255, 255, 255);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.search-group button:hover {
+  background-color: #f4b400;
+}
+
 .office-usage table {
   width: 100%;
   border-collapse: collapse;
@@ -121,19 +147,16 @@ header h1 {
 tr.high td:last-child {
   background: none;
   color: #ef5350;
-  font-weight: 900;
 }
 
 tr.moderate td:last-child {
   background: none;
   color: #f4b400;
-  font-weight: 900;
 }
 
 tr.efficient td:last-child {
   background: none;
   color: #66bb6a;
-  font-weight: 900;
 }
 
 /* Charts Section */
@@ -411,4 +434,6 @@ span.green-text {
   .centered-chart-box canvas {
     max-width: 240px !important;
   }
+
+ 
 }

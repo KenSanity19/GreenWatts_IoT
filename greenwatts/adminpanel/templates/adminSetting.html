@@ -98,8 +98,10 @@
       <!-- Office Table -->
       <section class="office-section">
         <div class="office-header">
-          <input type="text" placeholder="Search Office" />
-          <button class="add-btn">+ Add Office</button>
+          <div class="search-group">
+            <input type="text" id="searchInput" placeholder="Search Office" />
+          </div>
+          <button class="add-btn" id="addOfficeBtn">+ Add Office</button>
         </div>
 
         <!-- Modal for Add Office -->
@@ -888,7 +890,7 @@
     <script>
       // Get modal and elements
       const modal = document.getElementById("addOfficeModal");
-      const addBtn = document.querySelector(".add-btn");
+      const addBtn = document.getElementById("addOfficeBtn");
       const closeModal = document.getElementById("closeModal");
       const form = document.getElementById("addOfficeForm");
       const formMessage = document.getElementById("formMessage");
@@ -924,6 +926,52 @@
         formMessage.classList.remove("success-message", "error-message");
         form.reset();
       };
+
+      // Handle search functionality for offices
+      function performOfficeSearch() {
+        console.log("performOfficeSearch called");
+        const searchTerm = document.getElementById("searchInput").value.toLowerCase().trim();
+        console.log("Search term:", searchTerm);
+        const tableRows = document.querySelectorAll(".office-table tbody tr");
+        console.log("Table rows found:", tableRows.length);
+
+        tableRows.forEach((row, index) => {
+          const cells = Array.from(row.cells).slice(0, -1); // exclude action column
+          const rowText = cells.map(cell => cell.textContent.toLowerCase()).join(' ');
+          console.log(`Row ${index} text:`, rowText);
+          if (rowText.includes(searchTerm)) {
+            row.style.display = "";
+          } else {
+            row.style.display = "none";
+          }
+        });
+      }
+
+      // Live search on input
+      document.getElementById("searchInput").addEventListener("input", performOfficeSearch);
+
+      // Search on Enter key press
+      document.getElementById("searchInput").addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+          performOfficeSearch();
+        }
+      });
+
+      // Handle search functionality for devices (live search)
+      document.querySelector(".device-search-input").addEventListener("input", function () {
+        const searchTerm = this.value.toLowerCase().trim();
+        const tableRows = document.querySelectorAll(".device-table tbody tr");
+
+        tableRows.forEach(row => {
+          const cells = Array.from(row.cells).slice(0, -1); // exclude action column
+          const rowText = cells.map(cell => cell.textContent.toLowerCase()).join(' ');
+          if (rowText.includes(searchTerm)) {
+            row.style.display = "";
+          } else {
+            row.style.display = "none";
+          }
+        });
+      });
 
       // Close office modal on close button click
       closeModal.onclick = function () {
@@ -1777,5 +1825,7 @@
     </script>
 
     <script src="{% static 'adminJs/sidebarToggle.js' %}"></script>
+
+    
   </body>
 </html>
