@@ -17,15 +17,13 @@ class Device(models.Model):
         return self.appliance_type if self.appliance_type else f"Device {self.device_id}"
 
 class SensorReading(models.Model):
-    """
-    Stores individual sensor readings from ESP32.
-    Each reading contains voltage and current at a specific timestamp.
-    """
     reading_id = models.AutoField(primary_key=True)
+    date = models.DateField() 
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="sensor_readings")
     voltage = models.FloatField()  # Voltage in Volts
     current = models.FloatField()  # Current in Amperes
-    date = models.DateField()  # When the reading was taken
+    total_energy_kwh = models.FloatField(default=0.0)
+    peak_power_w = models.FloatField(default=0.0)
 
     class Meta:
         db_table = "tbl_sensor_reading"

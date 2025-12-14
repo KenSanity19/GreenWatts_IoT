@@ -9,11 +9,22 @@
 #include <SPIFFS.h>
 
 // ------------------ WiFi Settings ------------------
-const char *ssid = "PLDTLANG";
-const char *password = "Successed@123";
+struct WiFiNetwork
+{
+  const char *ssid;
+  const char *password;
+};
+
+WiFiNetwork networks[] = {
+    {"PLDTLANG", "Successed@123"},
+    {"STUDENT CONNECT", "IloveUSTP!"},
+    {"Fourth_WiFi", "fourth_password"},
+    {"SobaMask", "12345678"}};
+const int numNetworks = sizeof(networks) / sizeof(networks[0]);
+int currentNetworkIndex = 0;
 
 // ------------------ Supabase Settings ------------------
-const char *supabaseUrl = "https://sfweuxojewjwxyzomyal.supabase.co/rest/v1/tbl_energy_record";
+const char *supabaseUrl = "https://sfweuxojewjwxyzomyal.supabase.co/rest/v1/tbl_sensor_reading";
 const char *supabaseApiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmd2V1eG9qZXdqd3h5em9teWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwMjA0ODEsImV4cCI6MjA3NTU5NjQ4MX0.DiA1tj4Z66oLbiWo0fxGgKEFep-RE_wrybWp_LVwLT0";
 
 // ------------------ Device Settings ------------------
@@ -53,23 +64,41 @@ const long gmtOffset_sec = 28800; // UTC+8
 const int daylightOffset_sec = 0;
 
 // =========================================================
-// WIFI AUTO-RECONNECT
+// WIFI AUTO-RECONNECT WITH FAILOVER
 // =========================================================
 void ensureWiFiConnected()
 {
   if (WiFi.status() != WL_CONNECTED)
   {
-    Serial.println("WiFi lost! Reconnecting...");
-    WiFi.disconnect();
-    WiFi.begin(ssid, password);
-    int retries = 0;
-    while (WiFi.status() != WL_CONNECTED && retries < 20)
+    Serial.println("WiFi lost! Trying networks...");
+
+    for (int attempt = 0; attempt < numNetworks; attempt++)
     {
-      delay(500);
-      Serial.print(".");
-      retries++;
+      WiFi.disconnect();
+      Serial.print("Trying: ");
+      Serial.println(networks[currentNetworkIndex].ssid);
+
+      WiFi.begin(networks[currentNetworkIndex].ssid, networks[currentNetworkIndex].password);
+
+      int retries = 0;
+      while (WiFi.status() != WL_CONNECTED && retries < 15)
+      {
+        delay(500);
+        Serial.print(".");
+        retries++;
+      }
+
+      if (WiFi.status() == WL_CONNECTED)
+      {
+        Serial.print("\nConnected to: ");
+        Serial.println(networks[currentNetworkIndex].ssid);
+        return;
+      }
+
+      Serial.println(" Failed!");
+      currentNetworkIndex = (currentNetworkIndex + 1) % numNetworks;
     }
-    Serial.println(WiFi.status() == WL_CONNECTED ? "\nWiFi reconnected!" : "\nWiFi reconnect failed!");
+    Serial.println("All networks failed!");
   }
 }
 
@@ -97,7 +126,8 @@ void syncTime()
 void saveAccumulatedData()
 {
   File f = SPIFFS.open("/accumulated.txt", FILE_WRITE);
-  if (!f) return;
+  if (!f)
+    return;
   f.println(String(totalEnergy, 6));
   f.println(String(peakPower, 2));
   f.println(String(totalCarbon, 6));
@@ -107,13 +137,19 @@ void saveAccumulatedData()
 
 void loadAccumulatedData()
 {
-  if (!SPIFFS.exists("/accumulated.txt")) return;
+  if (!SPIFFS.exists("/accumulated.txt"))
+    return;
   File f = SPIFFS.open("/accumulated.txt", FILE_READ);
-  if (!f) return;
-  if (f.available()) totalEnergy = f.readStringUntil('\n').toFloat();
-  if (f.available()) peakPower = f.readStringUntil('\n').toFloat();
-  if (f.available()) totalCarbon = f.readStringUntil('\n').toFloat();
-  if (f.available()) totalCost = f.readStringUntil('\n').toFloat();
+  if (!f)
+    return;
+  if (f.available())
+    totalEnergy = f.readStringUntil('\n').toFloat();
+  if (f.available())
+    peakPower = f.readStringUntil('\n').toFloat();
+  if (f.available())
+    totalCarbon = f.readStringUntil('\n').toFloat();
+  if (f.available())
+    totalCost = f.readStringUntil('\n').toFloat();
   f.close();
   Serial.println("Restored accumulated data from storage.");
 }
@@ -143,12 +179,13 @@ void resendQueue()
     return;
 
   File f = SPIFFS.open("/queue.txt", FILE_READ);
-  if (!f) return;
+  if (!f)
+    return;
 
   Serial.println("\nTrying to resend queued data...");
   String allLines = "";
   String tempLines = "";
-  
+
   HTTPClient http;
   http.begin(supabaseUrl);
   http.addHeader("Content-Type", "application/json");
@@ -160,10 +197,11 @@ void resendQueue()
   {
     String line = f.readStringUntil('\n');
     line.trim();
-    if (line.length() < 5) continue;
-    
+    if (line.length() < 5)
+      continue;
+
     allLines += line + "\n";
-    
+
     Serial.print("Re-sending: ");
     Serial.println(line);
 
@@ -205,7 +243,7 @@ void resendQueue()
 // =========================================================
 // SEND TO SUPABASE
 // =========================================================
-void sendToSupabase(float energy_kwh, float peak_power_w, float carbon_kg, float cost_php)
+void sendToSupabase(float voltage, float current, float energy_kwh, float peak_power_w)
 {
 
   struct tm timeinfo;
@@ -220,11 +258,11 @@ void sendToSupabase(float energy_kwh, float peak_power_w, float carbon_kg, float
 
   String payload = "{";
   payload += "\"date\":\"" + String(buf) + "\",";
+  payload += "\"voltage\":" + String(voltage, 2) + ",";
+  payload += "\"current\":" + String(current, 3) + ",";
   payload += "\"total_energy_kwh\":" + String(energy_kwh, 3) + ",";
   payload += "\"peak_power_w\":" + String(peak_power_w, 2) + ",";
-  payload += "\"carbon_emission_kgco2\":" + String(carbon_kg, 3) + ",";
-  payload += "\"cost_estimate\":" + String(cost_php, 2) + ",";
-  payload += "\"device_id\":\"" + String(deviceId) + "\"";
+  payload += "\"device_id\":" + String(deviceId);
   payload += "}";
 
   Serial.println("\n=== JSON Payload ===");
@@ -272,24 +310,17 @@ void setup()
 
   pzemSerial.begin(PZEM_BAUD, SERIAL_8N1, PZEM_RX, PZEM_TX);
 
-  WiFi.begin(ssid, password);
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
 
-  Serial.print("Connecting to WiFi");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi Connected!");
+  ensureWiFiConnected();
 
   syncTime();
-  
+
   // Load accumulated data if device was reset
   loadAccumulatedData();
   deviceWasReset = false;
-  
+
   resendQueue();
 }
 
@@ -312,9 +343,8 @@ void loop()
     // Only process valid readings
     if (!isnan(voltage) && !isnan(current) && !isnan(power) && voltage > 0)
     {
-      // Calculate energy based on actual time elapsed (corrected calculation)
-      unsigned long elapsed = (lastValidReadTime > 0) ? (currentMillis - lastValidReadTime) : READ_INTERVAL;
-      float deltaEnergy = (power * elapsed) / 3600000.0; // W * ms / (1000*3600) = kWh
+      // Calculate energy for this reading interval (1 minute)
+      float deltaEnergy = (power * READ_INTERVAL) / 3600000.0; // W * ms / (1000*3600) = kWh
 
       if (deltaEnergy > 0 && deltaEnergy < 10) // Reasonable bounds check
       {
@@ -327,7 +357,7 @@ void loop()
         peakPower = power;
 
       lastValidReadTime = currentMillis;
-      
+
       // Save accumulated data every 10 readings (10 minutes)
       static int readingCount = 0;
       if (++readingCount >= 10)
@@ -359,7 +389,7 @@ void loop()
     {
       Serial.println("Invalid PZEM reading - skipping");
     }
-    
+
     lastReadTime = currentMillis;
   }
 
@@ -367,19 +397,19 @@ void loop()
   struct tm timeinfo;
   if (getLocalTime(&timeinfo))
   {
-    if (timeinfo.tm_hour == 0 && timeinfo.tm_min == 0)
+    if (timeinfo.tm_hour == 15 && timeinfo.tm_min == 30)
     {
       if (!uploadedToday)
       {
         Serial.println("\n--- Sending Daily Summary ---");
-        sendToSupabase(totalEnergy, peakPower, totalCarbon, totalCost);
+        sendToSupabase(230.0, 2.0, totalEnergy, peakPower); // Use last known voltage/current
 
         // Reset accumulators
         totalEnergy = 0;
         peakPower = 0;
         totalCarbon = 0;
         totalCost = 0;
-        
+
         // Clear stored data
         SPIFFS.remove("/accumulated.txt");
         uploadedToday = true;

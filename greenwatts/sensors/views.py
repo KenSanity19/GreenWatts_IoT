@@ -71,11 +71,14 @@ def receive_sensor_data(request):
         # Store single reading
         dt = datetime.fromtimestamp(timestamp or 0, tz=timezone.utc) if timestamp else timezone.now()
 
+        power = voltage * current
         sensor_reading = SensorReading.objects.create(
             device=device,
+            date=dt.date(),
             voltage=voltage,
             current=current,
-            timestamp=dt
+            total_energy_kwh=0.0,  # Will be calculated later
+            peak_power_w=power
         )
 
         print(f"[{datetime.now()}] Device {device_id} - Voltage: {voltage}V, Current: {current}A")
@@ -123,11 +126,14 @@ def _process_batch_readings(device, readings, reading_count):
                 # Convert Unix timestamp to datetime
                 dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
+                power = voltage * current
                 sensor_reading = SensorReading(
                     device=device,
+                    date=dt.date(),
                     voltage=voltage,
                     current=current,
-                    timestamp=dt
+                    total_energy_kwh=0.0,
+                    peak_power_w=power
                 )
                 sensor_readings.append(sensor_reading)
             except (ValueError, TypeError) as e:
