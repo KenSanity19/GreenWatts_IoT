@@ -1,4 +1,5 @@
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from email.mime.text import MIMEText
@@ -23,6 +24,10 @@ def send_email_via_gmail(to_email, subject, message_text):
             token_uri="https://oauth2.googleapis.com/token"
         )
 
+        # Refresh the token if needed
+        if not creds.valid:
+            creds.refresh(Request())
+
         service = build("gmail", "v1", credentials=creds)
 
         message = MIMEText(message_text)
@@ -36,9 +41,6 @@ def send_email_via_gmail(to_email, subject, message_text):
 
         sent_message = service.users().messages().send(userId="me", body=raw_message).execute()
         return sent_message
-    except KeyError as e:
-        logging.error(f"Missing environment variable: {e}")
-        return None
-    except HttpError as error:
-        logging.error(f"An error occurred: {error}")
+    except Exception as error:
+        logging.error(f"Gmail API error: {error}")
         return None

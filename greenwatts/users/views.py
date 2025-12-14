@@ -62,7 +62,10 @@ def index(request):
                         request.session['device_fingerprint'] = device_fingerprint
                         return redirect('users:verify_otp')
                     else:
-                        messages.error(request, 'Failed to send verification code. Please try again.')
+                        # Fallback: login without 2FA if email fails
+                        messages.warning(request, 'Email service unavailable. Logged in without 2FA.')
+                        auth.login(request, user)
+                        return redirect('users:dashboard')
             else:
                 attempts = record_failed_attempt(username, 'user')
                 if attempts >= 5:
