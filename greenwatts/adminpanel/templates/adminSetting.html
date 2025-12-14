@@ -664,7 +664,7 @@
                   id="cost_per_kwh"
                   step="0.01"
                   readonly
-                  value="12.50"
+                  value="{{ threshold.cost_per_kwh|default:12.0 }}"
                 />
                 PHP
               </p>
@@ -684,7 +684,7 @@
                   id="co2_per_kwh"
                   step="0.01"
                   readonly
-                  value="0.50"
+                  value="{{ threshold.co2_per_kwh|default:0.475 }}"
                 />
                 kg CO2
               </p>
@@ -748,9 +748,7 @@
                     <td>{{ history.high_max }} kWh</td>
                     <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
                     <td>
-                      {% if history.ended_at %}{{ history.ended_at|date:"M d, Y
-                      H:i" }}{% else %}<span class="active-status">Active</span
-                      >{% endif %}
+                      {% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span class="active-status">Active</span>{% endif %}
                     </td>
                   </tr>
                   {% empty %}
@@ -785,9 +783,7 @@
                     <td>{{ history.high_max }} kg</td>
                     <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
                     <td>
-                      {% if history.ended_at %}{{ history.ended_at|date:"M d, Y
-                      H:i" }}{% else %}<span class="active-status">Active</span
-                      >{% endif %}
+                      {% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span class="active-status">Active</span>{% endif %}
                     </td>
                   </tr>
                   {% empty %}
@@ -829,12 +825,20 @@
                   </tr>
                 </thead>
                 <tbody>
+                  {% for history in cost_history %}
                   <tr>
-                    <td>1</td>
-                    <td>12.50 PHP</td>
-                    <td>Jan 15, 2025 10:30</td>
-                    <td><span class="active-status">Active</span></td>
+                    <td>{{ history.cost_id }}</td>
+                    <td>{{ history.cost_per_kwh }} PHP</td>
+                    <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                      {% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span class="active-status">Active</span>{% endif %}
+                    </td>
                   </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4">No cost history found.</td>
+                  </tr>
+                  {% endfor %}
                 </tbody>
               </table>
             </div>
@@ -855,12 +859,20 @@
                   </tr>
                 </thead>
                 <tbody>
+                  {% for history in co2_settings_history %}
                   <tr>
-                    <td>1</td>
-                    <td>0.50 kg CO2</td>
-                    <td>Jan 15, 2025 10:30</td>
-                    <td><span class="active-status">Active</span></td>
+                    <td>{{ history.co2_id }}</td>
+                    <td>{{ history.co2_emission_factor }} kg CO2</td>
+                    <td>{{ history.created_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                      {% if history.ended_at %}{{ history.ended_at|date:"M d, Y H:i" }}{% else %}<span class="active-status">Active</span>{% endif %}
+                    </td>
                   </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="4">No CO2 settings history found.</td>
+                  </tr>
+                  {% endfor %}
                 </tbody>
               </table>
             </div>
@@ -1551,7 +1563,7 @@
 
       document
         .getElementById("save-cost-btn")
-        .addEventListener("click", function () {
+        .addEventListener("click", async function () {
           const costValue = parseFloat(
             document.getElementById("cost_per_kwh").value
           );
@@ -1559,21 +1571,40 @@
             alert("Cost per kWh must be greater than 0.");
             return;
           }
-          // Here you would normally save to backend
-          alert(
-            "Cost rating saved successfully! (Frontend only - no backend implementation yet)"
-          );
-          document.getElementById("cost_per_kwh").readOnly = true;
-          document.getElementById("edit-cost-btn").style.display =
-            "inline-block";
-          document.getElementById("save-cost-btn").style.display = "none";
-          document.getElementById("cancel-cost-btn").style.display = "none";
+          try {
+            const response = await fetch(
+              "{% url 'adminpanel:save_cost_settings' %}",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: JSON.stringify({
+                  cost_per_kwh: costValue,
+                }),
+              }
+            );
+            const data = await response.json();
+            if (data.status === "success") {
+              alert("Cost settings saved successfully!");
+              document.getElementById("cost_per_kwh").readOnly = true;
+              document.getElementById("edit-cost-btn").style.display =
+                "inline-block";
+              document.getElementById("save-cost-btn").style.display = "none";
+              document.getElementById("cancel-cost-btn").style.display = "none";
+            } else {
+              alert("Error saving cost settings: " + data.message);
+            }
+          } catch (error) {
+            alert("Error saving cost settings.");
+          }
         });
 
       document
         .getElementById("cancel-cost-btn")
         .addEventListener("click", function () {
-          document.getElementById("cost_per_kwh").value = "12.50"; // Reset to default
+          document.getElementById("cost_per_kwh").value = "{{ threshold.cost_per_kwh|default:12.0 }}"; // Reset to current value
           document.getElementById("cost_per_kwh").readOnly = true;
           document.getElementById("edit-cost-btn").style.display =
             "inline-block";
@@ -1595,7 +1626,7 @@
 
       document
         .getElementById("save-emission-btn")
-        .addEventListener("click", function () {
+        .addEventListener("click", async function () {
           const emissionValue = parseFloat(
             document.getElementById("co2_per_kwh").value
           );
@@ -1603,21 +1634,40 @@
             alert("CO2 per kWh must be greater than 0.");
             return;
           }
-          // Here you would normally save to backend
-          alert(
-            "CO2 emission rating saved successfully! (Frontend only - no backend implementation yet)"
-          );
-          document.getElementById("co2_per_kwh").readOnly = true;
-          document.getElementById("edit-emission-btn").style.display =
-            "inline-block";
-          document.getElementById("save-emission-btn").style.display = "none";
-          document.getElementById("cancel-emission-btn").style.display = "none";
+          try {
+            const response = await fetch(
+              "{% url 'adminpanel:save_co2_settings' %}",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: JSON.stringify({
+                  co2_emission_factor: emissionValue,
+                }),
+              }
+            );
+            const data = await response.json();
+            if (data.status === "success") {
+              alert("CO2 emission settings saved successfully!");
+              document.getElementById("co2_per_kwh").readOnly = true;
+              document.getElementById("edit-emission-btn").style.display =
+                "inline-block";
+              document.getElementById("save-emission-btn").style.display = "none";
+              document.getElementById("cancel-emission-btn").style.display = "none";
+            } else {
+              alert("Error saving CO2 settings: " + data.message);
+            }
+          } catch (error) {
+            alert("Error saving CO2 settings.");
+          }
         });
 
       document
         .getElementById("cancel-emission-btn")
         .addEventListener("click", function () {
-          document.getElementById("co2_per_kwh").value = "0.50"; // Reset to default
+          document.getElementById("co2_per_kwh").value = "{{ threshold.co2_per_kwh|default:0.475 }}"; // Reset to current value
           document.getElementById("co2_per_kwh").readOnly = true;
           document.getElementById("edit-emission-btn").style.display =
             "inline-block";

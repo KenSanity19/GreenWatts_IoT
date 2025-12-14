@@ -37,6 +37,40 @@ class SensorReading(models.Model):
         return f"Reading {self.reading_id} - Device {self.device.device_id} - {self.date}"
 
 
+class CostSettings(models.Model):
+    cost_id = models.AutoField(primary_key=True)
+    cost_per_kwh = models.FloatField(default=12.0)  # PHP per kWh
+    created_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "tbl_cost_settings"
+
+    def __str__(self):
+        return f"Cost: {self.cost_per_kwh} PHP/kWh"
+
+    @classmethod
+    def get_current_rate(cls):
+        return cls.objects.filter(ended_at__isnull=True).first() or cls.objects.create()
+
+
+class CO2Settings(models.Model):
+    co2_id = models.AutoField(primary_key=True)
+    co2_emission_factor = models.FloatField(default=0.475)  # kg CO2 per kWh
+    created_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "tbl_co2_settings"
+
+    def __str__(self):
+        return f"CO2: {self.co2_emission_factor} kg/kWh"
+
+    @classmethod
+    def get_current_rate(cls):
+        return cls.objects.filter(ended_at__isnull=True).first() or cls.objects.create()
+
+
 class EnergyRecord(models.Model):
     record_id = models.AutoField(primary_key=True)
     date = models.DateField()

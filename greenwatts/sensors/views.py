@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db.models import Max, Sum
 import json
 from datetime import datetime, timedelta
-from .models import Device, SensorReading, EnergyRecord
+from .models import Device, SensorReading, EnergyRecord, CostSettings, CO2Settings
 
 def index(request):
     return HttpResponse("Hello from Sensors app")
@@ -189,11 +189,13 @@ def _calculate_daily_aggregate(device, sensor_readings):
         # Total power sum is in watts, multiply by interval (10s) and convert to hours
         total_energy_kwh = (total_power_sum * reading_interval) / (1000 * 3600)
 
-        # Carbon emissions (kg CO2 per kWh - Philippines average: 0.5)
-        carbon_emission_kgco2 = total_energy_kwh * 0.5
-
-        # Cost estimate (PHP per kWh - Philippines average: 12.50)
-        cost_estimate = total_energy_kwh * 12.50
+        # Get current settings
+        cost_settings = CostSettings.get_current_rate()
+        co2_settings = CO2Settings.get_current_rate()
+        
+        # Calculate using admin settings
+        carbon_emission_kgco2 = total_energy_kwh * co2_settings.co2_emission_factor
+        cost_estimate = total_energy_kwh * cost_settings.cost_per_kwh
 
         # Update or create daily record
         energy_record, created = EnergyRecord.objects.update_or_create(
