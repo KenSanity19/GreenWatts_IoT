@@ -38,7 +38,7 @@ HardwareSerial pzemSerial(1);
 PZEM004Tv30 pzem(pzemSerial, PZEM_RX, PZEM_TX);
 
 // ------------------ Reading Interval ------------------
-const unsigned long READ_INTERVAL = 60000; // 1 minute
+const unsigned long READ_INTERVAL = 10000; // 10 seconds
 unsigned long lastReadTime = 0;
 unsigned long lastValidReadTime = 0;
 
@@ -333,7 +333,7 @@ void loop()
 
   unsigned long currentMillis = millis();
 
-  // Read PZEM every 1 minute
+  // Read PZEM every 10 seconds
   if (currentMillis - lastReadTime >= READ_INTERVAL)
   {
     float voltage = pzem.voltage();
@@ -343,8 +343,8 @@ void loop()
     // Only process valid readings
     if (!isnan(voltage) && !isnan(current) && !isnan(power) && voltage > 0)
     {
-      // Calculate energy for this reading interval (1 minute)
-      float deltaEnergy = (power * READ_INTERVAL) / 3600000.0; // W * ms / (1000*3600) = kWh
+      // Calculate energy for this reading interval (10 seconds)
+      float deltaEnergy = power * 10.0 / 3600000.0; // W * 10_seconds / (3600_s/h * 1000_W/kW) = kWh
 
       if (deltaEnergy > 0 && deltaEnergy < 10) // Reasonable bounds check
       {
@@ -368,21 +368,28 @@ void loop()
 
       // ------------------ DEBUG PRINT ------------------
       struct tm timeinfo;
-      if (getLocalTime(&timeinfo))
-      {
+      if (getLocalTime(&timeinfo)) {
         char timeStr[20];
         strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
-        Serial.print("[");
-        Serial.print(timeStr);
-        Serial.print("] V:");
-        Serial.print(voltage, 1);
-        Serial.print("V I:");
+        Serial.println("\n=== ENERGY READING ===");
+        Serial.print("Time: ");
+        Serial.println(timeStr);
+        Serial.print("Voltage: ");
+        Serial.print(voltage, 2);
+        Serial.println(" V");
+        Serial.print("Current: ");
         Serial.print(current, 3);
-        Serial.print("A P:");
-        Serial.print(power, 1);
-        Serial.print("W E:");
+        Serial.println(" A");
+        Serial.print("Power: ");
+        Serial.print(power, 2);
+        Serial.println(" W");
+        Serial.print("Total Energy: ");
         Serial.print(totalEnergy, 4);
-        Serial.println("kWh");
+        Serial.println(" kWh");
+        Serial.print("Peak Power: ");
+        Serial.print(peakPower, 2);
+        Serial.println(" W");
+        Serial.println("=====================");
       }
     }
     else

@@ -93,7 +93,7 @@ def dashboard(request):
     from datetime import timedelta, date
     from calendar import monthrange
     import json
-    from ..sensors.models import SensorReading
+    from ..sensors.models import EnergyRecord
     from datetime import datetime as dt
 
     office = request.user
@@ -116,9 +116,7 @@ def dashboard(request):
             'timestamp': notif.created_at
         })
     
-    # Get current rates
-    cost_rate = CostSettings.get_current_rate().cost_per_kwh
-    co2_rate = CO2Settings.get_current_rate().co2_emission_factor
+
     
     # Get selected day, month, year from request
     selected_day = request.GET.get('selected_day')
@@ -131,13 +129,13 @@ def dashboard(request):
             selected_year = str(dt.now().year)
     
     # Year options: all years with data for this office
-    years_with_data = SensorReading.objects.filter(
+    years_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
     
     # Month options: all months with data for this office
-    months_with_data = SensorReading.objects.filter(
+    months_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
 
@@ -148,13 +146,13 @@ def dashboard(request):
     
     # Day options: all days with data, or filtered by month/year if selected
     if selected_month and selected_year:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             date__year=int(selected_year),
             date__month=int(selected_month),
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
     else:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
 
@@ -184,7 +182,7 @@ def dashboard(request):
         level = 'month'
     else:
         # Default to latest date
-        latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
         latest_date = latest_data['latest_date']
         if latest_date:
             filter_kwargs = {'date': latest_date}
@@ -195,16 +193,22 @@ def dashboard(request):
             level = 'day'
 
     # Total energy usage for selected filter
-    energy_usage = SensorReading.objects.filter(
+    energy_usage = EnergyRecord.objects.filter(
         device__in=devices,
         **filter_kwargs
     ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
 
-    # Cost predicted for selected filter (calculated from energy)
-    cost_predicted = energy_usage * cost_rate
+    # Cost predicted for selected filter
+    cost_predicted = EnergyRecord.objects.filter(
+        device__in=devices,
+        **filter_kwargs
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
 
-    # CO2 emissions for selected filter (calculated from energy)
-    co2_emissions = energy_usage * co2_rate
+    # CO2 emissions for selected filter
+    co2_emissions = EnergyRecord.objects.filter(
+        device__in=devices,
+        **filter_kwargs
+    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
     # Active alerts: Show overall computation as single entry with scaled thresholds
     base_thresholds = get_base_thresholds()
@@ -233,52 +237,43 @@ def dashboard(request):
             prev_month = 12
             prev_year -= 1
         
-        current_energy = SensorReading.objects.filter(
+        current_cost = EnergyRecord.objects.filter(
             date__year=current_year, date__month=current_month,
             device__in=devices
-        ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
         
-        prev_energy = SensorReading.objects.filter(
+        prev_cost = EnergyRecord.objects.filter(
             date__year=prev_year, date__month=prev_month,
             device__in=devices
-        ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-        
-        current_cost = current_energy * cost_rate
-        prev_cost = prev_energy * cost_rate
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
         
         bar1_label = date(prev_year, prev_month, 1).strftime('%B %Y')
         bar2_label = date(current_year, current_month, 1).strftime('%B %Y')
     elif selected_date:
         # Compare selected_date and previous day
         previous_date = selected_date - timedelta(days=1)
-        current_energy = SensorReading.objects.filter(
+        current_cost = EnergyRecord.objects.filter(
             date=selected_date, device__in=devices
-        ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-        prev_energy = SensorReading.objects.filter(
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+        prev_cost = EnergyRecord.objects.filter(
             date=previous_date, device__in=devices
-        ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-        
-        current_cost = current_energy * cost_rate
-        prev_cost = prev_energy * cost_rate
+        ).aggregate(total=Sum('cost_estimate'))['total'] or 0
         
         bar1_label = previous_date.strftime('%B %d')
         bar2_label = selected_date.strftime('%B %d')
     else:
         # Default to last two days with data
-        change_dates_qs = SensorReading.objects.filter(
+        change_dates_qs = EnergyRecord.objects.filter(
             device__in=devices
         ).dates('date', 'day').distinct().order_by('-date')[:2]
         change_dates = list(change_dates_qs)
         if len(change_dates) >= 2:
-            current_energy = SensorReading.objects.filter(
+            current_cost = EnergyRecord.objects.filter(
                 date=change_dates[0], device__in=devices
-            ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-            prev_energy = SensorReading.objects.filter(
+            ).aggregate(total=Sum('cost_estimate'))['total'] or 0
+            prev_cost = EnergyRecord.objects.filter(
                 date=change_dates[1], device__in=devices
-            ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-            
-            current_cost = current_energy * cost_rate
-            prev_cost = prev_energy * cost_rate
+            ).aggregate(total=Sum('cost_estimate'))['total'] or 0
             
             bar1_label = change_dates[1].strftime('%B %d')
             bar2_label = change_dates[0].strftime('%B %d')
@@ -314,7 +309,7 @@ def dashboard(request):
         _, days_in_month = monthrange(current_year, current_month)
         
         # Get days with data so far in the month
-        days_with_data = SensorReading.objects.filter(
+        days_with_data = EnergyRecord.objects.filter(
             date__year=current_year, date__month=current_month,
             device__in=devices
         ).dates('date', 'day').count()
@@ -409,7 +404,7 @@ def office_usage(request):
     from django.db.models.functions import ExtractYear, ExtractMonth
     from django.utils import timezone
     from datetime import date, timedelta
-    from ..sensors.models import SensorReading
+    from ..sensors.models import EnergyRecord
     from datetime import datetime as dt
     import json
 
@@ -431,13 +426,13 @@ def office_usage(request):
             selected_year = str(dt.now().year)
     
     # Year options: all years with data for this office
-    years_with_data = SensorReading.objects.filter(
+    years_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
     
     # Month options: all months with data for this office
-    months_with_data = SensorReading.objects.filter(
+    months_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
     
@@ -447,13 +442,13 @@ def office_usage(request):
     
     # Day options: all days with data, or filtered by month/year if selected
     if selected_month and selected_year:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             date__year=int(selected_year),
             date__month=int(selected_month),
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
     else:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
     
@@ -465,14 +460,14 @@ def office_usage(request):
         if selected_month and selected_year:
             months = [{'month': int(selected_month), 'year': int(selected_year)}]
         else:
-            months = SensorReading.objects.filter(device__in=devices).annotate(
+            months = EnergyRecord.objects.filter(device__in=devices).annotate(
                 month=ExtractMonth('date'), year=ExtractYear('date')
             ).values('month', 'year').distinct().order_by('year', 'month')
         
         week_options = []
         for m in months:
             year, month = m['year'], m['month']
-            dates_in_month = SensorReading.objects.filter(
+            dates_in_month = EnergyRecord.objects.filter(
                 device__in=devices, date__year=year, date__month=month
             ).dates('date', 'day')
             
@@ -517,7 +512,7 @@ def office_usage(request):
         level = 'month'
     else:
         # Default to latest date
-        latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
         latest_date = latest_data['latest_date']
         if latest_date:
             filter_kwargs = {'date': latest_date}
@@ -528,21 +523,21 @@ def office_usage(request):
             level = 'day'
 
     # Get current office data for selected filter
-    office_record = SensorReading.objects.filter(
+    office_record = EnergyRecord.objects.filter(
         device__in=devices,
         **filter_kwargs
     ).aggregate(
-        total_energy=Sum('total_energy_kwh')
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
     )
 
     office_energy = office_record['total_energy'] or 0
-    cost_rate = CostSettings.get_current_rate().cost_per_kwh
-    co2_rate = CO2Settings.get_current_rate().co2_emission_factor
-    office_cost = office_energy * cost_rate
-    office_co2 = office_energy * co2_rate
+    office_cost = office_record['total_cost'] or 0
+    office_co2 = office_record['total_co2'] or 0
 
     # Get all offices data for comparison
-    all_offices_data = SensorReading.objects.filter(
+    all_offices_data = EnergyRecord.objects.filter(
         **filter_kwargs
     ).values(
         office_name=F('device__office__name'),
@@ -587,7 +582,7 @@ def office_usage(request):
     if selected_week:
         week_start = date.fromisoformat(selected_week)
         week_end = week_start + timedelta(days=6)
-        week_data = SensorReading.objects.filter(
+        week_data = EnergyRecord.objects.filter(
             device__in=devices,
             date__gte=week_start,
             date__lte=week_end
@@ -607,7 +602,7 @@ def office_usage(request):
             current += timedelta(days=1)
     elif selected_date:
         week_start = selected_date - timedelta(days=6)
-        week_data = SensorReading.objects.filter(
+        week_data = EnergyRecord.objects.filter(
             device__in=devices,
             date__gte=week_start,
             date__lte=selected_date
@@ -627,7 +622,7 @@ def office_usage(request):
             current += timedelta(days=1)
     else:
         # For month/year filters, get last 7 days with data
-        week_data = SensorReading.objects.filter(
+        week_data = EnergyRecord.objects.filter(
             device__in=devices,
             **filter_kwargs
         ).values('date').annotate(
@@ -647,7 +642,7 @@ def office_usage(request):
     if level == 'day':
         # Compare with yesterday
         prev_date = selected_date - timedelta(days=1)
-        prev_week_energy = SensorReading.objects.filter(
+        prev_week_energy = EnergyRecord.objects.filter(
             device__in=devices,
             date=prev_date
         ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
@@ -661,7 +656,7 @@ def office_usage(request):
             prev_month = 12
             prev_year -= 1
         
-        prev_week_energy = SensorReading.objects.filter(
+        prev_week_energy = EnergyRecord.objects.filter(
             device__in=devices,
             date__year=prev_year,
             date__month=prev_month
@@ -671,7 +666,7 @@ def office_usage(request):
     else:
         # For year, compare with previous year
         prev_year = int(selected_year) - 1
-        prev_week_energy = SensorReading.objects.filter(
+        prev_week_energy = EnergyRecord.objects.filter(
             device__in=devices,
             date__year=prev_year
         ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
@@ -765,7 +760,7 @@ def user_reports(request):
     from datetime import timedelta, date
     from datetime import datetime as dt
     import json
-    from ..sensors.models import SensorReading
+    from ..sensors.models import EnergyRecord
 
     office = request.user
     devices = office.devices.all()
@@ -781,7 +776,7 @@ def user_reports(request):
 
     # Auto-select latest data if no filters provided
     if not any([selected_day, selected_month, selected_year, selected_week]):
-        latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
         if latest_data['latest_date']:
             latest_date = latest_data['latest_date']
             selected_month = str(latest_date.month)
@@ -793,13 +788,13 @@ def user_reports(request):
             selected_year = str(dt.now().year)
 
     # Year options: all years with data for this office
-    years_with_data = SensorReading.objects.filter(
+    years_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
 
     # Month options: all months with data for this office
-    months_with_data = SensorReading.objects.filter(
+    months_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
     
@@ -809,13 +804,13 @@ def user_reports(request):
 
     # Day options: all days with data, or filtered by month/year if selected
     if selected_month and selected_year:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             date__year=int(selected_year),
             date__month=int(selected_month),
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
     else:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
 
@@ -829,7 +824,7 @@ def user_reports(request):
             months = [{'month': int(selected_month), 'year': int(selected_year)}]
         else:
             # Get distinct months with data
-            months = SensorReading.objects.filter(
+            months = EnergyRecord.objects.filter(
                 device__in=devices
             ).annotate(
                 month=ExtractMonth('date'),
@@ -842,7 +837,7 @@ def user_reports(request):
             month = m['month']
 
             # Get all dates in this month with data
-            dates_in_month = SensorReading.objects.filter(
+            dates_in_month = EnergyRecord.objects.filter(
                 device__in=devices
             ).filter(
                 date__year=year,
@@ -916,7 +911,7 @@ def user_reports(request):
             level = 'month'
         else:
             # Default to latest date
-            latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+            latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
             latest_date = latest_data['latest_date']
             if latest_date:
                 filter_kwargs = {'date': latest_date}
@@ -954,18 +949,18 @@ def user_reports(request):
         return render(request, 'users/userReports.html', context)
 
     # Fetch data for the selected filter
-    period_data = SensorReading.objects.filter(
+    period_data = EnergyRecord.objects.filter(
         device__in=devices,
         **filter_kwargs
     ).aggregate(
-        total_energy=Sum('total_energy_kwh')
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
     )
 
     total_energy_usage = period_data['total_energy'] or 0
-    cost_rate = CostSettings.get_current_rate().cost_per_kwh
-    co2_rate = CO2Settings.get_current_rate().co2_emission_factor
-    cost_predicted = total_energy_usage * cost_rate
-    co2_emission = total_energy_usage * co2_rate
+    cost_predicted = period_data['total_cost'] or 0
+    co2_emission = period_data['total_co2'] or 0
 
     # Prepare chart data based on level
     import calendar
@@ -980,7 +975,7 @@ def user_reports(request):
         week_start = date.fromisoformat(selected_week)
         week_end = week_start + timedelta(days=6)
         
-        daily_data = SensorReading.objects.filter(
+        daily_data = EnergyRecord.objects.filter(
             device__in=devices,
             date__gte=week_start,
             date__lte=week_end
@@ -1015,7 +1010,7 @@ def user_reports(request):
         start_date = date(int(selected_year), int(selected_month), 1)
         end_date = date(int(selected_year), int(selected_month), calendar.monthrange(int(selected_year), int(selected_month))[1])
         
-        daily_data = SensorReading.objects.filter(
+        daily_data = EnergyRecord.objects.filter(
             device__in=devices,
             date__gte=start_date,
             date__lte=end_date
@@ -1103,7 +1098,7 @@ def user_reports(request):
     calendar_year = int(selected_year) if selected_year else now.year
     calendar_month = int(selected_month) if selected_month else now.month
     
-    calendar_data = SensorReading.objects.filter(
+    calendar_data = EnergyRecord.objects.filter(
         device__in=devices,
         date__year=calendar_year,
         date__month=calendar_month
@@ -1157,7 +1152,7 @@ def user_energy_cost(request):
     from django.db.models.functions import ExtractYear, ExtractMonth
     from django.utils import timezone
     from datetime import date, timedelta
-    from ..sensors.models import SensorReading
+    from ..sensors.models import EnergyRecord
     from datetime import datetime as dt
     from calendar import monthrange
     import json
@@ -1176,7 +1171,7 @@ def user_energy_cost(request):
     
     # Auto-select latest data if no filters provided
     if not any([selected_day, selected_month, selected_year, selected_week]):
-        latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
         if latest_data['latest_date']:
             latest_date = latest_data['latest_date']
             selected_month = str(latest_date.month)
@@ -1188,13 +1183,13 @@ def user_energy_cost(request):
             selected_year = str(dt.now().year)
     
     # Year options: all years with data for this office
-    years_with_data = SensorReading.objects.filter(
+    years_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
     
     # Month options: all months with data for this office
-    months_with_data = SensorReading.objects.filter(
+    months_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
     
@@ -1204,13 +1199,13 @@ def user_energy_cost(request):
     
     # Day options: all days with data, or filtered by month/year if selected
     if selected_month and selected_year:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             date__year=int(selected_year),
             date__month=int(selected_month),
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
     else:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+        day_options = [d.strftime('%m/%d/%Y') for d in EnergyRecord.objects.filter(
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
     
@@ -1221,7 +1216,7 @@ def user_energy_cost(request):
         if selected_month and selected_year:
             months = [{'month': int(selected_month), 'year': int(selected_year)}]
         else:
-            months = SensorReading.objects.filter(
+            months = EnergyRecord.objects.filter(
                 device__in=devices
             ).annotate(
                 month=ExtractMonth('date'),
@@ -1233,7 +1228,7 @@ def user_energy_cost(request):
             year = m['year']
             month = m['month']
             
-            dates_in_month = SensorReading.objects.filter(
+            dates_in_month = EnergyRecord.objects.filter(
                 device__in=devices
             ).filter(
                 date__year=year,
@@ -1301,7 +1296,7 @@ def user_energy_cost(request):
             filter_kwargs = {'date__year': int(selected_year)}
             level = 'year'
         else:
-            latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+            latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
             latest_date = latest_data['latest_date']
             if latest_date:
                 filter_kwargs = {'date': latest_date}
@@ -1339,21 +1334,21 @@ def user_energy_cost(request):
         return render(request, 'users/userEnergyCost.html', context)
     
     # Aggregate totals for selected filter
-    aggregates = SensorReading.objects.filter(
+    aggregates = EnergyRecord.objects.filter(
         device__in=devices,
         **filter_kwargs
     ).aggregate(
-        total_energy=Sum('total_energy_kwh')
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate')
     )
     
-    num_days = SensorReading.objects.filter(
+    num_days = EnergyRecord.objects.filter(
         device__in=devices,
         **filter_kwargs
     ).dates('date', 'day').distinct().count() or 1
     
     total_energy = aggregates['total_energy'] or 0
-    cost_rate = CostSettings.get_current_rate().cost_per_kwh
-    total_cost = total_energy * cost_rate
+    total_cost = aggregates['total_cost'] or 0
     avg_daily_cost = total_cost / num_days if num_days > 0 else 0
     
     # Calculate period start and end based on level
@@ -1400,21 +1395,19 @@ def user_energy_cost(request):
         prev_end = period_end - timedelta(days=1)
     
     # Previous cost
-    prev_energy = SensorReading.objects.filter(
+    prev_cost = EnergyRecord.objects.filter(
         device__in=devices,
         date__gte=prev_start,
         date__lte=prev_end
-    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    prev_cost = prev_energy * cost_rate
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
     
     # So far cost
     so_far_end = min(period_end, now)
-    so_far_energy = SensorReading.objects.filter(
+    so_far_cost = EnergyRecord.objects.filter(
         device__in=devices,
         date__gte=period_start,
         date__lte=so_far_end
-    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    so_far_cost = so_far_energy * cost_rate
+    ).aggregate(total=Sum('cost_estimate'))['total'] or 0
     
     # Predicted cost
     total_days = (period_end - period_start).days + 1
@@ -1432,12 +1425,12 @@ def user_energy_cost(request):
     if level == 'day':
         highest_cost_day = selected_date.strftime('%Y-%m-%d')
     else:
-        daily_costs = SensorReading.objects.filter(
+        daily_costs = EnergyRecord.objects.filter(
             device__in=devices,
             **filter_kwargs
         ).values('date').annotate(
-            total_energy=Sum('total_energy_kwh')
-        ).order_by('-total_energy')
+            total_cost=Sum('cost_estimate')
+        ).order_by('-total_cost')
         
         if daily_costs:
             highest_cost_day = daily_costs.first()['date'].strftime('%Y-%m-%d')
@@ -1453,10 +1446,10 @@ def user_energy_cost(request):
         chart_labels = [[d.strftime('%A'), d.strftime('%Y-%m-%d')] for d in chart_dates]
         chart_data = []
         for d in chart_dates:
-            cost = SensorReading.objects.filter(
+            cost = EnergyRecord.objects.filter(
                 device__in=devices,
                 date=d
-            ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+            ).aggregate(total=Sum('cost_estimate'))['total'] or 0
             chart_data.append(cost)
     elif level == 'month':
         year = int(selected_year) if selected_year else dt.now().year
@@ -1468,28 +1461,26 @@ def user_energy_cost(request):
         chart_labels = [[d.strftime('%d'), d.strftime('%Y-%m-%d')] for d in chart_dates]
         chart_data = []
         for d in chart_dates:
-            cost = SensorReading.objects.filter(
+            cost = EnergyRecord.objects.filter(
                 device__in=devices,
                 date=d
-            ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+            ).aggregate(total=Sum('cost_estimate'))['total'] or 0
             chart_data.append(cost)
     elif level == 'year':
-        monthly_data = SensorReading.objects.filter(
+        monthly_data = EnergyRecord.objects.filter(
             device__in=devices,
             date__year=int(selected_year)
         ).annotate(
             month=ExtractMonth('date')
         ).values('month').annotate(
-            total_energy=Sum('total_energy_kwh')
+            total_cost=Sum('cost_estimate')
         ).order_by('month')
         chart_labels = [['Jan', 'January'], ['Feb', 'February'], ['Mar', 'March'], ['Apr', 'April'], 
                        ['May', 'May'], ['Jun', 'June'], ['Jul', 'July'], ['Aug', 'August'], 
                        ['Sep', 'September'], ['Oct', 'October'], ['Nov', 'November'], ['Dec', 'December']]
         chart_data = [0] * 12
         for item in monthly_data:
-            energy = item['total_energy'] or 0
-            cost = energy * cost_rate
-            chart_data[item['month'] - 1] = cost
+            chart_data[item['month'] - 1] = item['total_cost'] or 0
     else:  # day
         chart_labels = [[selected_date.strftime('%A'), selected_date.strftime('%Y-%m-%d')]]
         chart_data = [total_cost]
@@ -1551,7 +1542,7 @@ def user_emmision(request):
     from django.utils import timezone
     import json
     from greenwatts.users.models import Office
-    from ..sensors.models import SensorReading
+    from ..sensors.models import EnergyRecord
     from datetime import datetime as dt
 
     office = request.user
@@ -1568,7 +1559,7 @@ def user_emmision(request):
 
     # Auto-select latest data if no filters provided
     if not any([selected_day, selected_month, selected_year, selected_week]):
-        latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
         if latest_data['latest_date']:
             latest_date = latest_data['latest_date']
             selected_month = str(latest_date.month)
@@ -1580,13 +1571,13 @@ def user_emmision(request):
             selected_year = str(dt.now().year)
 
     # Year options: all years with data for this office
-    years_with_data = SensorReading.objects.filter(
+    years_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
 
     # Month options: all months with data for this office
-    months_with_data = SensorReading.objects.filter(
+    months_with_data = EnergyRecord.objects.filter(
         device__in=devices
     ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
     
@@ -1601,7 +1592,7 @@ def user_emmision(request):
         if selected_month and selected_year:
             months = [{'month': int(selected_month), 'year': int(selected_year)}]
         else:
-            months = SensorReading.objects.filter(
+            months = EnergyRecord.objects.filter(
                 device__in=devices
             ).annotate(
                 month=ExtractMonth('date'),
@@ -1613,7 +1604,7 @@ def user_emmision(request):
             year = m['year']
             month = m['month']
             
-            dates_in_month = SensorReading.objects.filter(
+            dates_in_month = EnergyRecord.objects.filter(
                 device__in=devices
             ).filter(
                 date__year=year,
@@ -1681,7 +1672,7 @@ def user_emmision(request):
             filter_kwargs = {'date__year': int(selected_year)}
             level = 'year'
         else:
-            latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+            latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
             latest_date = latest_data['latest_date']
             if latest_date:
                 filter_kwargs = {'date': latest_date}
@@ -1718,13 +1709,10 @@ def user_emmision(request):
         return render(request, 'users/userEmmision.html', context)
 
     # Get CO2 data for selected filter
-    energy_data = SensorReading.objects.filter(
+    co2_data = EnergyRecord.objects.filter(
         device__in=devices,
         **filter_kwargs
-    ).aggregate(total_energy=Sum('total_energy_kwh'))['total_energy'] or 0
-    
-    co2_rate = CO2Settings.get_current_rate().co2_emission_factor
-    co2_data = energy_data * co2_rate
+    ).aggregate(total_co2=Sum('carbon_emission_kgco2'))['total_co2'] or 0
 
     # Calculate previous period for comparison
     if level == 'week':
@@ -1758,22 +1746,20 @@ def user_emmision(request):
         previous_label = f"Previous Week"
 
     # Previous period CO2
-    last_week_energy = SensorReading.objects.filter(
+    last_week_co2 = EnergyRecord.objects.filter(
         device__in=devices,
         date__gte=prev_week_start,
         date__lte=prev_week_end
-    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    last_week_co2 = last_week_energy * co2_rate
+    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
     # Current period so far CO2
     now = timezone.now().date()
     current_end = min(week_end, now)
-    current_week_so_far_energy = SensorReading.objects.filter(
+    current_week_so_far_co2 = EnergyRecord.objects.filter(
         device__in=devices,
         date__gte=week_start,
         date__lte=current_end
-    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    current_week_so_far_co2 = current_week_so_far_energy * co2_rate
+    ).aggregate(total=Sum('carbon_emission_kgco2'))['total'] or 0
 
     # Predicted CO2
     if level == 'week':
@@ -1798,14 +1784,14 @@ def user_emmision(request):
 
     # Chart data based on level
     if level == 'week':
-        daily_data = SensorReading.objects.filter(
+        daily_data = EnergyRecord.objects.filter(
             device__in=devices,
             date__gte=week_start,
             date__lte=week_end
         ).annotate(
             day_date=TruncDate('date')
         ).values('day_date').annotate(
-            total_energy=Sum('total_energy_kwh')
+            total_co2=Sum('carbon_emission_kgco2')
         ).order_by('day_date')
         
         date_range = []
@@ -1814,7 +1800,7 @@ def user_emmision(request):
             date_range.append(current)
             current += timedelta(days=1)
         
-        date_dict = {item['day_date']: (item['total_energy'] or 0) * co2_rate or 0 for item in daily_data}
+        date_dict = {item['day_date']: item['total_co2'] or 0 for item in daily_data}
         week_data = []
         labels = []
         for d in date_range:
@@ -1822,14 +1808,14 @@ def user_emmision(request):
             labels.append(label)
             week_data.append(date_dict.get(d, 0))
     elif level == 'month':
-        daily_data = SensorReading.objects.filter(
+        daily_data = EnergyRecord.objects.filter(
             device__in=devices,
             date__gte=week_start,
             date__lte=week_end
         ).annotate(
             day_date=TruncDate('date')
         ).values('day_date').annotate(
-            total_energy=Sum('total_energy_kwh')
+            total_co2=Sum('carbon_emission_kgco2')
         ).order_by('day_date')
         
         date_range = []
@@ -1838,7 +1824,7 @@ def user_emmision(request):
             date_range.append(current)
             current += timedelta(days=1)
         
-        date_dict = {item['day_date']: (item['total_energy'] or 0) * co2_rate or 0 for item in daily_data}
+        date_dict = {item['day_date']: item['total_co2'] or 0 for item in daily_data}
         week_data = []
         labels = []
         for d in date_range:
@@ -1849,14 +1835,14 @@ def user_emmision(request):
         # Default to last 7 days
         end_date = now
         start_date = end_date - timedelta(days=6)
-        daily_data = SensorReading.objects.filter(
+        daily_data = EnergyRecord.objects.filter(
             device__in=devices,
             date__gte=start_date,
             date__lte=end_date
         ).annotate(
             day_date=TruncDate('date')
         ).values('day_date').annotate(
-            total_energy=Sum('total_energy_kwh')
+            total_co2=Sum('carbon_emission_kgco2')
         ).order_by('day_date')
         
         date_range = []
@@ -1865,7 +1851,7 @@ def user_emmision(request):
             date_range.append(current)
             current += timedelta(days=1)
         
-        date_dict = {item['day_date']: (item['total_energy'] or 0) * co2_rate or 0 for item in daily_data}
+        date_dict = {item['day_date']: item['total_co2'] or 0 for item in daily_data}
         week_data = []
         labels = []
         for d in date_range:
@@ -1907,7 +1893,7 @@ def export_user_reports(request):
     from django.db.models.functions import ExtractYear, ExtractMonth
     from datetime import timedelta, date
     from datetime import datetime as dt
-    from ..sensors.models import SensorReading
+    from ..sensors.models import EnergyRecord
     import calendar
     
     office = request.user
@@ -1950,7 +1936,7 @@ def export_user_reports(request):
             level = 'year'
         else:
             # Default to latest date
-            latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+            latest_data = EnergyRecord.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
             latest_date = latest_data['latest_date']
             if latest_date:
                 filter_kwargs = {'date': latest_date}
@@ -1969,11 +1955,13 @@ def export_user_reports(request):
         return response
     
     # Get data based on filter
-    export_data = SensorReading.objects.filter(
+    export_data = EnergyRecord.objects.filter(
         device__in=devices,
         **filter_kwargs
     ).values('date').annotate(
-        total_energy=Sum('total_energy_kwh')
+        total_energy=Sum('total_energy_kwh'),
+        total_cost=Sum('cost_estimate'),
+        total_co2=Sum('carbon_emission_kgco2')
     ).order_by('date')
     
     response = HttpResponse(content_type='text/csv')
@@ -1995,18 +1983,12 @@ def export_user_reports(request):
     writer = csv.writer(response)
     writer.writerow(['Date', 'Energy Usage (kWh)', 'Cost Estimate (PHP)', 'CO2 Emission (kg)'])
     
-    cost_rate = CostSettings.get_current_rate().cost_per_kwh
-    co2_rate = CO2Settings.get_current_rate().co2_emission_factor
-    
     for record in export_data:
-        energy = record['total_energy'] or 0
-        cost = energy * cost_rate
-        co2 = energy * co2_rate
         writer.writerow([
             record['date'].strftime('%Y-%m-%d'),
-            f"{energy:.2f}",
-            f"{cost:.2f}",
-            f"{co2:.2f}"
+            f"{record['total_energy']:.2f}" if record['total_energy'] else '0.00',
+            f"{record['total_cost']:.2f}" if record['total_cost'] else '0.00',
+            f"{record['total_co2']:.2f}" if record['total_co2'] else '0.00'
         ])
     
     return response
@@ -2023,7 +2005,7 @@ def get_user_days(request):
         office = request.user
         devices = office.devices.all()
         
-        days = SensorReading.objects.filter(
+        days = EnergyRecord.objects.filter(
             date__year=int(year),
             date__month=int(month),
             device__in=devices
@@ -2066,7 +2048,7 @@ def get_user_weeks(request):
             if selected_month and selected_year:
                 months = [{'month': int(selected_month), 'year': int(selected_year)}]
             else:
-                months = SensorReading.objects.filter(
+                months = EnergyRecord.objects.filter(
                     device__in=devices
                 ).annotate(
                     month=ExtractMonth('date'),
@@ -2078,7 +2060,7 @@ def get_user_weeks(request):
                 year = m['year']
                 month = m['month']
 
-                dates_in_month = SensorReading.objects.filter(
+                dates_in_month = EnergyRecord.objects.filter(
                     device__in=devices
                 ).filter(
                     date__year=year,
