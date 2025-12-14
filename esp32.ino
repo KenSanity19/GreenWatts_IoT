@@ -317,7 +317,7 @@ void setup()
 
   syncTime();
 
-  // Load accumulated data if device was reset
+  // Load accumulated data if device was reset (for blackout protection)
   loadAccumulatedData();
   deviceWasReset = false;
 
@@ -368,7 +368,8 @@ void loop()
 
       // ------------------ DEBUG PRINT ------------------
       struct tm timeinfo;
-      if (getLocalTime(&timeinfo)) {
+      if (getLocalTime(&timeinfo))
+      {
         char timeStr[20];
         strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
         Serial.println("\n=== ENERGY READING ===");
