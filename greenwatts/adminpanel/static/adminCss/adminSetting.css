@@ -36,18 +36,36 @@ header h1 {
   margin-left: auto;
 }
 
-/* Office Table */
-.office-section {
-  margin: 10px 0;
+/* Management Section */
+.management-section {
+  margin: 20px 0;
   background: #1e1f47;
   padding: 20px;
   border-radius: 8px;
   color: #fff;
 }
 
+/* Office Table */
+.office-section {
+  margin: 20px 0;
+  background: #1e1f47;
+  padding: 20px;
+  border-radius: 8px;
+  color: #fff;
+  margin-bottom: 0px;
+}
+
+.management-content {
+  margin-top: 20px;
+}
+
 .office-table-container {
+  max-height: 250px;
+  overflow-y: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }
 
 .office-header {
@@ -677,8 +695,12 @@ footer .tip span {
 }
 
 .device-table-container {
+  max-height: 250px;
+  overflow-y: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }
 
 /* Device table */
@@ -687,47 +709,48 @@ footer .tip span {
   border-collapse: collapse;
   background-color: white;
   color: black;
-  border-radius: 8px;
-  overflow: hidden;
-  display: block;
+  min-width: 750px;
 }
 
-.device-table thead, .device-table tbody {
-  display: block;
+.device-table thead {
+  display: table-header-group;
 }
 
 .device-table tbody {
-  height: 300px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  display: table-row-group;
+}
+
+.device-table tbody {
+  display: block;
 }
 
 .device-table th, .device-table td {
-  box-sizing: border-box;
-  padding: 12px;
+  padding: 10px 8px;
   text-align: center;
-  display: inline-block;
-  vertical-align: top;
+  border-bottom: 1px solid #eee;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-transform: capitalize;
 }
 
-.device-table th:nth-child(1), .device-table td:nth-child(1) { width: 15%; } /* Device ID */
-.device-table th:nth-child(2), .device-table td:nth-child(2) { width: 20%; } /* Installed Date */
-.device-table th:nth-child(3), .device-table td:nth-child(3) { width: 21%; } /* Status */
-.device-table th:nth-child(4), .device-table td:nth-child(4) { width: 22%; } /* Office */
-.device-table th:nth-child(5), .device-table td:nth-child(5) { width: 15%; } /* Appliance Type */
-.device-table th:nth-child(6), .device-table td:nth-child(6) { width: 15%; } /* Action */
+.device-table th:nth-child(1), .device-table td:nth-child(1) { width: 12%; } /* Device ID */
+.device-table th:nth-child(2), .device-table td:nth-child(2) { width: 25%; } /* Office */
+.device-table th:nth-child(3), .device-table td:nth-child(3) { width: 20%; } /* Appliance Type */
+.device-table th:nth-child(4), .device-table td:nth-child(4) { width: 18%; } /* Installed Date */
+.device-table th:nth-child(5), .device-table td:nth-child(5) { width: 15%; } /* Status */
+.device-table th:nth-child(6), .device-table td:nth-child(6) { width: 10%; } /* Action */
 
 .device-table thead tr {
-  width: 100%;
-  display: flex;
   background-color: #004080;
   color: white;
 }
 
-.device-table tbody tr {
-  display: flex;
-  width: 100%;
+.device-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.device-table tbody tr:hover {
+  background-color: #f0f0f0;
 }
 
 .device-table tr:nth-child(even) {
@@ -772,7 +795,7 @@ button.deactivate-device-btn {
 
 /* History Section - Combined */
 .history-section {
-  margin: 10px 0;
+  margin: 20px 0;
   background: #1e1f47;
   padding: 20px;
   border-radius: 8px;
@@ -829,6 +852,8 @@ button.deactivate-device-btn {
 }
 
 .history-section .threshold-history-table-container {
+  max-height: 300px;
+  overflow-y: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -840,13 +865,41 @@ button.deactivate-device-btn {
   color: black;
   border-radius: 8px;
   overflow: hidden;
+  min-width: 800px;
 }
+
+/* Energy/CO2 threshold history table widths */
+#energy-history-table .threshold-history-table th:nth-child(1), #energy-history-table .threshold-history-table td:nth-child(1) { width: 6%; }
+#energy-history-table .threshold-history-table th:nth-child(2), #energy-history-table .threshold-history-table td:nth-child(2) { width: 16%; }
+#energy-history-table .threshold-history-table th:nth-child(3), #energy-history-table .threshold-history-table td:nth-child(3) { width: 16%; }
+#energy-history-table .threshold-history-table th:nth-child(4), #energy-history-table .threshold-history-table td:nth-child(4) { width: 14%; }
+#energy-history-table .threshold-history-table th:nth-child(5), #energy-history-table .threshold-history-table td:nth-child(5) { width: 24%; }
+#energy-history-table .threshold-history-table th:nth-child(6), #energy-history-table .threshold-history-table td:nth-child(6) { width: 24%; }
+
+#co2-history-table .threshold-history-table th:nth-child(1), #co2-history-table .threshold-history-table td:nth-child(1) { width: 6%; }
+#co2-history-table .threshold-history-table th:nth-child(2), #co2-history-table .threshold-history-table td:nth-child(2) { width: 16%; }
+#co2-history-table .threshold-history-table th:nth-child(3), #co2-history-table .threshold-history-table td:nth-child(3) { width: 16%; }
+#co2-history-table .threshold-history-table th:nth-child(4), #co2-history-table .threshold-history-table td:nth-child(4) { width: 14%; }
+#co2-history-table .threshold-history-table th:nth-child(5), #co2-history-table .threshold-history-table td:nth-child(5) { width: 24%; }
+#co2-history-table .threshold-history-table th:nth-child(6), #co2-history-table .threshold-history-table td:nth-child(6) { width: 24%; }
+
+/* Cost/Emission ratings history table widths */
+#cost-history-table .threshold-history-table th:nth-child(1), #cost-history-table .threshold-history-table td:nth-child(1) { width: 10%; }
+#cost-history-table .threshold-history-table th:nth-child(2), #cost-history-table .threshold-history-table td:nth-child(2) { width: 20%; }
+#cost-history-table .threshold-history-table th:nth-child(3), #cost-history-table .threshold-history-table td:nth-child(3) { width: 35%; }
+#cost-history-table .threshold-history-table th:nth-child(4), #cost-history-table .threshold-history-table td:nth-child(4) { width: 35%; }
+
+#emission-history-table .threshold-history-table th:nth-child(1), #emission-history-table .threshold-history-table td:nth-child(1) { width: 10%; }
+#emission-history-table .threshold-history-table th:nth-child(2), #emission-history-table .threshold-history-table td:nth-child(2) { width: 20%; }
+#emission-history-table .threshold-history-table th:nth-child(3), #emission-history-table .threshold-history-table td:nth-child(3) { width: 35%; }
+#emission-history-table .threshold-history-table th:nth-child(4), #emission-history-table .threshold-history-table td:nth-child(4) { width: 35%; }
 
 .history-section .threshold-history-table th,
 .history-section .threshold-history-table td {
-  padding: 12px;
-  text-align: left;
+  padding: 8px 4px;
+  text-align: center;
   border-bottom: 1px solid #eee;
+  white-space: nowrap;
 }
 
 .history-section .threshold-history-table thead {
@@ -901,42 +954,58 @@ button.deactivate-device-btn:hover {
   color: black;
   width: 100%;
   border-collapse: collapse;
-  border-radius: 8px;
-  overflow: hidden;
-  display: block;
+  margin: 0;
+  min-width: 700px;
 }
 
-.office-table thead, .office-table tbody {
-  display: block;
+.office-table thead {
+  display: table-header-group;
 }
 
 .office-table tbody {
-  height: 240px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  display: table-row-group;
 }
 
+/* Office table specific widths */
+#office-management .office-table th:nth-child(1), #office-management .office-table td:nth-child(1) { width: 25%; }
+#office-management .office-table th:nth-child(2), #office-management .office-table td:nth-child(2) { width: 20%; }
+#office-management .office-table th:nth-child(3), #office-management .office-table td:nth-child(3) { width: 35%; }
+#office-management .office-table th:nth-child(4), #office-management .office-table td:nth-child(4) { width: 12%; }
+#office-management .office-table th:nth-child(5), #office-management .office-table td:nth-child(5) { width: 8%; }
+
+/* Device table specific widths */
+#device-management .office-table th:nth-child(1), #device-management .office-table td:nth-child(1) { width: 12%; }
+#device-management .office-table th:nth-child(2), #device-management .office-table td:nth-child(2) { width: 25%; }
+#device-management .office-table th:nth-child(3), #device-management .office-table td:nth-child(3) { width: 20%; }
+#device-management .office-table th:nth-child(4), #device-management .office-table td:nth-child(4) { width: 18%; }
+#device-management .office-table th:nth-child(5), #device-management .office-table td:nth-child(5) { width: 15%; }
+#device-management .office-table th:nth-child(6), #device-management .office-table td:nth-child(6) { width: 10%; }
+
+/* WiFi table specific widths */
+.wifi-section .office-table th:nth-child(1), .wifi-section .office-table td:nth-child(1) { width: 40%; }
+.wifi-section .office-table th:nth-child(2), .wifi-section .office-table td:nth-child(2) { width: 20%; }
+.wifi-section .office-table th:nth-child(3), .wifi-section .office-table td:nth-child(3) { width: 20%; }
+.wifi-section .office-table th:nth-child(4), .wifi-section .office-table td:nth-child(4) { width: 20%; }
+
 .office-table th, .office-table td {
-  width: 20%;
-  box-sizing: border-box;
-  padding: 10px;
-  text-align: left;
-  display: inline-block;
-  vertical-align: top;
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .office-table thead tr {
-  width: 100%;
-  display: flex;
-  background-color: white;
-  color: black;
-  border-bottom: 1px solid #ccc;
+  background-color: #004080;
+  color: white;
 }
 
-.office-table tbody tr {
-  display: flex;
-  width: 100%;
-  border-bottom: 1px solid #ccc;
+.office-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.office-table tbody tr:hover {
+  background-color: #f0f0f0;
 }
 
 .office-table tbody tr {
@@ -952,10 +1021,9 @@ button.deactivate-device-btn:hover {
 }
 
 .office-table th {
-  padding: 10px;
-  border-bottom: 1px solid #ccc;
-  background-color: white;
-  color: black;
+  background-color: #004080;
+  color: white;
+  font-weight: bold;
 }
 
 .office-table td {
@@ -1087,13 +1155,42 @@ button.deactivate-device-btn:hover {
   min-height: 20px;
 }
 
-.device-section > .table-wrapper {
-  height: 430px;
-  overflow-y: auto;
+/* WiFi Section */
+.wifi-section {
+  background: #1e1f47;
   padding: 20px;
   border-radius: 8px;
-  background-color: #1e1f47;
-  color: #eee;
+  color: #fff;
+  margin: 20px 0;
+}
+
+.wifi-section .table-wrapper {
+  background-color: transparent;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.wifi-section .office-table-container {
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background-color: white;
+}
+
+/* Threshold cards centering */
+.energy-threshold-boxes {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.threshold-boxes {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 /* Responsive adjustments */
@@ -1104,88 +1201,113 @@ button.deactivate-device-btn:hover {
   width: 100%;
 }
 
-@media (max-width: 900px) {
-  header {
-    flex-direction: column;
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 10px;
+  }
+
+  .office-section, .wifi-section, .thresholds {
+    margin: 10px 0;
+    padding: 15px;
   }
 
   .office-header {
-    flex-direction: row;
+    flex-direction: column;
     gap: 10px;
   }
 
-  .office-header input {
-    flex: 1;
-    max-width: 60%;
+  .office-header input, .add-btn {
+    width: 100%;
   }
 
-  .add-btn {
-    flex-shrink: 0;
-    white-space: nowrap;
+  .history-section .threshold-history-table th,
+  .history-section .threshold-history-table td {
+    font-size: 12px;
   }
 
-  .device-header {
-    flex-direction: row;
-    gap: 10px;
+  .office-table-container {
+    overflow-x: auto;
+    overflow-y: auto;
   }
 
-  .device-header input[type="text"] {
-    flex: 1;
-    max-width: 60%;
+  .office-table {
+    min-width: 700px;
   }
 
-  .device-header button.add-device-btn {
-    flex-shrink: 0;
-    white-space: nowrap;
+  .office-table th, .office-table td {
+    font-size: 12px;
+    padding: 8px 6px;
   }
 
-  .threshold-boxes {
+  .thresholds-device-container {
     flex-direction: column;
     gap: 15px;
   }
 
-  .threshold-card {
-    width: 100%;
+  .energy-threshold-boxes {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .threshold-boxes {
+    flex-direction: column;
+    align-items: center;
   }
 
   .modal-content {
     width: 95%;
-    margin: 5% auto;
-    border-radius: 12px;
+    margin: 10% auto;
+    padding: 20px;
   }
 
-  .modal-content h2 {
-    padding: 25px 30px 20px;
-    font-size: 20px;
-  }
-
-  .modal-content h2::after {
-    left: 30px;
-    right: 30px;
-  }
-
-  .modal-content p {
-    padding: 15px 30px 25px;
-    font-size: 14px;
-  }
-
-  .modal-content form {
-    padding: 0 30px 30px;
-  }
-
-  .close-button {
-    top: 15px;
-    right: 15px;
-    width: 32px;
-    height: 32px;
-    font-size: 20px;
-  }
-
-  /* Stack thresholds and device vertically on mobile */
-  .thresholds-device-container {
+  .history-section .threshold-tabs {
     flex-direction: column;
+    gap: 5px;
   }
 }
+
+/* Tablet Responsive */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main-content {
+    padding: 15px;
+  }
+
+  .office-table th, .office-table td {
+    font-size: 13px;
+    padding: 8px;
+  }
+
+  .thresholds-device-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .threshold-boxes {
+    flex-direction: row;
+    gap: 15px;
+  }
+
+  .modal-content {
+    width: 80%;
+    max-width: 500px;
+  }
+}
+
+/* Desktop Responsive */
+@media (min-width: 1025px) {
+  .thresholds-device-container {
+    flex-direction: row;
+  }
+
+  .wifi-section {
+    flex: 1;
+  }
+
+  .thresholds {
+    flex: 2;
+  }
+
 
 @media (max-width: 480px) {
   .modal-content {
@@ -1237,91 +1359,7 @@ button.deactivate-device-btn:hover {
   }
 }
 
-@media (max-width: 768px) {
-  .office-section {
-    padding: 15px;
-  }
 
-  .office-table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .office-table {
-    min-width: 500px;
-    font-size: 12px;
-  }
-
-  .office-table th,
-  .office-table td {
-    padding: 8px 4px;
-    text-align: left;
-  }
-
-  .office-table th:nth-child(1),
-  .office-table td:nth-child(1) {
-    width: 20%;
-  }
-
-  .office-table th:nth-child(2),
-  .office-table td:nth-child(2) {
-    width: 18%;
-  }
-
-  .office-table th:nth-child(3),
-  .office-table td:nth-child(3) {
-    width: 37%;
-  }
-
-  .office-table th:nth-child(4),
-  .office-table td:nth-child(4) {
-    width: 12%;
-  }
-
-  .office-table th:nth-child(5),
-  .office-table td:nth-child(5) {
-    width: 13%;
-    text-align: center;
-  }
-
-  .device-section .table-wrapper {
-    padding: 15px;
-  }
-
-  .device-table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .device-table {
-    min-width: 500px;
-    font-size: 12px;
-  }
-
-  .device-table th,
-  .device-table td {
-    padding: 8px 4px;
-    width: auto;
-    min-width: 80px;
-  }
-
-  .thresholds,
-  .ratings {
-    width: 100%;
-    padding: 15px;
-    height: auto;
-  }
-
-  .threshold-card {
-    width: 100%;
-    padding: 10px;
-    box-sizing: border-box;
-  }
-
-  .threshold-card input {
-    width: 50px;
-  }
-}
 
 /* Threshold History Section */
 .threshold-history-section {
@@ -1436,6 +1474,18 @@ button.deactivate-device-btn:hover {
   font-weight: bold;
 }
 
+/* WiFi section */
+.wifi-section {
+  background: #1e1f47;
+  color: var(--text-white);
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 8px;
+  flex: 1;
+  height: 470px;
+  box-sizing: border-box;
+}
+
 /* Device section */
 .device-section {
   flex: 1;
@@ -1471,4 +1521,6 @@ button.deactivate-device-btn:hover {
 #save-co2-rating-btn,
 #cancel-co2-rating-btn {
   display: none;
+}
+
 }

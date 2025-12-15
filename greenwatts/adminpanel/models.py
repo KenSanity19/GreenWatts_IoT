@@ -41,6 +41,21 @@ class CO2Threshold(models.Model):
     class Meta:
         db_table = 'tbl_co2_threshold'
 
+class WiFiNetwork(models.Model):
+    wifi_id = models.AutoField(primary_key=True)
+    ssid = models.CharField(max_length=100)
+    password = models.CharField(max_length=255)
+    priority = models.IntegerField(default=1)  # Lower number = higher priority
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tbl_wifi_network'
+        ordering = ['priority', 'ssid']
+
+    def __str__(self):
+        return f"{self.ssid} (Priority: {self.priority})"
+
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
         ('info', 'Info'),

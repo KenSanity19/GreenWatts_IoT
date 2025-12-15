@@ -95,14 +95,24 @@
         12:00am midnight
       </p>
 
-      <!-- Office Table -->
+      <!-- Office and Device Management Section -->
       <section class="office-section">
-        <div class="office-header">
-          <div class="search-group">
-            <input type="text" id="searchInput" placeholder="Search Office" />
+        <div class="section-header">
+          <h2>MANAGEMENT</h2>
+          <div class="header-buttons">
+            <button class="text-btn active" id="office-tab-btn">Offices</button>
+            <button class="text-btn" id="device-tab-btn">Devices</button>
           </div>
-          <button class="add-btn" id="addOfficeBtn">+ Add Office</button>
         </div>
+
+        <!-- Office Management -->
+        <div id="office-management" class="management-content">
+          <div class="office-header">
+            <div class="search-group">
+              <input type="text" id="searchInput" placeholder="Search Office" />
+            </div>
+            <button class="add-btn" id="addOfficeBtn">+ Add Office</button>
+          </div>
 
         <!-- Modal for Add Office -->
         <div
@@ -192,41 +202,92 @@
           </div>
         </div>
 
-        <div class="table-wrapper">
-          <div class="office-table-container">
-            <table class="office-table">
-              <thead>
-                <tr>
-                  <th>Office</th>
-                  <th>Department</th>
-                  <th>Location</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for office in offices %}
-                <tr>
-                  <td>{{ office.name }}</td>
-                  <td>CITC</td>
-                  <td>{{ office.location }}</td>
-                  <td>Active</td>
-                  <td>
-                    <button
-                      class="edit-office-btn"
-                      data-office-id="{{ office.office_id }}"
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="5">No offices found.</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div class="table-wrapper">
+            <div class="office-table-container">
+              <table class="office-table">
+                <thead>
+                  <tr>
+                    <th>Office</th>
+                    <th>Department</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for office in offices %}
+                  <tr>
+                    <td>{{ office.name }}</td>
+                    <td>CITC</td>
+                    <td>{{ office.location }}</td>
+                    <td>Active</td>
+                    <td>
+                      <button
+                        class="edit-office-btn"
+                        data-office-id="{{ office.office_id }}"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="5">No offices found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Device Management -->
+        <div id="device-management" class="management-content" style="display: none;">
+          <div class="office-header">
+            <div class="search-group">
+              <input type="text" id="deviceSearchInput" placeholder="Search Device" />
+            </div>
+            <button class="add-btn" id="openAddDeviceModal">+ Add Device</button>
+          </div>
+
+          <div class="table-wrapper">
+            <div class="office-table-container">
+              <table class="office-table">
+                <thead>
+                  <tr>
+                    <th>Device ID</th>
+                    <th>Office</th>
+                    <th>Appliance Type</th>
+                    <th>Installed Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for device in devices %}
+                  <tr>
+                    <td>{{ device.device_id }}</td>
+                    <td>{{ device.office.name }}</td>
+                    <td>{{ device.appliance_type }}</td>
+                    <td>{{ device.installed_date }}</td>
+                    <td>{{ device.status }}</td>
+                    <td>
+                      <button
+                        class="edit-office-btn edit-device-btn"
+                        data-device-id="{{ device.device_id }}"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="6">No devices found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -313,183 +374,317 @@
         </div>
       </div>
 
-      <!-- Thresholds and Device Management Side by Side -->
-      <section class="thresholds-device-container">
-        <section class="device-section">
-          <!-- Modal for Add Device -->
-          <div
-            id="addDeviceModal"
-            class="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="deviceModalTitle"
-            aria-describedby="deviceModalDesc"
+      <!-- Device Modals -->
+      <!-- Modal for Add Device -->
+      <div
+        id="addDeviceModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deviceModalTitle"
+        aria-describedby="deviceModalDesc"
+      >
+        <div class="modal-content">
+          <button
+            id="closeDeviceModal"
+            aria-label="Close modal"
+            class="close-button"
           >
-            <div class="modal-content">
-              <button
-                id="closeDeviceModal"
-                aria-label="Close modal"
-                class="close-button"
-              >
-                &times;
-              </button>
-              <h2 id="deviceModalTitle">Add Device</h2>
-              <p id="deviceModalDesc">
-                Please fill in the details below to add a new device.
-              </p>
-              <form id="addDeviceForm" novalidate>
-                <div class="form-group">
-                  <label for="installed_date">Installed Date</label>
-                  <input
-                    type="date"
-                    id="installed_date"
-                    name="installed_date"
-                    required
-                    aria-required="true"
-                  />
-                </div>
-                <div class="form-group">
-                  <label for="status">Status</label>
-                  <select
-                    id="status"
-                    name="status"
-                    required
-                    aria-required="true"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="office">Office</label>
-                  <select
-                    id="office"
-                    name="office"
-                    required
-                    aria-required="true"
-                  >
-                    {% for office in offices %}
-                    <option value="{{ office.office_id }}">
-                      {{ office.name }}
-                    </option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="appliance_type">Appliance Type</label>
-                  <input
-                    type="text"
-                    id="appliance_type"
-                    name="appliance_type"
-                    required
-                    aria-required="true"
-                  />
-                </div>
-                <button type="submit" class="submit-button">Submit</button>
-              </form>
-              <div id="deviceFormMessage" role="alert" aria-live="polite"></div>
+            &times;
+          </button>
+          <h2 id="deviceModalTitle">Add Device</h2>
+          <p id="deviceModalDesc">
+            Please fill in the details below to add a new device.
+          </p>
+          <form id="addDeviceForm" novalidate>
+            <div class="form-group">
+              <label for="installed_date">Installed Date</label>
+              <input
+                type="date"
+                id="installed_date"
+                name="installed_date"
+                required
+                aria-required="true"
+              />
             </div>
-          </div>
-
-          <!-- Edit Device Modal -->
-          <div
-            id="editDeviceModal"
-            class="modal"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div class="modal-content">
-              <button
-                id="closeEditDeviceModal"
-                aria-label="Close modal"
-                class="close-button"
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select
+                id="status"
+                name="status"
+                required
+                aria-required="true"
               >
-                &times;
-              </button>
-              <h2>Edit Device</h2>
-              <p>Please update the device details below.</p>
-              <form id="editDeviceForm" novalidate>
-                <input type="hidden" id="editDeviceId" name="id" />
-                <div class="form-group">
-                  <label for="editInstalledDate">Installed Date</label>
-                  <input
-                    type="date"
-                    id="editInstalledDate"
-                    name="installed_date"
-                    required
-                  />
-                </div>
-                <div class="form-group">
-                  <label for="editStatus">Status</label>
-                  <select id="editStatus" name="status" required>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="editOffice">Office</label>
-                  <select id="editOffice" name="office" required>
-                    {% for office in offices %}
-                    <option value="{{ office.office_id }}">
-                      {{ office.name }}
-                    </option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="editApplianceType">Appliance Type</label>
-                  <input
-                    type="text"
-                    id="editApplianceType"
-                    name="appliance_type"
-                    required
-                  />
-                </div>
-                <button type="submit" class="submit-button">Update</button>
-              </form>
-              <div
-                id="editDeviceFormMessage"
-                role="alert"
-                aria-live="polite"
-              ></div>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </div>
-          </div>
-
-          <div class="table-wrapper device-table-wrapper">
-            <div class="device-header">
+            <div class="form-group">
+              <label for="office">Office</label>
+              <select
+                id="office"
+                name="office"
+                required
+                aria-required="true"
+              >
+                {% for office in offices %}
+                <option value="{{ office.office_id }}">
+                  {{ office.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="appliance_type">Appliance Type</label>
               <input
                 type="text"
-                placeholder="Search Device"
-                class="device-search-input"
+                id="appliance_type"
+                name="appliance_type"
+                required
+                aria-required="true"
               />
-              <button class="add-device-btn" id="openAddDeviceModal">
-                + Add Device
-              </button>
             </div>
-            <div class="device-table-container">
-              <table class="device-table">
+            <button type="submit" class="submit-button">Submit</button>
+          </form>
+          <div id="deviceFormMessage" role="alert" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- Edit Device Modal -->
+      <div
+        id="editDeviceModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div class="modal-content">
+          <button
+            id="closeEditDeviceModal"
+            aria-label="Close modal"
+            class="close-button"
+          >
+            &times;
+          </button>
+          <h2>Edit Device</h2>
+          <p>Please update the device details below.</p>
+          <form id="editDeviceForm" novalidate>
+            <input type="hidden" id="editDeviceId" name="id" />
+            <div class="form-group">
+              <label for="editInstalledDate">Installed Date</label>
+              <input
+                type="date"
+                id="editInstalledDate"
+                name="installed_date"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="editStatus">Status</label>
+              <select id="editStatus" name="status" required>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editOffice">Office</label>
+              <select id="editOffice" name="office" required>
+                {% for office in offices %}
+                <option value="{{ office.office_id }}">
+                  {{ office.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editApplianceType">Appliance Type</label>
+              <input
+                type="text"
+                id="editApplianceType"
+                name="appliance_type"
+                required
+              />
+            </div>
+            <button type="submit" class="submit-button">Update</button>
+          </form>
+          <div
+            id="editDeviceFormMessage"
+            role="alert"
+            aria-live="polite"
+          ></div>
+        </div>
+      </div>
+
+      <!-- WiFi Modals -->
+      <!-- Modal for Add WiFi -->
+      <div
+        id="addWifiModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wifiModalTitle"
+        aria-describedby="wifiModalDesc"
+      >
+        <div class="modal-content">
+          <button
+            id="closeWifiModal"
+            aria-label="Close modal"
+            class="close-button"
+          >
+            &times;
+          </button>
+          <h2 id="wifiModalTitle">Add WiFi Network</h2>
+          <p id="wifiModalDesc">
+            Please fill in the WiFi network details below.
+          </p>
+          <form id="addWifiForm" novalidate>
+            <div class="form-group">
+              <label for="wifi_ssid">SSID</label>
+              <input
+                type="text"
+                id="wifi_ssid"
+                name="ssid"
+                required
+                aria-required="true"
+              />
+            </div>
+            <div class="form-group">
+              <label for="wifi_password">Password</label>
+              <input
+                type="password"
+                id="wifi_password"
+                name="password"
+                required
+                aria-required="true"
+              />
+            </div>
+            <div class="form-group">
+              <label for="wifi_priority">Priority</label>
+              <input
+                type="number"
+                id="wifi_priority"
+                name="priority"
+                min="1"
+                max="100"
+                value="1"
+                required
+                aria-required="true"
+              />
+            </div>
+            <div class="form-group">
+              <label for="wifi_status">Status</label>
+              <select
+                id="wifi_status"
+                name="is_active"
+                required
+                aria-required="true"
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+            <button type="submit" class="submit-button">Submit</button>
+          </form>
+          <div id="wifiFormMessage" role="alert" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- Edit WiFi Modal -->
+      <div
+        id="editWifiModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div class="modal-content">
+          <button
+            id="closeEditWifiModal"
+            aria-label="Close modal"
+            class="close-button"
+          >
+            &times;
+          </button>
+          <h2>Edit WiFi Network</h2>
+          <p>Please update the WiFi network details below.</p>
+          <form id="editWifiForm" novalidate>
+            <input type="hidden" id="editWifiId" name="id" />
+            <div class="form-group">
+              <label for="editWifiSsid">SSID</label>
+              <input
+                type="text"
+                id="editWifiSsid"
+                name="ssid"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="editWifiPassword">Password</label>
+              <input
+                type="password"
+                id="editWifiPassword"
+                name="password"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="editWifiPriority">Priority</label>
+              <input
+                type="number"
+                id="editWifiPriority"
+                name="priority"
+                min="1"
+                max="100"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="editWifiStatus">Status</label>
+              <select id="editWifiStatus" name="is_active" required>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+            <button type="submit" class="submit-button">Update</button>
+          </form>
+          <div
+            id="editWifiFormMessage"
+            role="alert"
+            aria-live="polite"
+          ></div>
+        </div>
+      </div>
+
+      <!-- WiFi and Thresholds Section -->
+      <section class="thresholds-device-container">
+        <!-- WiFi Management Section -->
+        <section class="wifi-section">
+          <div class="section-header">
+            <h2>WIFI MANAGEMENT</h2>
+            <div class="header-buttons">
+              <button class="add-btn" id="addWifiBtn">+ Add WiFi</button>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <div class="office-table-container">
+              <table class="office-table">
                 <thead>
                   <tr>
-                    <th>Device ID</th>
-                    <th>Office</th>
-                    <th>Appliance Type</th>
-                    <th>Installed Date</th>
+                    <th>SSID</th>
+                    <th>Priority</th>
                     <th>Status</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for device in devices %}
+                  {% for wifi in wifi_networks %}
                   <tr>
-                    <td>{{ device.device_id }}</td>
-                    <td>{{ device.office.name }}</td>
-                    <td>{{ device.appliance_type }}</td>
-                    <td>{{ device.installed_date }}</td>
-                    <td>{{ device.status }}</td>
+                    <td>{{ wifi.ssid }}</td>
+                    <td>{{ wifi.priority }}</td>
+                    <td>{% if wifi.is_active %}Active{% else %}Inactive{% endif %}</td>
                     <td>
                       <button
-                        class="edit-device-btn"
-                        data-device-id="{{ device.device_id }}"
+                        class="edit-office-btn edit-wifi-btn"
+                        data-wifi-id="{{ wifi.wifi_id }}"
                       >
                         Edit
                       </button>
@@ -497,7 +692,7 @@
                   </tr>
                   {% empty %}
                   <tr>
-                    <td colspan="6">No devices found.</td>
+                    <td colspan="4">No WiFi networks found.</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -505,6 +700,7 @@
             </div>
           </div>
         </section>
+
         <section class="thresholds">
           <div class="section-header">
             <h2>SET THRESHOLDS</h2>
@@ -909,6 +1105,19 @@
       const addDeviceForm = document.getElementById("addDeviceForm");
       const deviceFormMessage = document.getElementById("deviceFormMessage");
 
+      // WiFi modal elements
+      const addWifiModal = document.getElementById("addWifiModal");
+      const addWifiBtn = document.getElementById("addWifiBtn");
+      const closeWifiModal = document.getElementById("closeWifiModal");
+      const addWifiForm = document.getElementById("addWifiForm");
+      const wifiFormMessage = document.getElementById("wifiFormMessage");
+
+      // Edit WiFi modal elements
+      const editWifiModal = document.getElementById("editWifiModal");
+      const closeEditWifiModal = document.getElementById("closeEditWifiModal");
+      const editWifiForm = document.getElementById("editWifiForm");
+      const editWifiFormMessage = document.getElementById("editWifiFormMessage");
+
       // Edit device modal elements
       const editDeviceModal = document.getElementById("editDeviceModal");
       const closeEditDeviceModal = document.getElementById(
@@ -926,6 +1135,27 @@
         formMessage.classList.remove("success-message", "error-message");
         form.reset();
       };
+
+      // Tab switching functionality
+      document.getElementById('office-tab-btn').addEventListener('click', function() {
+        // Show office management, hide device management
+        document.getElementById('office-management').style.display = 'block';
+        document.getElementById('device-management').style.display = 'none';
+        
+        // Update button states
+        document.getElementById('office-tab-btn').classList.add('active');
+        document.getElementById('device-tab-btn').classList.remove('active');
+      });
+
+      document.getElementById('device-tab-btn').addEventListener('click', function() {
+        // Show device management, hide office management
+        document.getElementById('office-management').style.display = 'none';
+        document.getElementById('device-management').style.display = 'block';
+        
+        // Update button states
+        document.getElementById('device-tab-btn').classList.add('active');
+        document.getElementById('office-tab-btn').classList.remove('active');
+      });
 
       // Handle search functionality for offices
       function performOfficeSearch() {
@@ -958,9 +1188,9 @@
       });
 
       // Handle search functionality for devices (live search)
-      document.querySelector(".device-search-input").addEventListener("input", function () {
+      document.getElementById("deviceSearchInput").addEventListener("input", function () {
         const searchTerm = this.value.toLowerCase().trim();
-        const tableRows = document.querySelectorAll(".device-table tbody tr");
+        const tableRows = document.querySelectorAll("#device-management .office-table tbody tr");
 
         tableRows.forEach(row => {
           const cells = Array.from(row.cells).slice(0, -1); // exclude action column
@@ -996,6 +1226,24 @@
         editDeviceModal.style.display = "none";
       };
 
+      // Open WiFi modal on button click
+      addWifiBtn.onclick = function () {
+        addWifiModal.style.display = "block";
+        wifiFormMessage.innerHTML = "";
+        wifiFormMessage.classList.remove("success-message", "error-message");
+        addWifiForm.reset();
+      };
+
+      // Close WiFi modal on close button click
+      closeWifiModal.onclick = function () {
+        addWifiModal.style.display = "none";
+      };
+
+      // Close edit WiFi modal on close button click
+      closeEditWifiModal.onclick = function () {
+        editWifiModal.style.display = "none";
+      };
+
       // Close modals if user clicks outside modal content
       window.onclick = function (event) {
         if (event.target == modal) {
@@ -1009,6 +1257,12 @@
         }
         if (event.target == editDeviceModal) {
           editDeviceModal.style.display = "none";
+        }
+        if (event.target == addWifiModal) {
+          addWifiModal.style.display = "none";
+        }
+        if (event.target == editWifiModal) {
+          editWifiModal.style.display = "none";
         }
       };
 
@@ -1067,8 +1321,12 @@
 
       // Handle edit button clicks
       document.querySelectorAll(".edit-office-btn").forEach((button) => {
-        button.addEventListener("click", async () => {
+        button.addEventListener("click", async (e) => {
+          e.preventDefault();
           const officeId = button.getAttribute("data-office-id");
+          if (!officeId) {
+            return;
+          }
           try {
             const response = await fetch(
               `/adminpanel/editOffice/${officeId}/`,
@@ -1080,6 +1338,9 @@
                 },
               }
             );
+            if (!response.ok) {
+              return;
+            }
             const result = await response.json();
             if (result.status === "success") {
               const office = result.office;
@@ -1097,11 +1358,9 @@
                 "error-message"
               );
               editModal.style.display = "block";
-            } else {
-              alert("Failed to fetch office data.");
             }
           } catch (error) {
-            alert("An error occurred. Please try again.");
+            return;
           }
         });
       });
@@ -1208,8 +1467,12 @@
 
       // Handle edit device button clicks
       document.querySelectorAll(".edit-device-btn").forEach((button) => {
-        button.addEventListener("click", async () => {
+        button.addEventListener("click", async (e) => {
+          e.preventDefault();
           const deviceId = button.getAttribute("data-device-id");
+          if (!deviceId) {
+            return;
+          }
           try {
             const response = await fetch(
               `/adminpanel/editDevice/${deviceId}/`,
@@ -1221,6 +1484,9 @@
                 },
               }
             );
+            if (!response.ok) {
+              return;
+            }
             const result = await response.json();
             if (result.status === "success") {
               const device = result.device;
@@ -1237,11 +1503,9 @@
                 "error-message"
               );
               editDeviceModal.style.display = "block";
-            } else {
-              alert("Failed to fetch device data.");
             }
           } catch (error) {
-            alert("An error occurred. Please try again.");
+            return;
           }
         });
       });
@@ -1295,6 +1559,151 @@
           editDeviceFormMessage.classList.add("error-message");
           editDeviceFormMessage.classList.remove("success-message");
           editDeviceFormMessage.innerHTML =
+            "An error occurred. Please try again.";
+        }
+      };
+
+      // Handle add WiFi form submission
+      addWifiForm.onsubmit = async function (e) {
+        e.preventDefault();
+        wifiFormMessage.innerHTML = "";
+        wifiFormMessage.classList.remove("success-message", "error-message");
+
+        const formData = {
+          ssid: addWifiForm.ssid.value,
+          password: addWifiForm.password.value,
+          priority: addWifiForm.priority.value,
+          is_active: addWifiForm.is_active.value,
+        };
+
+        try {
+          const response = await fetch("{% url 'adminpanel:create_wifi' %}", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify(formData),
+          });
+          const result = await response.json();
+          if (result.status === "success") {
+            wifiFormMessage.classList.add("success-message");
+            wifiFormMessage.classList.remove("error-message");
+            wifiFormMessage.innerHTML = result.message;
+            setTimeout(() => {
+              addWifiModal.style.display = "none";
+              wifiFormMessage.innerHTML = "";
+              wifiFormMessage.classList.remove(
+                "success-message",
+                "error-message"
+              );
+              addWifiForm.reset();
+              location.reload();
+            }, 1500);
+          } else {
+            wifiFormMessage.classList.add("error-message");
+            wifiFormMessage.classList.remove("success-message");
+            wifiFormMessage.innerHTML = result.message;
+          }
+        } catch (error) {
+          wifiFormMessage.classList.add("error-message");
+          wifiFormMessage.classList.remove("success-message");
+          wifiFormMessage.innerHTML = "An error occurred. Please try again.";
+        }
+      };
+
+      // Handle edit WiFi button clicks
+      document.querySelectorAll(".edit-wifi-btn").forEach((button) => {
+        button.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const wifiId = button.getAttribute("data-wifi-id");
+          if (!wifiId) {
+            return;
+          }
+          try {
+            const response = await fetch(
+              `/adminpanel/editWifi/${wifiId}/`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": "{{ csrf_token }}",
+                },
+              }
+            );
+            if (!response.ok) {
+              return;
+            }
+            const result = await response.json();
+            if (result.status === "success") {
+              const wifi = result.wifi;
+              document.getElementById("editWifiId").value = wifi.id;
+              document.getElementById("editWifiSsid").value = wifi.ssid;
+              document.getElementById("editWifiPassword").value = wifi.password;
+              document.getElementById("editWifiPriority").value = wifi.priority;
+              document.getElementById("editWifiStatus").value = wifi.is_active.toString();
+              editWifiFormMessage.innerHTML = "";
+              editWifiFormMessage.classList.remove(
+                "success-message",
+                "error-message"
+              );
+              editWifiModal.style.display = "block";
+            }
+          } catch (error) {
+            return;
+          }
+        });
+      });
+
+      // Handle edit WiFi form submission
+      editWifiForm.onsubmit = async function (e) {
+        e.preventDefault();
+        editWifiFormMessage.innerHTML = "";
+        editWifiFormMessage.classList.remove(
+          "success-message",
+          "error-message"
+        );
+
+        const wifiId = document.getElementById("editWifiId").value;
+        const formData = {
+          ssid: editWifiForm.ssid.value,
+          password: editWifiForm.password.value,
+          priority: editWifiForm.priority.value,
+          is_active: editWifiForm.is_active.value,
+        };
+
+        try {
+          const response = await fetch(`/adminpanel/editWifi/${wifiId}/`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify(formData),
+          });
+          const result = await response.json();
+          if (result.status === "success") {
+            editWifiFormMessage.classList.add("success-message");
+            editWifiFormMessage.classList.remove("error-message");
+            editWifiFormMessage.innerHTML = result.message;
+            setTimeout(() => {
+              editWifiModal.style.display = "none";
+              editWifiFormMessage.innerHTML = "";
+              editWifiFormMessage.classList.remove(
+                "success-message",
+                "error-message"
+              );
+              location.reload();
+            }, 1500);
+          } else {
+            editWifiFormMessage.classList.add("error-message");
+            editWifiFormMessage.classList.remove("success-message");
+            editWifiFormMessage.innerHTML = result.message;
+          }
+        } catch (error) {
+          editWifiFormMessage.classList.add("error-message");
+          editWifiFormMessage.classList.remove("success-message");
+          editWifiFormMessage.innerHTML =
             "An error occurred. Please try again.";
         }
       };

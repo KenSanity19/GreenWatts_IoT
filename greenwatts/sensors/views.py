@@ -6,9 +6,40 @@ from django.db.models import Max, Sum
 import json
 from datetime import datetime, timedelta
 from .models import Device, SensorReading, EnergyRecord, CostSettings, CO2Settings
+from greenwatts.adminpanel.models import WiFiNetwork
 
 def index(request):
     return HttpResponse("Hello from Sensors app")
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_wifi_networks(request):
+    """
+    API endpoint for ESP32 to fetch WiFi networks from admin settings.
+    Returns active WiFi networks ordered by priority.
+    """
+    try:
+        wifi_networks = WiFiNetwork.objects.filter(is_active=True).order_by('priority', 'ssid')
+        
+        networks_data = []
+        for network in wifi_networks:
+            networks_data.append({
+                "ssid": network.ssid,
+                "password": network.password,
+                "priority": network.priority
+            })
+        
+        return JsonResponse({
+            "status": "success",
+            "networks": networks_data,
+            "count": len(networks_data)
+        }, status=200)
+        
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        }, status=500)
 
 @csrf_exempt
 @require_http_methods(["POST"])

@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.views.decorators.cache import cache_control
 from functools import wraps
-from .models import Admin, EnergyThreshold, CO2Threshold, Notification
+from .models import Admin, EnergyThreshold, CO2Threshold, Notification, WiFiNetwork
 from ..sensors.models import CostSettings, CO2Settings
 from greenwatts.users.models import Office
 from ..sensors.models import Device, SensorReading, EnergyRecord, CostSettings, CO2Settings
@@ -505,8 +505,11 @@ def admin_dashboard(request):
 @admin_required
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_setting(request):
+    from .models import WiFiNetwork
+    
     offices = Office.objects.all()
     devices = Device.objects.select_related('office').all().order_by('device_id')
+    wifi_networks = WiFiNetwork.objects.all().order_by('priority', 'ssid')
     
     energy_threshold = EnergyThreshold.objects.filter(ended_at__isnull=True).first()
     co2_threshold = CO2Threshold.objects.filter(ended_at__isnull=True).first()
@@ -533,6 +536,7 @@ def admin_setting(request):
     return render(request, 'adminSetting.html', {
         'offices': offices, 
         'devices': devices, 
+        'wifi_networks': wifi_networks,
         'threshold': threshold,
         'energy_history': energy_history,
         'co2_history': co2_history,
@@ -1946,6 +1950,64 @@ def export_reports(request):
         ])
     
     return response
+
+@admin_required
+@csrf_exempt
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def create_wifi(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            ssid = data.get("ssid")
+            password = data.get("password")
+            priority = int(data.get("priority", 1))
+            is_active = data.get("is_active") == "true"
+
+            wifi = WiFiNetwork.objects.create(
+                ssid=ssid,
+                password=password,
+                priority=priority,
+                is_active=is_active
+            )
+            return JsonResponse({"status": "success", "message": "WiFi network created successfully"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+    else:
+        return JsonResponse({"status": "error", "message": "Invalid request method"})
+
+@admin_required
+@csrf_exempt
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def edit_wifi(request, id):
+    try:
+        wifi = WiFiNetwork.objects.get(wifi_id=id)
+    except WiFiNetwork.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "WiFi network not found"})
+
+    if request.method == "GET":
+        wifi_data = {
+            "id": wifi.wifi_id,
+            "ssid": wifi.ssid,
+            "password": wifi.password,
+            "priority": wifi.priority,
+            "is_active": wifi.is_active
+        }
+        return JsonResponse({"status": "success", "wifi": wifi_data})
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            wifi.ssid = data.get("ssid", wifi.ssid)
+            wifi.password = data.get("password", wifi.password)
+            wifi.priority = int(data.get("priority", wifi.priority))
+            wifi.is_active = data.get("is_active") == "true"
+            wifi.save()
+            return JsonResponse({"status": "success", "message": "WiFi network updated successfully"})
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)})
+
+    else:
+        return JsonResponse({"status": "error", "message": "Invalid request method"})
 
 @admin_required
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
