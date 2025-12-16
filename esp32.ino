@@ -16,18 +16,17 @@ struct WiFiNetwork
   const char *password;
 };
 
-WiFiNetwork networks[] = {
+// Hardcoded WiFi credentials
+WiFiNetwork hardcodedNetworks[] = {
     {"greenwatts", "greenwatts123"},
     {"PLDTLANG", "Successed@123"},
     {"STUDENT-CONNECT", "IloveUSTP!"},
-    {"Fourth_WiFi", "fourth_password"},
     {"SobaMask", "12345678"}};
-const int numNetworks = sizeof(networks) / sizeof(networks[0]);
-int currentNetworkIndex = 0;
+const int numHardcodedNetworks = sizeof(hardcodedNetworks) / sizeof(hardcodedNetworks[0]);
 
 // Dynamic WiFi from admin panel
-String* dynamicSSIDs = nullptr;
-String* dynamicPasswords = nullptr;
+String *dynamicSSIDs = nullptr;
+String *dynamicPasswords = nullptr;
 int numDynamicNetworks = 0;
 bool usingDynamicNetworks = false;
 const char *wifiApiUrl = "https://sfweuxojewjwxyzomyal.supabase.co/rest/v1/tbl_wifi_network?is_active=eq.true&order=priority.asc";
@@ -37,7 +36,7 @@ const char *supabaseUrl = "https://sfweuxojewjwxyzomyal.supabase.co/rest/v1/tbl_
 const char *supabaseApiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmd2V1eG9qZXdqd3h5em9teWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwMjA0ODEsImV4cCI6MjA3NTU5NjQ4MX0.DiA1tj4Z66oLbiWo0fxGgKEFep-RE_wrybWp_LVwLT0";
 
 // ------------------ Device Settings ------------------
-const char *deviceId = "1";
+const char *deviceId = "6";
 
 // ------------------ PZEM Settings ------------------
 #define PZEM_RX 16
@@ -53,6 +52,7 @@ unsigned long lastValidReadTime = 0;
 
 // ------------------ DAILY UPLOAD FLAG ------------------
 bool uploadedToday = false;
+String lastUploadDate = "";
 
 // ------------------ Accumulators ------------------
 float totalEnergy = 0; // kWh
@@ -73,63 +73,76 @@ const long gmtOffset_sec = 28800; // UTC+8
 const int daylightOffset_sec = 0;
 
 // =========================================================
+// FUNCTION DECLARATIONS
+// =========================================================
+void checkMissedDailyUpload();
+void sendToSupabase(float voltage, float current, float energy_kwh, float peak_power_w);
+
+// =========================================================
 // FETCH WIFI NETWORKS FROM ADMIN PANEL
 // =========================================================
 void fetchWiFiNetworks()
 {
-  if (WiFi.status() != WL_CONNECTED) return;
-  
+  if (WiFi.status() != WL_CONNECTED)
+    return;
+
   HTTPClient http;
   http.begin(wifiApiUrl);
   http.addHeader("apikey", supabaseApiKey);
   http.addHeader("Authorization", String("Bearer ") + supabaseApiKey);
   http.setTimeout(5000);
-  
+
   int httpCode = http.GET();
-  
-  if (httpCode == 200) {
+
+  if (httpCode == 200)
+  {
     String payload = http.getString();
-    
+
     int count = 0;
     int pos = 0;
-    while ((pos = payload.indexOf("\"ssid\":", pos)) != -1) {
+    while ((pos = payload.indexOf("\"ssid\":", pos)) != -1)
+    {
       count++;
       pos++;
     }
-    
-    if (count > 0) {
-      if (dynamicSSIDs != nullptr) {
+
+    if (count > 0)
+    {
+      if (dynamicSSIDs != nullptr)
+      {
         delete[] dynamicSSIDs;
         delete[] dynamicPasswords;
       }
-      
+
       dynamicSSIDs = new String[count];
       dynamicPasswords = new String[count];
       numDynamicNetworks = count;
-      
+
       int networkIndex = 0;
       pos = 0;
-      
-      while (networkIndex < count && pos < payload.length()) {
+
+      while (networkIndex < count && pos < payload.length())
+      {
         int ssidStart = payload.indexOf("\"ssid\":\"", pos) + 8;
         int ssidEnd = payload.indexOf("\"", ssidStart);
         int passStart = payload.indexOf("\"password\":\"", ssidEnd) + 12;
         int passEnd = payload.indexOf("\"", passStart);
-        
-        if (ssidStart > 7 && ssidEnd > ssidStart && passStart > 11 && passEnd > passStart) {
+
+        if (ssidStart > 7 && ssidEnd > ssidStart && passStart > 11 && passEnd > passStart)
+        {
           dynamicSSIDs[networkIndex] = payload.substring(ssidStart, ssidEnd);
           dynamicPasswords[networkIndex] = payload.substring(passStart, passEnd);
           networkIndex++;
         }
-        
+
         pos = passEnd + 1;
       }
-      
+
       Serial.println("Fetched " + String(numDynamicNetworks) + " WiFi networks from admin");
       usingDynamicNetworks = true;
     }
   }
-  
+
   http.end();
 }
 
@@ -142,65 +155,234 @@ void ensureWiFiConnected()
   {
     Serial.println("WiFi lost! Trying networks...");
 
-    // Try dynamic networks first
-    if (usingDynamicNetworks && dynamicSSIDs != nullptr && numDynamicNetworks > 0) {
+    // Aggressive WiFi reset
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    delay(2000);
+    WiFi.mode(WIFI_STA);
+    delay(2000);
+
+    // Try hardcoded networks first
+    for (int i = 0; i < numHardcodedNetworks; i++)
+    {
+      Serial.print("Trying hardcoded: ");
+      Serial.println(hardcodedNetworks[i].ssid);
+      WiFi.begin(hardcodedNetworks[i].ssid, hardcodedNetworks[i].password);
+
+      int hardcodedRetries = 0;
+      while (WiFi.status() != WL_CONNECTED && hardcodedRetries < 20)
+      {
+        delay(500);
+        Serial.print(".");
+        hardcodedRetries++;
+      }
+
+      if (WiFi.status() == WL_CONNECTED)
+      {
+        Serial.println("\n=== WiFi Connected ===");
+        Serial.print("Network: ");
+        Serial.println(hardcodedNetworks[i].ssid);
+        Serial.print("IP Address: ");
+        Serial.println(WiFi.localIP());
+        Serial.print("Signal Strength: ");
+        Serial.print(WiFi.RSSI());
+        Serial.println(" dBm");
+        Serial.println("=====================");
+        fetchWiFiNetworks();
+        checkMissedDailyUpload();
+        return;
+      }
+      Serial.println(" Failed!");
+      WiFi.disconnect(true);
+      delay(2000);
+    }
+
+    // Try dynamic networks from database
+    if (usingDynamicNetworks && dynamicSSIDs != nullptr && numDynamicNetworks > 0)
+    {
       for (int i = 0; i < numDynamicNetworks; i++)
       {
-        WiFi.disconnect();
         Serial.print("Trying dynamic: ");
         Serial.println(dynamicSSIDs[i]);
 
         WiFi.begin(dynamicSSIDs[i].c_str(), dynamicPasswords[i].c_str());
 
-        int retries = 0;
-        while (WiFi.status() != WL_CONNECTED && retries < 15)
+        int dynamicRetries = 0;
+        while (WiFi.status() != WL_CONNECTED && dynamicRetries < 20)
         {
           delay(500);
           Serial.print(".");
-          retries++;
+          dynamicRetries++;
         }
 
         if (WiFi.status() == WL_CONNECTED)
         {
-          Serial.print("\nConnected to dynamic: ");
+          Serial.println("\n=== WiFi Connected ===");
+          Serial.print("Network: ");
           Serial.println(dynamicSSIDs[i]);
+          Serial.print("IP Address: ");
+          Serial.println(WiFi.localIP());
+          Serial.print("Signal Strength: ");
+          Serial.print(WiFi.RSSI());
+          Serial.println(" dBm");
+          Serial.println("=====================");
+          checkMissedDailyUpload();
           return;
         }
         Serial.println(" Failed!");
+        WiFi.disconnect(true);
+        delay(2000);
       }
     }
 
-    // Fallback to hardcoded networks
-    for (int attempt = 0; attempt < numNetworks; attempt++)
+    // Final fallback - try hardcoded networks again
+    for (int i = 0; i < numHardcodedNetworks; i++)
     {
-      WiFi.disconnect();
-      Serial.print("Trying: ");
-      Serial.println(networks[currentNetworkIndex].ssid);
+      Serial.print("Trying fallback: ");
+      Serial.println(hardcodedNetworks[i].ssid);
+      WiFi.begin(hardcodedNetworks[i].ssid, hardcodedNetworks[i].password);
 
-      WiFi.begin(networks[currentNetworkIndex].ssid, networks[currentNetworkIndex].password);
-
-      int retries = 0;
-      while (WiFi.status() != WL_CONNECTED && retries < 15)
+      int fallbackRetries = 0;
+      while (WiFi.status() != WL_CONNECTED && fallbackRetries < 20)
       {
         delay(500);
         Serial.print(".");
-        retries++;
+        fallbackRetries++;
       }
 
       if (WiFi.status() == WL_CONNECTED)
       {
-        Serial.print("\nConnected to fallback: ");
-        Serial.println(networks[currentNetworkIndex].ssid);
-        
-        // Fetch dynamic networks for next time
+        Serial.println("\n=== WiFi Connected ===");
+        Serial.print("Network: ");
+        Serial.println(hardcodedNetworks[i].ssid);
+        Serial.print("IP Address: ");
+        Serial.println(WiFi.localIP());
+        Serial.print("Signal Strength: ");
+        Serial.print(WiFi.RSSI());
+        Serial.println(" dBm");
+        Serial.println("=====================");
         fetchWiFiNetworks();
+        checkMissedDailyUpload();
         return;
       }
-
       Serial.println(" Failed!");
-      currentNetworkIndex = (currentNetworkIndex + 1) % numNetworks;
+      WiFi.disconnect(true);
+      delay(2000);
     }
     Serial.println("All networks failed!");
+  }
+}
+
+// =========================================================
+// CHECK MISSED DAILY UPLOAD
+// =========================================================
+void checkMissedDailyUpload()
+{
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo))
+    return;
+
+  char currentDate[11];
+  strftime(currentDate, sizeof(currentDate), "%Y-%m-%d", &timeinfo);
+
+  // If we have accumulated data and it's a new day, send it
+  if (totalEnergy > 0 && lastUploadDate != String(currentDate))
+  {
+    Serial.println("\n--- Sending Missed Daily Summary ---");
+    sendToSupabase(230.0, 2.0, totalEnergy, peakPower);
+
+    // Reset accumulators
+    totalEnergy = 0;
+    peakPower = 0;
+    totalCarbon = 0;
+    totalCost = 0;
+
+    // Clear stored data
+    SPIFFS.remove("/accumulated.txt");
+
+    // Update last upload date
+    lastUploadDate = String(currentDate);
+    uploadedToday = true;
+  }
+}
+
+// =========================================================
+// UPLOAD YESTERDAY'S DATA NOW
+// =========================================================
+void uploadNowAndReset()
+{
+  if (totalEnergy > 0 && WiFi.status() == WL_CONNECTED)
+  {
+    Serial.println("\n--- Manual Upload: Sending yesterday's data ---");
+
+    struct tm timeinfo;
+    time_t now = time(nullptr);
+    now -= 24 * 60 * 60; // Yesterday
+    localtime_r(&now, &timeinfo);
+
+    char buf[25];
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+
+    String payload = "{";
+    payload += "\"date\":\"" + String(buf) + "\",";
+    payload += "\"voltage\":253.4,";
+    payload += "\"current\":0.0,";
+    payload += "\"total_energy_kwh\":" + String(totalEnergy, 4) + ",";
+    payload += "\"peak_power_w\":" + String(peakPower, 2) + ",";
+    payload += "\"device_id\":" + String(deviceId);
+    payload += "}";
+
+    Serial.println("Payload: " + payload);
+
+    HTTPClient http;
+    http.begin(supabaseUrl);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("apikey", supabaseApiKey);
+    http.addHeader("Authorization", String("Bearer ") + supabaseApiKey);
+
+    int httpCode = http.POST(payload);
+    Serial.print("HTTP Response: ");
+    Serial.println(httpCode);
+
+    if (httpCode == 201)
+    {
+      Serial.println("SUCCESS: Yesterday's data uploaded!");
+
+      // Reset accumulators
+      totalEnergy = 0;
+      peakPower = 0;
+      totalCarbon = 0;
+      totalCost = 0;
+
+      // Clear stored data
+      SPIFFS.remove("/accumulated.txt");
+
+      // Update upload date to today
+      struct tm currentTime;
+      if (getLocalTime(&currentTime))
+      {
+        char currentDate[11];
+        strftime(currentDate, sizeof(currentDate), "%Y-%m-%d", &currentTime);
+        lastUploadDate = String(currentDate);
+        uploadedToday = true;
+      }
+
+      Serial.println("Accumulators reset for today");
+    }
+    else
+    {
+      Serial.println("FAILED: Could not upload data");
+    }
+
+    http.end();
+  }
+  else if (totalEnergy <= 0)
+  {
+    Serial.println("No data to upload");
+  }
+  else
+  {
+    Serial.println("WiFi not connected");
   }
 }
 
@@ -270,6 +452,44 @@ void saveToQueue(String payload)
   f.println(payload);
   f.close();
   Serial.println("Saved unsent data to queue.");
+}
+
+// =========================================================
+// HANDLE WIFI DISCONNECTION AT MIDNIGHT
+// =========================================================
+void handleMidnightDisconnection()
+{
+  if (WiFi.status() != WL_CONNECTED && totalEnergy > 0)
+  {
+    Serial.println("WiFi disconnected - queuing current day's data");
+
+    // Create payload for current day's accumulated data
+    struct tm timeinfo;
+    time_t now = time(nullptr);
+    now -= 24 * 60 * 60; // Yesterday's date
+    localtime_r(&now, &timeinfo);
+
+    char buf[25];
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+
+    String payload = "{";
+    payload += "\"date\":\"" + String(buf) + "\",";
+    payload += "\"voltage\":230.0,";
+    payload += "\"current\":2.0,";
+    payload += "\"total_energy_kwh\":" + String(totalEnergy, 3) + ",";
+    payload += "\"peak_power_w\":" + String(peakPower, 2) + ",";
+    payload += "\"device_id\":" + String(deviceId);
+    payload += "}";
+
+    saveToQueue(payload);
+  }
+
+  // Reset accumulators for new day
+  totalEnergy = 0;
+  peakPower = 0;
+  totalCarbon = 0;
+  totalCost = 0;
+  SPIFFS.remove("/accumulated.txt");
 }
 
 // =========================================================
@@ -351,7 +571,7 @@ void sendToSupabase(float voltage, float current, float energy_kwh, float peak_p
   struct tm timeinfo;
   time_t now = time(nullptr);
 
-  // Use yesterday’s date
+  // Use yesterday's date
   now -= 24 * 60 * 60;
   localtime_r(&now, &timeinfo);
 
@@ -407,28 +627,29 @@ void setup()
   Serial.begin(115200);
   delay(1000);
 
-  // Disable watchdog completely
-  disableCore0WDT();
-  disableCore1WDT();
-
   if (!SPIFFS.begin(true))
     Serial.println("SPIFFS Mount Failed!");
 
   pzemSerial.begin(PZEM_BAUD, SERIAL_8N1, PZEM_RX, PZEM_TX);
 
+  WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
+  delay(1000);
 
   ensureWiFiConnected();
 
   syncTime();
-  
+
   // Fetch WiFi networks from admin panel
   fetchWiFiNetworks();
 
   // Load accumulated data if device was reset (for blackout protection)
   loadAccumulatedData();
   deviceWasReset = false;
+
+  // Call this manually to upload yesterday's data
+  uploadNowAndReset();
 
   resendQueue();
 }
@@ -438,7 +659,6 @@ void setup()
 // =========================================================
 void loop()
 {
-  Serial.println("Loop running..."); // Debug: confirm loop is working
   ensureWiFiConnected();
 
   unsigned long currentMillis = millis();
@@ -527,17 +747,22 @@ void loop()
     {
       if (!uploadedToday)
       {
-        Serial.println("\n--- Sending Daily Summary ---");
-        sendToSupabase(230.0, 2.0, totalEnergy, peakPower); // Use last known voltage/current
+        Serial.println("\n--- Midnight Reset ---");
 
-        // Reset accumulators
-        totalEnergy = 0;
-        peakPower = 0;
-        totalCarbon = 0;
-        totalCost = 0;
+        if (WiFi.status() == WL_CONNECTED && totalEnergy > 0)
+        {
+          Serial.println("Sending Daily Summary");
+          sendToSupabase(230.0, 2.0, totalEnergy, peakPower);
+        }
+        else
+        {
+          handleMidnightDisconnection();
+        }
 
-        // Clear stored data
-        SPIFFS.remove("/accumulated.txt");
+        // Update last upload date
+        char currentDate[11];
+        strftime(currentDate, sizeof(currentDate), "%Y-%m-%d", &timeinfo);
+        lastUploadDate = String(currentDate);
         uploadedToday = true;
       }
     }
