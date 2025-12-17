@@ -3,8 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.db.models import Max, Sum
-import json
-from datetime import datetime, timedelta
+from ..lazy_imports import json, get_timezone_utils
 from .models import Device, SensorReading, EnergyRecord, CostSettings, CO2Settings
 from greenwatts.adminpanel.models import WiFiNetwork
 
@@ -100,6 +99,7 @@ def receive_sensor_data(request):
             }, status=400)
 
         # Store single reading
+        _, datetime, _, _ = get_timezone_utils()
         dt = datetime.fromtimestamp(timestamp or 0, tz=timezone.utc) if timestamp else timezone.now()
 
         power = voltage * current
@@ -155,6 +155,7 @@ def _process_batch_readings(device, readings, reading_count):
                     continue
 
                 # Convert Unix timestamp to datetime
+                _, datetime, _, _ = get_timezone_utils()
                 dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
                 power = voltage * current

@@ -1,16 +1,22 @@
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from email.mime.text import MIMEText
 import base64
 import os
 import logging
 
 
+def _lazy_import():
+    """Lazy import heavy modules only when needed."""
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+    from googleapiclient.discovery import build
+    from email.mime.text import MIMEText
+    return Credentials, Request, build, MIMEText
+
+
 def send_email_via_gmail(to_email, subject, message_text):
     """Sends an email using the Gmail API with a refresh token."""
     try:
+        Credentials, Request, build, MIMEText = _lazy_import()
+        
         refresh_token = os.environ["GOOGLE_REFRESH_TOKEN"]
         client_id = os.environ["GOOGLE_CLIENT_ID"]
         client_secret = os.environ["GOOGLE_CLIENT_SECRET"]
@@ -24,7 +30,6 @@ def send_email_via_gmail(to_email, subject, message_text):
             token_uri="https://oauth2.googleapis.com/token"
         )
 
-        # Refresh the token if needed
         if not creds.valid:
             creds.refresh(Request())
 

@@ -7,7 +7,7 @@ from django.db import models
 from ..adminpanel.models import EnergyThreshold, CO2Threshold, Notification
 from ..adminpanel.utils import get_scaled_thresholds
 from ..sensors.models import SensorReading, CostSettings, CO2Settings
-import csv
+from ..lazy_imports import csv, json, get_db_functions, get_timezone_utils
 
 def get_unread_notifications_count(office):
     """Helper function to get unread notifications count for an office"""
@@ -31,7 +31,7 @@ def get_base_thresholds():
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
     from ..adminpanel.login_attempts import is_locked_out, record_failed_attempt, clear_attempts, get_lockout_time_remaining
-    from .two_factor import get_device_fingerprint, is_trusted_device, send_otp
+    from .lazy_two_factor import lazy_get_device_fingerprint as get_device_fingerprint, lazy_is_trusted_device as is_trusted_device, lazy_send_otp as send_otp
     
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -91,13 +91,10 @@ def index(request):
 @login_required
 def dashboard(request):
     from django.db.models import Sum, Max
-    from django.db.models.functions import ExtractYear, ExtractMonth
-    from django.utils import timezone
-    from datetime import timedelta, date
+    ExtractYear, ExtractMonth, _ = get_db_functions()
+    timezone, dt, timedelta, date = get_timezone_utils()
     from calendar import monthrange
-    import json
     from ..sensors.models import SensorReading
-    from datetime import datetime as dt
 
     office = request.user
     devices = office.devices.all()
@@ -409,12 +406,9 @@ def notifications(request):
 @login_required
 def office_usage(request):
     from django.db.models import Sum, F, Max
-    from django.db.models.functions import ExtractYear, ExtractMonth
-    from django.utils import timezone
-    from datetime import date, timedelta
+    ExtractYear, ExtractMonth, _ = get_db_functions()
+    timezone, dt, timedelta, date = get_timezone_utils()
     from ..sensors.models import SensorReading
-    from datetime import datetime as dt
-    import json
 
     office = request.user
     devices = office.devices.all()
@@ -763,11 +757,8 @@ def office_usage(request):
 @login_required
 def user_reports(request):
     from django.db.models import Sum, Max, Min
-    from django.db.models.functions import ExtractYear, ExtractMonth
-    from django.utils import timezone
-    from datetime import timedelta, date
-    from datetime import datetime as dt
-    import json
+    ExtractYear, ExtractMonth, _ = get_db_functions()
+    timezone, dt, timedelta, date = get_timezone_utils()
     from ..sensors.models import SensorReading
 
     office = request.user
@@ -2121,7 +2112,7 @@ def get_user_weeks(request):
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def resend_otp(request):
-    from .two_factor import send_otp
+    from .lazy_two_factor import lazy_send_otp as send_otp
     from django.core.cache import cache
     from django.utils import timezone
     
@@ -2159,7 +2150,7 @@ def resend_otp(request):
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def verify_otp(request):
-    from .two_factor import verify_otp as check_otp, trust_device
+    from .lazy_two_factor import lazy_verify_otp as check_otp, lazy_trust_device as trust_device
     
     if 'pending_2fa_user' not in request.session:
         return redirect('users:index')
