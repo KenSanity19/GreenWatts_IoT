@@ -304,7 +304,9 @@ def dashboard(request):
     if current_cost > 0 or prev_cost > 0:
         max_cost = max(current_cost, prev_cost)
         if max_cost > 0:
-            heights = [(prev_cost / max_cost * 100), (current_cost / max_cost * 100)]
+            height1 = max(15, (prev_cost / max_cost * 100))
+            height2 = max(15, (current_cost / max_cost * 100))
+            heights = [height1, height2]
         else:
             heights = [50, 50]
     else:

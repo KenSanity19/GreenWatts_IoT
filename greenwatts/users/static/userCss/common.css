@@ -104,6 +104,7 @@ body {
   padding: 20px 30px;
   overflow-y: auto;
   transition: margin-left 0.3s ease;
+  background: linear-gradient(to bottom, #fdedcd, #d9d6cd);
 }
 
 .sidebar-toggle {
