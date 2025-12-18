@@ -40,6 +40,33 @@ def get_threshold_for_date(target_date):
         'co2_moderate_max': co2_threshold.moderate_max if co2_threshold else 13.0,
     }
 
+def get_rates_for_date(target_date):
+    """Get the cost and CO2 rates that were active on a specific date"""
+    from django.utils import timezone
+    target_datetime = timezone.make_aware(timezone.datetime.combine(target_date, timezone.datetime.min.time()))
+    
+    cost_rate = CostSettings.objects.filter(
+        created_at__date__lte=target_date
+    ).filter(
+        Q(ended_at__isnull=True) | Q(ended_at__date__gt=target_date)
+    ).first()
+    
+    co2_rate = CO2Settings.objects.filter(
+        created_at__date__lte=target_date
+    ).filter(
+        Q(ended_at__isnull=True) | Q(ended_at__date__gt=target_date)
+    ).first()
+    
+    if not cost_rate:
+        cost_rate = CostSettings.get_current_rate()
+    if not co2_rate:
+        co2_rate = CO2Settings.get_current_rate()
+    
+    return {
+        'cost_per_kwh': cost_rate.cost_per_kwh if cost_rate else 12.0,
+        'co2_per_kwh': co2_rate.co2_emission_factor if co2_rate else 0.475
+    }
+
 def get_valid_office_ids():
     """Get all valid office ids from Office table"""
     return set(Office.objects.values_list('office_id', flat=True))
@@ -457,9 +484,23 @@ def admin_dashboard(request):
             change_percent = 0
         is_decrease = change_percent < 0
         change_percent_abs = abs(change_percent)
-        # Heights: scale to max
-        max_cost = max(change_costs)
-        heights = [(c / max_cost * 100) if max_cost > 0 else 0 for c in change_costs]
+        
+        # Heights: proportional to actual cost values
+        if prev_cost == 0 and latest_cost == 0:
+            heights = [50, 50]  # Equal heights when both are zero
+        elif prev_cost == 0:
+            heights = [20, 100]  # Latest is much higher
+        elif latest_cost == 0:
+            heights = [100, 20]  # Previous is much higher
+        else:
+            # Scale heights proportionally to cost values
+            max_cost = max(prev_cost, latest_cost)
+            min_height = 30  # Minimum height for visibility
+            heights = [
+                max(min_height, (prev_cost / max_cost) * 100),
+                max(min_height, (latest_cost / max_cost) * 100)
+            ]
+        
         if level == 'month':
             bar1_label = change_dates[0].strftime('%B %Y')  # previous month
             bar2_label = change_dates[1].strftime('%B %Y')  # current month
@@ -1067,6 +1108,9 @@ def admin_costs(request):
     # Week options: filtered by selected month/year if available
     week_options = get_week_options(valid_office_ids, selected_month, selected_year)
 
+    # Get cost settings
+    cost_settings = CostSettings.get_current_rate()
+
     # Get readings and calculate with historical rates
     filtered_readings = SensorReading.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
@@ -1383,6 +1427,9 @@ def carbon_emission(request):
     
     # Week options: filtered by selected month/year if available
     week_options = get_week_options(valid_office_ids, selected_month, selected_year)
+
+    # Get CO2 settings
+    co2_settings = CO2Settings.get_current_rate()
 
     # Get readings and calculate with historical rates
     filtered_readings = SensorReading.objects.filter(**filter_kwargs).filter(
@@ -1967,6 +2014,10 @@ def export_reports(request):
     valid_office_ids = get_valid_office_ids()
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, None)
     
+    # Get rates that were active on the filtered date
+    target_date = selected_date or datetime.now().date()
+    rates = get_rates_for_date(target_date)
+    
     # Get office data with historical rates
     office_names = SensorReading.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
@@ -1999,6 +2050,12 @@ def export_reports(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     writer = csv.writer(response)
+    # Add header with rates information
+    writer.writerow(['GreenWatts Energy Report'])
+    writer.writerow([f'Report Date: {target_date.strftime("%B %d, %Y")}'])
+    writer.writerow([f'Cost Rate: ₱{rates["cost_per_kwh"]:.2f} per kWh'])
+    writer.writerow([f'CO2 Emission Factor: {rates["co2_per_kwh"]:.3f} kg CO2 per kWh'])
+    writer.writerow([])  # Empty row for spacing
     writer.writerow(['Office Name', 'Energy Usage (kWh)', 'Cost Estimate (PHP)', 'CO2 Emission (kg)'])
     
     for record in office_data:

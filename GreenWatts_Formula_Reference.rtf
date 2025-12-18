@@ -1,0 +1,238 @@
+{\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;} {\f1 Courier New;}}
+{\colortbl;\red0\green0\blue0;\red255\green0\blue0;\red0\green128\blue0;\red0\green0\blue255;}
+
+\f0\fs24\b GreenWatts IoT Energy Monitoring System - Complete Formula Reference\b0\par
+\par
+
+\fs20\b 1. Core Energy Calculations (ESP32)\b0\par
+\par
+
+\b Power Calculation\b0\par
+\f1\fs18 float power = voltage * current;  // Watts (W)\f0\fs20\par
+\par
+
+\b Energy Calculation (kWh)\b0\par
+\f1\fs18 // For 10-second reading intervals\par
+float deltaEnergy = power * 10.0 / 3600000.0;  // kWh per reading\par
+// Formula: P(W) \u215? time(s) / (3600 s/h \u215? 1000 W/kW) = kWh\par
+\par
+// Daily total energy\par
+float total_energy_kwh = (total_power_sum * reading_interval) / (1000 * 3600);\par
+// Where: reading_interval = 10 seconds\f0\fs20\par
+\par
+
+\b Peak Power Tracking\b0\par
+\f1\fs18 if (power > peakPower) \{\par
+    peakPower = power;  // Track maximum power in Watts\par
+\}\f0\fs20\par
+\par
+
+\b 2. Environmental Impact Calculations\b0\par
+\par
+
+\b Carbon Emissions (CO2)\b0\par
+\f1\fs18 # Philippines grid emission factor: 0.475 kg CO2/kWh (configurable)\par
+carbon_emission_kgco2 = total_energy_kwh * co2_emission_factor\par
+\par
+# ESP32 calculation\par
+totalCarbon += deltaEnergy * 0.475;  // kg CO2\f0\fs20\par
+\par
+
+\b Cost Estimation\b0\par
+\f1\fs18 # Philippines average rate: 12.0 PHP/kWh (configurable)\par
+cost_estimate = total_energy_kwh * cost_per_kwh\par
+\par
+# ESP32 calculation\par
+totalCost += deltaEnergy * 12.0;  // PHP\f0\fs20\par
+\par
+
+\b 3. Threshold Scaling Formulas\b0\par
+\par
+
+\b Time-Based Threshold Scaling\b0\par
+\f1\fs18 def get_scaled_thresholds(base_thresholds, level):\par
+    scale_factors = \{\par
+        'day': 1,\par
+        'week': 7,\par
+        'month': 30,\par
+        'year': 365\par
+    \}\par
+    \par
+    factor = scale_factors.get(level, 1)\par
+    \par
+    return \{\par
+        'energy_efficient_max': base_thresholds['energy_efficient_max'] * factor,\par
+        'energy_moderate_max': base_thresholds['energy_moderate_max'] * factor,\par
+        'co2_efficient_max': base_thresholds['co2_efficient_max'] * factor,\par
+        'co2_moderate_max': base_thresholds['co2_moderate_max'] * factor,\par
+    \}\f0\fs20\par
+\par
+
+\b 4. Prediction Algorithms\b0\par
+\par
+
+\b Monthly CO2 Prediction\b0\par
+\f1\fs18 # For month: predict based on current month's daily average\par
+days_with_data = current_month_readings.dates('date', 'day').count()\par
+if days_with_data > 0:\par
+    daily_avg = co2_emissions / days_with_data\par
+    predicted_co2 = daily_avg * days_in_month\f0\fs20\par
+\par
+
+\b Cost Prediction\b0\par
+\f1\fs18 # Predicted cost based on daily average\par
+total_days = (period_end - period_start).days + 1\par
+days_so_far = (so_far_end - period_start).days + 1\par
+\par
+if days_so_far > 0 and period_end > now:\par
+    avg_daily = so_far_cost / days_so_far\par
+    predicted_cost = avg_daily * total_days\f0\fs20\par
+\par
+
+\b Energy Usage Prediction\b0\par
+\f1\fs18 # Default prediction for other levels\par
+predicted_co2 = co2_emissions * 2  # Simple 2x multiplier\f0\fs20\par
+\par
+
+\b 5. Historical Rate Calculations\b0\par
+\par
+
+\b Dynamic Rate Application\b0\par
+\f1\fs18 def get_rates_for_date(target_date):\par
+    # Get cost rate active on specific date\par
+    cost_rate = CostSettings.objects.filter(\par
+        created_at__lte=target_date\par
+    ).filter(\par
+        Q(ended_at__isnull=True) | Q(ended_at__gt=target_date)\par
+    ).order_by('-created_at').first()\par
+    \par
+    # Get CO2 rate active on specific date\par
+    co2_rate = CO2Settings.objects.filter(\par
+        created_at__lte=target_date\par
+    ).filter(\par
+        Q(ended_at__isnull=True) | Q(ended_at__gt=target_date)\par
+    ).order_by('-created_at').first()\par
+    \par
+    return \{\par
+        'cost_per_kwh': cost_rate.cost_per_kwh,\par
+        'co2_emission_factor': co2_rate.co2_emission_factor\par
+    \}\f0\fs20\par
+\par
+
+\b 6. Performance Metrics\b0\par
+\par
+
+\b Percentage Change Calculation\b0\par
+\f1\fs18 if prev_cost > 0:\par
+    change_percent = ((current_cost - prev_cost) / prev_cost) * 100\par
+else:\par
+    change_percent = 0\par
+\par
+is_decrease = change_percent < 0\par
+change_percent_abs = abs(change_percent)\f0\fs20\par
+\par
+
+\b Office Share Calculation\b0\par
+\f1\fs18 # Calculate office share percentage\par
+office_share_percentage = (office_energy / total_all_energy * 100) if total_all_energy > 0 else 0\f0\fs20\par
+\par
+
+\b Progress Percentage\b0\par
+\f1\fs18 # Carbon footprint progress\par
+progress_percentage = (month_so_far_co2 / predicted_co2 * 100) if predicted_co2 > 0 else 0\f0\fs20\par
+\par
+
+\b Savings Calculation\b0\par
+\f1\fs18 # Estimated savings\par
+savings = prev_cost - predicted_cost if prev_cost > predicted_cost else 0\f0\fs20\par
+\par
+
+\b 7. Status Classification Logic\b0\par
+\par
+
+\b Energy Efficiency Status\b0\par
+\f1\fs18 if total_energy > energy_moderate_max:\par
+    status = 'High'        # Red - Above threshold\par
+elif total_energy > energy_efficient_max:\par
+    status = 'Moderate'    # Yellow - Approaching threshold\par
+else:\par
+    status = 'Efficient'   # Green - Within limits\f0\fs20\par
+\par
+
+\b Chart Color Coding\b0\par
+\f1\fs18 colors = []\par
+for energy_value in chart_values:\par
+    if energy_value > energy_moderate_max:\par
+        colors.append('#d9534f')  # Red - High usage\par
+    elif energy_value > energy_efficient_max:\par
+        colors.append('#f0ad4e')  # Yellow - Moderate usage\par
+    else:\par
+        colors.append('#5cb85c')  # Green - Efficient usage\f0\fs20\par
+\par
+
+\b 8. Default Configuration Values\b0\par
+\par
+
+\b System Defaults\b0\par
+\u8226? \b Energy Thresholds\b0: 10 kWh (efficient), 20 kWh (moderate), 30 kWh (high) - daily basis\par
+\u8226? \b CO2 Thresholds\b0: 8 kg (efficient), 13 kg (moderate), 18 kg (high) - daily basis\par
+\u8226? \b CO2 Emission Factor\b0: 0.475 kg CO2/kWh (Philippines grid)\par
+\u8226? \b Cost Rate\b0: 12.0 PHP/kWh (Philippines average)\par
+\u8226? \b Reading Interval\b0: 10 seconds\par
+\u8226? \b Data Transmission\b0: Daily at midnight (00:00)\par
+\par
+
+\b ESP32 Calculation Constants\b0\par
+\f1\fs18 const unsigned long READ_INTERVAL = 10000; // 10 seconds\par
+const float CO2_FACTOR = 0.475;           // kg CO2/kWh\par
+const float COST_RATE = 12.0;             // PHP/kWh\f0\fs20\par
+\par
+
+\b 9. Data Aggregation Formulas\b0\par
+\par
+
+\b Daily Energy Record Creation\b0\par
+\f1\fs18 # Calculate metrics from sensor readings\par
+total_power_sum = 0\par
+peak_power = 0\par
+reading_interval = 10  # seconds\par
+\par
+for reading in sensor_readings:\par
+    power = reading.voltage * reading.current  # Watts\par
+    total_power_sum += power\par
+    peak_power = max(peak_power, power)\par
+\par
+# Energy = Power \u215? Time (convert to kWh)\par
+total_energy_kwh = (total_power_sum * reading_interval) / (1000 * 3600)\par
+\par
+# Calculate using admin settings\par
+carbon_emission_kgco2 = total_energy_kwh * co2_settings.co2_emission_factor\par
+cost_estimate = total_energy_kwh * cost_settings.cost_per_kwh\f0\fs20\par
+\par
+
+\b 10. Key Mathematical Relationships\b0\par
+\par
+
+\b Power-Energy Relationship\b0\par
+Energy (kWh) = Power (W) \u215? Time (hours) \u247? 1000\par
+\par
+
+\b Cost-Energy Relationship\b0\par
+Cost (PHP) = Energy (kWh) \u215? Rate (PHP/kWh)\par
+\par
+
+\b CO2-Energy Relationship\b0\par
+CO2 Emissions (kg) = Energy (kWh) \u215? Emission Factor (kg CO2/kWh)\par
+\par
+
+\b Efficiency Classification\b0\par
+Efficient: Energy \u8804? Efficient Threshold\par
+Moderate: Efficient Threshold < Energy \u8804? Moderate Threshold\par
+High: Energy > Moderate Threshold\par
+\par
+
+\line\par
+\b Document Version:\b0 1.0\par
+\b Last Updated:\b0 January 2025\par
+\b Project:\b0 GreenWatts IoT Energy Monitoring System\par
+}

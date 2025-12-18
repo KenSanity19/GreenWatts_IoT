@@ -316,19 +316,10 @@ h3.alerts {
 
 .bar-fill {
   width: 30px;
-  height: 100%; /* Fill height relative to .bar */
-  background-color: #1e90ff; /* DodgerBlue */
+  background-color: #1e90ff;
   border-radius: 4px 4px 0 0;
   transition: height 0.3s ease;
   border: 1px solid #003f7f;
-}
-
-.bar-fill {
-  width: 30px;
-  background-color: #1e90ff; /* Changed to DodgerBlue for better visibility */
-  border-radius: 4px 4px 0 0;
-  transition: height 0.3s ease;
-  border: 1px solid #003f7f; /* Added border for contrast */
 }
 
 .bar-label {
