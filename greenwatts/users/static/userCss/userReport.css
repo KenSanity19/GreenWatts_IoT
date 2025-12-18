@@ -121,12 +121,12 @@ header h1 {
     font-weight: 700;
   }
 
-  /* Colors for each card */
-  .energy { background: #527e4c; }     /* Green */
-  .cost { background: #6c757d; }       /* Gray */
-  .co2 { background: #17a2b8; }       /* Teal */
-  .status { background: #214574; }     /* Blue */
-  .highest { background: #dc3545; }    /* Red */
+  /* Default colors for cards - will be overridden by JavaScript */
+  .energy { background: #214574; }     /* Default Blue */
+  .cost { background: #214574; }       /* Default Blue */
+  .co2 { background: #214574; }        /* Default Blue */
+  .status { background: #214574; }     /* Default Blue */
+  .highest { background: #214574; }    /* Default Blue */
   
   /* Override for yellow card text color */
   .best { color: #000; }

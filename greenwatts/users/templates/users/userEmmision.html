@@ -165,7 +165,18 @@
       </section>
     </div>
 
+    <script src="{% static 'userJs/cardColorManager.js' %}"></script>
     <script>
+      // Initialize card colors
+      document.addEventListener('DOMContentLoaded', function() {
+        window.cardColorManager.initCO2Cards({
+          current_status: '{{ current_status }}',
+          predicted_status: '{{ predicted_status }}',
+          change_status: '{{ change_status }}',
+          threshold_status: '{{ threshold_status }}'
+        });
+      });
+
       const ctx = document.getElementById("co2Chart").getContext("2d");
       const co2Chart = new Chart(ctx, {
         type: "line",

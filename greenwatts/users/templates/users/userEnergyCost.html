@@ -170,7 +170,18 @@
     </div>
 
     <!-- Chart Script -->
+    <script src="{% static 'userJs/cardColorManager.js' %}"></script>
     <script>
+      // Initialize card colors
+      document.addEventListener('DOMContentLoaded', function() {
+        window.cardColorManager.initEnergyCostCards({
+          energy_status: '{{ energy_status }}',
+          cost_status: '{{ cost_status }}',
+          avg_status: '{{ avg_status }}',
+          highest_status: '{{ highest_status }}'
+        });
+      });
+
       const ctx = document.getElementById("energyChart").getContext("2d");
       const chartLabels = {{ chart_labels|safe }};
       const chartData = {{ chart_data|safe }};

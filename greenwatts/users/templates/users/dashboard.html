@@ -243,7 +243,17 @@
       </div>
     </div>
 
+    <script src="{% static 'userJs/cardColorManager.js' %}"></script>
     <script>
+      // Initialize card colors
+      document.addEventListener('DOMContentLoaded', function() {
+        window.cardColorManager.initDashboardCards({
+          energy_status: '{{ energy_status }}',
+          cost_status: '{{ cost_status }}',
+          co2_status: '{{ co2_status }}'
+        });
+      });
+
       function updateTime() {
         const now = new Date();
         const options = {

@@ -177,7 +177,19 @@
     </div>
 
     <!-- Chart Script -->
+    <script src="{% static 'userJs/cardColorManager.js' %}"></script>
     <script>
+      // Initialize card colors
+      document.addEventListener('DOMContentLoaded', function() {
+        window.cardColorManager.initReportsCards({
+          energy_status: '{{ energy_status }}',
+          cost_status: '{{ cost_status }}',
+          co2_status: '{{ co2_status }}',
+          status_status: '{{ status_status }}',
+          highest_status: '{{ highest_status }}'
+        });
+      });
+
       const ctx = document.getElementById("energyChart").getContext("2d");
       const chartLabels = {{ chart_labels|safe }};
       const chartValues = {{ chart_values|safe }};

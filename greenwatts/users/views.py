@@ -356,6 +356,29 @@ def dashboard(request):
     # Calculate progress percentage for carbon footprint bar
     progress_percentage = (month_so_far_co2 / predicted_co2 * 100) if predicted_co2 > 0 else 0
 
+    # Determine individual card efficiency status
+    base_thresholds = get_base_thresholds()
+    scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
+    
+    # Energy card status
+    if energy_usage > scaled_thresholds['energy_moderate_max']:
+        energy_status = 'high'
+    elif energy_usage > scaled_thresholds['energy_efficient_max']:
+        energy_status = 'moderate'
+    else:
+        energy_status = 'efficient'
+    
+    # Cost card status (based on energy)
+    cost_status = energy_status
+    
+    # CO2 card status
+    if co2_emissions > scaled_thresholds['co2_moderate_max']:
+        co2_status = 'high'
+    elif co2_emissions > scaled_thresholds['co2_efficient_max']:
+        co2_status = 'moderate'
+    else:
+        co2_status = 'efficient'
+
     context = {
         'office': office,
         'selected_date': selected_date,
@@ -376,6 +399,9 @@ def dashboard(request):
         'month_so_far_co2': f"{month_so_far_co2:.2f}",
         'predicted_co2': f"{predicted_co2:.2f}",
         'progress_percentage': f"{progress_percentage:.1f}",
+        'energy_status': energy_status,
+        'cost_status': cost_status,
+        'co2_status': co2_status,
         'unread_notifications_count': unread_notifications_count,
         'notifications': notifications,
     }
@@ -1065,10 +1091,30 @@ def user_reports(request):
     
     if total_energy_usage > energy_moderate_max:
         office_status = 'HIGH'
+        energy_status = 'high'
     elif total_energy_usage > energy_efficient_max:
         office_status = 'MODERATE'
+        energy_status = 'moderate'
     else:
         office_status = 'ACTIVE'
+        energy_status = 'efficient'
+    
+    # Cost status (based on energy)
+    cost_status = energy_status
+    
+    # CO2 status
+    if co2_emission > (energy_moderate_max * co2_rate):
+        co2_status = 'high'
+    elif co2_emission > (energy_efficient_max * co2_rate):
+        co2_status = 'moderate'
+    else:
+        co2_status = 'efficient'
+    
+    # Status card shows overall office status
+    status_status = energy_status
+    
+    # Highest day card - neutral color
+    highest_status = 'efficient'
 
     # Dynamic recommendation based on usage and threshold
     def generate_recommendation(total_energy, energy_efficient_max, energy_moderate_max, level, chart_values):
@@ -1155,6 +1201,11 @@ def user_reports(request):
         'calendar_month': calendar_month,
         'energy_efficient_max': energy_efficient_max,
         'energy_moderate_max': energy_moderate_max,
+        'energy_status': energy_status,
+        'cost_status': cost_status,
+        'co2_status': co2_status,
+        'status_status': status_status,
+        'highest_status': highest_status,
         'unread_notifications_count': unread_notifications_count,
     }
     return render(request, 'users/userReports.html', context)
@@ -1523,6 +1574,27 @@ def user_energy_cost(request):
     predicted_label = f"Predicted This {level.capitalize()}"
     savings_label = "Estimated Savings"
     
+    # Determine individual card efficiency status
+    base_thresholds = get_base_thresholds()
+    scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
+    
+    # Energy card status
+    if total_energy > scaled_thresholds['energy_moderate_max']:
+        energy_status = 'high'
+    elif total_energy > scaled_thresholds['energy_efficient_max']:
+        energy_status = 'moderate'
+    else:
+        energy_status = 'efficient'
+    
+    # Cost cards status (based on energy)
+    cost_status = energy_status
+    
+    # Average daily cost status
+    avg_status = energy_status
+    
+    # Highest cost day - neutral
+    highest_status = 'efficient'
+    
     context = {
         'office': office,
         'week_options': week_options,
@@ -1548,6 +1620,10 @@ def user_energy_cost(request):
         'savings': f"₱{savings:.2f}",
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
+        'energy_status': energy_status,
+        'cost_status': cost_status,
+        'avg_status': avg_status,
+        'highest_status': highest_status,
         'unread_notifications_count': unread_notifications_count,
     }
     return render(request, 'users/userEnergyCost.html', context)
@@ -1887,6 +1963,31 @@ def user_emmision(request):
     # Get base (daily) CO2 threshold for chart since we show daily data points
     base_thresholds = get_base_thresholds()
     threshold_value = base_thresholds['co2_moderate_max']
+    
+    # Determine individual card efficiency status based on CO2 emissions
+    scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
+    
+    # Current week CO2 status
+    if current_week_so_far_co2 > scaled_thresholds['co2_moderate_max']:
+        current_status = 'high'
+    elif current_week_so_far_co2 > scaled_thresholds['co2_efficient_max']:
+        current_status = 'moderate'
+    else:
+        current_status = 'efficient'
+    
+    # Predicted week CO2 status
+    if predicted_week_co2 > scaled_thresholds['co2_moderate_max']:
+        predicted_status = 'high'
+    elif predicted_week_co2 > scaled_thresholds['co2_efficient_max']:
+        predicted_status = 'moderate'
+    else:
+        predicted_status = 'efficient'
+    
+    # Change card - neutral
+    change_status = 'efficient'
+    
+    # Threshold card - neutral
+    threshold_status = 'efficient'
 
     context = {
         'office': office,
@@ -1907,6 +2008,10 @@ def user_emmision(request):
         'week_data': json.dumps(week_data),
         'threshold': threshold_value,
         'co2_efficient_max': base_thresholds['co2_efficient_max'],
+        'current_status': current_status,
+        'predicted_status': predicted_status,
+        'change_status': change_status,
+        'threshold_status': threshold_status,
         'unread_notifications_count': unread_notifications_count,
     }
     return render(request, 'users/userEmmision.html', context)

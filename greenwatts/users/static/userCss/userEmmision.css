@@ -82,10 +82,11 @@ strong.red-text {
     transition: transform 0.2s ease;
 }
 
-.co2-card:nth-child(1) { background: #527e4c; color: #fff; }
+/* Default colors for CO2 cards - will be overridden by JavaScript */
+.co2-card:nth-child(1) { background: #214574; color: #fff; }
 .co2-card:nth-child(2) { background: #214574; color: #fff; }
-.co2-card:nth-child(3) { background: #5a5a5a; color: #fff; }
-.co2-card:nth-child(4) { background: #e33b4b; color: #fff; }
+.co2-card:nth-child(3) { background: #214574; color: #fff; }
+.co2-card:nth-child(4) { background: #214574; color: #fff; }
 
 .co2-card:nth-child(1) .card-label { color: rgba(255, 255, 255, 0.9); }
 .co2-card:nth-child(2) .card-label { color: rgba(255, 255, 255, 0.9); }

@@ -160,10 +160,10 @@ header h1 {
   font-weight: 700;
 }
 
-/* Colors for each card */
-.total {  background: #527e4c; }     /* Green */
-.highest { background: #dc3545; }   /* Red */
-.inactive { background: #214574; }  /* Blue */
+/* Default colors for cards - will be overridden by JavaScript */
+.total { background: #214574; }     /* Default Blue */
+.highest { background: #214574; }   /* Default Blue */
+.inactive { background: #214574; }  /* Default Blue */
 
 /* Bottom Section */
 .bottom-section {
