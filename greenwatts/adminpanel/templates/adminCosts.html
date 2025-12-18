@@ -52,7 +52,7 @@
         <a
           href="{% url 'adminpanel:admin_costs' %}"
           class="{% if request.resolver_match.url_name == 'admin_costs' %}active{% endif %}"
-          ><i class="fas fa-dollar-sign"></i> Energy Costs</a
+          ><i class="fas fa-peso-sign"></i> Energy Costs</a
         >
         <a
           href="{% url 'adminpanel:carbon_emission' %}"
@@ -120,7 +120,7 @@
 
       <!-- Top Cards -->
       <div class="report-cards">
-        <div class="card total">
+        <div class="card {{ energy_efficiency }}">
           <div class="card-icon">
             <i class="fas fa-bolt"></i>
           </div>
@@ -129,16 +129,16 @@
             <div class="card-value">{{ total_energy|floatformat:1 }} kWh</div>
           </div>
         </div>
-        <div class="card inactive">
+        <div class="card {{ energy_efficiency }}">
           <div class="card-icon">
-            <i class="fas fa-dollar-sign"></i>
+            <i class="fas fa-peso-sign"></i>
           </div>
           <div class="card-content">
             <div class="card-label">Total Cost</div>
             <div class="card-value">₱{{ total_cost|floatformat:2 }}</div>
           </div>
         </div>
-        <div class="card inactive">
+        <div class="card {{ energy_efficiency }}">
           <div class="card-icon">
             <i class="fas fa-calendar-day"></i>
           </div>
@@ -147,7 +147,7 @@
             <div class="card-value">₱{{ avg_daily_cost|floatformat:2 }}</div>
           </div>
         </div>
-        <div class="card highest">
+        <div class="card high">
           <div class="card-icon">
             <i class="fas fa-building"></i>
           </div>
@@ -201,6 +201,7 @@
       const ctx = document.getElementById("energyChart").getContext("2d");
       const chartLabels = {{ chart_labels|safe }};
       const chartData = {{ chart_data|safe }};
+      const costPerKwh = {{ cost_per_kwh }};
       const maxValue = Math.max(...chartData) + 20;
       new Chart(ctx, {
         type: "bar",
@@ -208,7 +209,7 @@
           labels: chartLabels,
           datasets: [
             {
-              label: "Cost",
+              label: "Energy (kWh)",
               data: chartData,
               backgroundColor: "#4caf50",
               borderRadius: 5,
@@ -225,7 +226,7 @@
                 stepSize: Math.ceil(maxValue / 6),
                 color: "#fff",
                 callback: function (value) {
-                  return "₱" + value;
+                  return value + " kWh";
                 },
               },
               grid: {
@@ -246,6 +247,15 @@
             legend: {
               display: false,
             },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const energy = context.parsed.y;
+                  const cost = energy * costPerKwh;
+                  return `Cost: ₱${cost.toFixed(2)}`;
+                }
+              }
+            }
           },
         },
       });

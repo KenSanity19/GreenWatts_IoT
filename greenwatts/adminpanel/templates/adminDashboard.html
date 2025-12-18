@@ -50,7 +50,7 @@
         <a
           href="{% url 'adminpanel:admin_costs' %}"
           class="{% if request.resolver_match.url_name == 'admin_costs' %}active{% endif %}"
-          ><i class="fas fa-dollar-sign"></i> Energy Costs</a
+          ><i class="fas fa-peso-sign"></i> Energy Costs</a
         >
         <a
           href="{% url 'adminpanel:carbon_emission' %}"
@@ -119,7 +119,7 @@
 
       <!-- Top Cards -->
       <div class="report-cards">
-        <div class="card total">
+        <div class="card {{ energy_efficiency }}">
           <div class="card-icon">
             <i class="fas fa-bolt"></i>
           </div>
@@ -128,16 +128,16 @@
             <div class="card-value">{{ total_energy_usage|floatformat:2 }} kWh</div>
           </div>
         </div>
-        <div class="card inactive">
+        <div class="card {{ energy_efficiency }}">
           <div class="card-icon">
-            <i class="fas fa-dollar-sign"></i>
+            <i class="fas fa-peso-sign"></i>
           </div>
           <div class="card-content">
             <div class="card-label">Total Cost</div>
             <div class="card-value">₱{{ total_cost_predicted|floatformat:2 }}</div>
           </div>
         </div>
-        <div class="card highest">
+        <div class="card {{ energy_efficiency }}">
           <div class="card-icon">
             <i class="fas fa-leaf"></i>
           </div>

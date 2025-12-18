@@ -161,7 +161,15 @@ header h1 {
   font-weight: 700;
 }
 
-/* Colors for each card */
+/* Default card colors */
+.card { background: #214574; }  /* Default blue */
+
+/* Dynamic efficiency-based colors */
+.card.efficient { background: rgb(42, 118, 59) !important; }    /* Green */
+.card.moderate { background: rgb(205, 149, 23) !important; }    /* Yellow */
+.card.high { background: rgb(179, 57, 57) !important; }         /* Red */
+
+/* Legacy colors for specific card types (fallback) */
 .total {  background: #527e4c; }     /* Green */
 .highest { background: #dc3545; }   /* Red */
 .inactive { background: #214574; }  /* Blue */

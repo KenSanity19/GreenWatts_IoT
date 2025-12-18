@@ -481,6 +481,15 @@ def admin_dashboard(request):
     else:
         change_data = None
 
+    # Determine efficiency levels for cards
+    total_energy = aggregates['total_energy_usage'] or 0
+    if total_energy > energy_moderate_max:
+        energy_efficiency = 'high'
+    elif total_energy > energy_efficient_max:
+        energy_efficiency = 'moderate'
+    else:
+        energy_efficiency = 'efficient'
+
     context = {
         'total_energy_usage': aggregates['total_energy_usage'] or 0,
         'total_cost_predicted': aggregates['total_cost_predicted'] or 0,
@@ -500,6 +509,7 @@ def admin_dashboard(request):
         'selected_year': selected_year,
         'selected_week': selected_week,
         'level': level,
+        'energy_efficiency': energy_efficiency,
         'random_energy_tip': get_random_energy_tip(),
     }
     return render(request, 'adminDashboard.html', context)
@@ -757,6 +767,15 @@ def office_usage(request):
         })
         color_index += 1
 
+    # Determine efficiency levels for cards based on total energy usage
+    total_energy_usage = sum(record['total_energy'] for record in office_data)
+    if total_energy_usage > energy_moderate_max:
+        energy_efficiency = 'high'
+    elif total_energy_usage > energy_efficient_max:
+        energy_efficiency = 'moderate'
+    else:
+        energy_efficiency = 'efficient'
+
     context = {
         'table_data': table_data,
         'pie_labels': json.dumps(pie_labels),
@@ -771,6 +790,7 @@ def office_usage(request):
         'selected_month': selected_month,
         'selected_year': selected_year,
         'selected_week': selected_week,
+        'energy_efficiency': energy_efficiency,
         'random_energy_tip': get_random_energy_tip(),
     }
     return render(request, 'officeUsage.html', context)
@@ -947,6 +967,14 @@ def admin_reports(request):
     # Generate dynamic recommendation
     recommendation = generate_recommendation(office_data, energy_moderate_max, energy_efficient_max, filter_kwargs, valid_office_ids)
 
+    # Determine efficiency levels for cards
+    if total_energy_usage > energy_moderate_max:
+        energy_efficiency = 'high'
+    elif total_energy_usage > energy_efficient_max:
+        energy_efficiency = 'moderate'
+    else:
+        energy_efficiency = 'efficient'
+
     context = {
         'total_energy_usage': total_energy_usage,
         'highest_usage_office': highest_usage_office,
@@ -965,6 +993,7 @@ def admin_reports(request):
         'selected_day': selected_day,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'energy_efficiency': energy_efficiency,
         'random_energy_tip': get_random_energy_tip(),
         'recommendation': recommendation,
         'offices': Office.objects.all(),
@@ -1169,7 +1198,7 @@ def admin_costs(request):
             ).exclude(
                 device__office__name='DS'
             ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-            chart_data.append(energy * cost_settings.cost_per_kwh)
+            chart_data.append(energy)
     elif level == 'month':
         year = int(selected_year) if selected_year else datetime.now().year
         month = int(selected_month) if selected_month else datetime.now().month
@@ -1177,7 +1206,7 @@ def admin_costs(request):
         _, last_day = monthrange(year, month)
         end_date = date(year, month, last_day)
         chart_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
-        chart_labels = [d.strftime('%d') for d in chart_dates]  # Day numbers
+        chart_labels = [f"{d.strftime('%a')}\n{d.strftime('%d')}" for d in chart_dates]  # Day name and day number
         chart_data = []
         for d in chart_dates:
             energy = SensorReading.objects.filter(
@@ -1186,7 +1215,7 @@ def admin_costs(request):
             ).exclude(
                 device__office__name='DS'
             ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-            chart_data.append(energy * cost_settings.cost_per_kwh)
+            chart_data.append(energy)
     elif level == 'year':
         # Aggregate by month
         monthly_data = SensorReading.objects.filter(
@@ -1202,7 +1231,7 @@ def admin_costs(request):
         chart_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         chart_data = [0] * 12
         for item in monthly_data:
-            chart_data[item['month'] - 1] = (item['total_energy'] or 0) * cost_settings.cost_per_kwh
+            chart_data[item['month'] - 1] = (item['total_energy'] or 0)
     else:  # day or default
         # Default to last 7 days costs
         chart_dates_desc = SensorReading.objects.filter(
@@ -1211,7 +1240,7 @@ def admin_costs(request):
             device__office__name='DS'
         ).dates('date', 'day').distinct().order_by('-date')[:7]
         chart_dates = list(reversed(chart_dates_desc))
-        chart_labels = [d.strftime('%B %d') for d in chart_dates]
+        chart_labels = [f"{d.strftime('%a')}\n{d.strftime('%B %d')}" for d in chart_dates]
         chart_data = []
         for d in chart_dates:
             energy = SensorReading.objects.filter(
@@ -1220,7 +1249,7 @@ def admin_costs(request):
             ).exclude(
                 device__office__name='DS'
             ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-            chart_data.append(energy * cost_settings.cost_per_kwh)
+            chart_data.append(energy)
 
     # Labels for chart header
     if level == 'week':
@@ -1243,6 +1272,19 @@ def admin_costs(request):
         predicted_label = f"Predicted This {level.capitalize()} ({period_label})"
     savings_label = "Estimated Savings"
 
+    # Determine efficiency levels for cards based on energy usage
+    base_thresholds = get_threshold_for_date(selected_date or datetime.now().date())
+    threshold_values = get_scaled_thresholds(base_thresholds, level)
+    energy_efficient_max = threshold_values['energy_efficient_max']
+    energy_moderate_max = threshold_values['energy_moderate_max']
+    
+    if total_energy > energy_moderate_max:
+        energy_efficiency = 'high'
+    elif total_energy > energy_efficient_max:
+        energy_efficiency = 'moderate'
+    else:
+        energy_efficiency = 'efficient'
+
     context = {
         'total_energy': total_energy,
         'total_cost': total_cost,
@@ -1258,6 +1300,7 @@ def admin_costs(request):
         'savings': savings,
         'chart_labels': json.dumps(chart_labels),
         'chart_data': json.dumps(chart_data),
+        'cost_per_kwh': cost_settings.cost_per_kwh,
         'day_options': day_options,
         'month_options': month_options,
         'year_options': year_options,
@@ -1267,6 +1310,7 @@ def admin_costs(request):
         'selected_year': selected_year,
         'selected_week': selected_week,
         'level': level,
+        'energy_efficiency': energy_efficiency,
         'random_energy_tip': get_random_energy_tip(),
     }
     return render(request, 'adminCosts.html', context)
@@ -1572,6 +1616,19 @@ def carbon_emission(request):
     else:
         predicted_label = f"Predicted This {level.capitalize()} ({period_label})"
 
+    # Determine efficiency levels for cards based on energy usage
+    base_thresholds = get_threshold_for_date(selected_date or datetime.now().date())
+    threshold_values = get_scaled_thresholds(base_thresholds, level)
+    energy_efficient_max = threshold_values['energy_efficient_max']
+    energy_moderate_max = threshold_values['energy_moderate_max']
+    
+    if total_energy_kwh > energy_moderate_max:
+        energy_efficiency = 'high'
+    elif total_energy_kwh > energy_efficient_max:
+        energy_efficiency = 'moderate'
+    else:
+        energy_efficiency = 'efficient'
+
     context = {
         'total_energy_kwh': round(total_energy_kwh, 1),
         'total_co2': f"{total_co2:.1f}",
@@ -1601,6 +1658,7 @@ def carbon_emission(request):
         'selected_month': selected_month,
         'selected_year': selected_year,
         'selected_week': selected_week,
+        'energy_efficiency': energy_efficiency,
         'random_energy_tip': get_random_energy_tip(),
     }
     return render(request, 'carbonEmission.html', context)
