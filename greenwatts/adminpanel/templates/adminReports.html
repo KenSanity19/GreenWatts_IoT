@@ -9,6 +9,14 @@
     <link rel="icon" type="image/png" href="{% static 'browse-logo.png' %}" />
     <link rel="stylesheet" href="{% static 'adminCss/common.css' %}" />
     <link rel="stylesheet" href="{% static 'adminCss/adminReports.css' %}" />
+    <style>
+      .error-msg {
+        color: #d9534f;
+        font-size: 12px;
+        margin-top: 5px;
+        display: block;
+      }
+    </style>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -189,32 +197,38 @@
       <div class="modal-content">
         <h2>Send Notification</h2>
         <span class="close">&times;</span>
-        <form method="post" action="{% url 'adminpanel:send_notification' %}" class="notification-form">
+        <form method="post" action="{% url 'adminpanel:send_notification' %}" class="notification-form" id="notificationForm">
           {% csrf_token %}
           <div class="form-group">
             <label>Title:</label>
-            <input type="text" name="title" required />
+            <input type="text" name="title" id="notifTitle" required maxlength="100" />
+            <span class="error-msg" id="titleError"></span>
           </div>
           <div class="form-group">
             <label>Message:</label>
-            <textarea name="message" required rows="4"></textarea>
+            <textarea name="message" id="notifMessage" required rows="4" maxlength="500"></textarea>
+            <span class="error-msg" id="messageError"></span>
           </div>
           <div class="form-group">
             <label>Type:</label>
-            <select name="notification_type">
+            <select name="notification_type" id="notifType" required>
+              <option value="">Select Type</option>
               <option value="info">Info</option>
               <option value="warning">Warning</option>
               <option value="alert">Alert</option>
             </select>
+            <span class="error-msg" id="typeError"></span>
           </div>
           <div class="form-group">
             <label>Target:</label>
-            <select name="target_office">
-              <option value="">All Offices</option>
+            <select name="target_office" id="notifTarget" required>
+              <option value="">Select Target</option>
+              <option value="all">All Offices</option>
               {% for office in offices %}
               <option value="{{ office.office_id }}">{{ office.name }}</option>
               {% endfor %}
             </select>
+            <span class="error-msg" id="targetError"></span>
           </div>
           <div class="modal-buttons">
             <button type="button" class="cancel-btn">Cancel</button>
@@ -576,6 +590,67 @@
           if (event.target === modal) {
             modal.style.display = 'none';
           }
+        });
+        
+        // Form validation
+        const notificationForm = document.getElementById('notificationForm');
+        const titleInput = document.getElementById('notifTitle');
+        const messageInput = document.getElementById('notifMessage');
+        const typeSelect = document.getElementById('notifType');
+        const targetSelect = document.getElementById('notifTarget');
+        
+        function validateTitle() {
+          const title = titleInput.value.trim();
+          const error = document.getElementById('titleError');
+          if (!title || title.length < 3) {
+            error.textContent = title ? 'Title must be at least 3 characters' : 'Title is required';
+            return false;
+          }
+          error.textContent = '';
+          return true;
+        }
+        
+        function validateMessage() {
+          const message = messageInput.value.trim();
+          const error = document.getElementById('messageError');
+          if (!message || message.length < 10) {
+            error.textContent = message ? 'Message must be at least 10 characters' : 'Message is required';
+            return false;
+          }
+          error.textContent = '';
+          return true;
+        }
+        
+        function validateType() {
+          const type = typeSelect.value;
+          const error = document.getElementById('typeError');
+          if (!type) {
+            error.textContent = 'Please select notification type';
+            return false;
+          }
+          error.textContent = '';
+          return true;
+        }
+        
+        function validateTarget() {
+          const target = targetSelect.value;
+          const error = document.getElementById('targetError');
+          if (!target) {
+            error.textContent = 'Please select target';
+            return false;
+          }
+          error.textContent = '';
+          return true;
+        }
+        
+        titleInput.addEventListener('blur', validateTitle);
+        messageInput.addEventListener('blur', validateMessage);
+        typeSelect.addEventListener('change', validateType);
+        targetSelect.addEventListener('change', validateTarget);
+        
+        notificationForm.addEventListener('submit', function(e) {
+          const isValid = validateTitle() & validateMessage() & validateType() & validateTarget();
+          if (!isValid) e.preventDefault();
         });
       });
     </script>

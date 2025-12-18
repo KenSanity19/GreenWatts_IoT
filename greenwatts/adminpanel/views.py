@@ -2135,20 +2135,20 @@ def send_notification(request):
         notification_type = request.POST.get('notification_type')
         target_office_id = request.POST.get('target_office')
         
-        if target_office_id:
+        if target_office_id == 'all':
+            Notification.objects.create(
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                is_global=True
+            )
+        elif target_office_id:
             target_office = Office.objects.get(office_id=target_office_id)
             Notification.objects.create(
                 title=title,
                 message=message,
                 notification_type=notification_type,
                 target_office=target_office
-            )
-        else:
-            Notification.objects.create(
-                title=title,
-                message=message,
-                notification_type=notification_type,
-                is_global=True
             )
         
         return redirect('adminpanel:admin_reports')

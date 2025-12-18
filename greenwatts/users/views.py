@@ -1101,9 +1101,9 @@ def user_reports(request):
     cost_status = energy_status
     
     # CO2 status
-    if co2_emission > (energy_moderate_max * co2_rate):
+    if co2_emission > scaled_thresholds['co2_moderate_max']:
         co2_status = 'high'
-    elif co2_emission > (energy_efficient_max * co2_rate):
+    elif co2_emission > scaled_thresholds['co2_efficient_max']:
         co2_status = 'moderate'
     else:
         co2_status = 'efficient'
@@ -1898,7 +1898,8 @@ def user_emmision(request):
             date_range.append(current)
             current += timedelta(days=1)
         
-        date_dict = {item['day_date']: (item['total_energy'] or 0) * co2_rate or 0 for item in daily_data}
+        co2_settings = CO2Settings.get_current_rate()
+        date_dict = {item['day_date']: (item['total_energy'] or 0) * co2_settings.co2_emission_factor for item in daily_data}
         week_data = []
         labels = []
         for d in date_range:
@@ -1922,7 +1923,8 @@ def user_emmision(request):
             date_range.append(current)
             current += timedelta(days=1)
         
-        date_dict = {item['day_date']: (item['total_energy'] or 0) * co2_rate or 0 for item in daily_data}
+        co2_settings = CO2Settings.get_current_rate()
+        date_dict = {item['day_date']: (item['total_energy'] or 0) * co2_settings.co2_emission_factor for item in daily_data}
         week_data = []
         labels = []
         for d in date_range:
@@ -1949,7 +1951,8 @@ def user_emmision(request):
             date_range.append(current)
             current += timedelta(days=1)
         
-        date_dict = {item['day_date']: (item['total_energy'] or 0) * co2_rate or 0 for item in daily_data}
+        co2_settings = CO2Settings.get_current_rate()
+        date_dict = {item['day_date']: (item['total_energy'] or 0) * co2_settings.co2_emission_factor for item in daily_data}
         week_data = []
         labels = []
         for d in date_range:
