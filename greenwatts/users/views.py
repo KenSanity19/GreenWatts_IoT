@@ -597,8 +597,9 @@ def office_usage(request):
     # Calculate office share percentage
     office_share_percentage = (office_energy / total_all_energy * 100) if total_all_energy > 0 else 0
     
-    # Find office rank
+    # Find office rank and total count
     office_rank = 1
+    total_offices = len(all_offices_data)
     for i, record in enumerate(all_offices_data):
         if record['office_id'] == office.office_id:
             office_rank = i + 1
@@ -781,6 +782,8 @@ def office_usage(request):
         'office_co2_emission': f"{office_co2:.1f}",
         'office_share_percentage': f"{office_share_percentage:.1f}",
         'office_rank': formatted_rank,
+        'total_offices': len(all_offices_data),
+
         'rank_change': f"{abs(rank_change):.1f}",
         'rank_change_direction': 'increase' if rank_change >= 0 else 'decrease',
         'comparison_label': comparison_label,

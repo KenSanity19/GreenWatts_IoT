@@ -109,14 +109,14 @@
               <div class="summary-content">
                 <div class="summary-item">
                   <span class="summary-label">Office</span>
-                  <span class="summary-value office-name">{{ office.name }}</span>
+                  <span class="summary-value office-name {{ status_class }}">{{ office.name }}</span>
                 </div>
                 <div class="summary-item">
                   <span class="summary-label">Energy Usage</span>
                   <span class="summary-value">{{ office_energy_usage }} kWh</span>
                 </div>
                 <div class="summary-item">
-                  <span class="summary-label">Cost Predicted</span>
+                  <span class="summary-label">Cost</span>
                   <span class="summary-value">₱{{ office_cost_predicted }}</span>
                 </div>
                 <div class="summary-item">
@@ -143,11 +143,11 @@
               
               <div class="usage-ranking">
                 <span class="rank-number">{{ office_rank }}</span>
-                <span class="rank-text">Highest Usage</span>
+                <span class="rank-text">out of <strong>{{ total_offices }}</strong> Offices</span>
               </div>
               
               <div class="usage-trend">
-                <i class="fas fa-arrow-{{ rank_change_direction|yesno:'up,down' }} trend-arrow"></i>
+                <i class="fas fa-arrow-{% if rank_change_direction == 'increase' %}up{% else %}down{% endif %} trend-arrow"></i>
                 <span class="trend-text">{{ rank_change }}% {{ rank_change_direction|title }} {{ comparison_label }}</span>
               </div>
               
@@ -453,13 +453,32 @@
 
       // Pie Chart
       const pieCtx = document.getElementById('pieChart').getContext('2d');
+      const pieLabels = {{ pie_chart_labels|safe }};
+      const pieData = {{ pie_chart_data|safe }};
+      
+      // Set colors based on share percentage
+      const maxShare = Math.max(...pieData);
+      const minShare = Math.min(...pieData);
+      
+      const pieColors = pieLabels.map((label, index) => {
+        if (pieData[index] === maxShare) {
+          return '#b33939'; // Highest share - red
+        } else if (pieData[index] === minShare) {
+          return '#2a763b'; // Lowest share - green
+        } else {
+          // Random colors for others
+          const colors = ['#1f77b4', '#ff7f0e', '#8b5cf6', '#f59e0b', '#6366f1'];
+          return colors[index % colors.length];
+        }
+      });
+      
       const pieChart = new Chart(pieCtx, {
         type: 'pie',
         data: {
-          labels: {{ pie_chart_labels|safe }},
+          labels: pieLabels,
           datasets: [{
-            data: {{ pie_chart_data|safe }},
-            backgroundColor: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd'],
+            data: pieData,
+            backgroundColor: pieColors,
             borderWidth: 2,
             borderColor: '#fff'
           }]
