@@ -137,13 +137,15 @@
             <h3 class="alerts">Active Alerts</h3>
             <table>
               <tr>
-                <th>Office Name</th>
+                <th>Device ID</th>
+                <th>Appliance Type</th>
                 <th>Energy Usage</th>
                 <th>Status</th>
               </tr>
               {% for alert in active_alerts %}
                 <tr class="{% if alert.status == 'High' %}high{% elif alert.status == 'Moderate' %}moderate{% else %}efficient{% endif %}">
-                  <td>{{ alert.office_name }}</td>
+                  <td>{{ alert.device_id }}</td>
+                  <td>{{ alert.appliance_type }}</td>
                   <td>{{ alert.energy_usage }} kWh</td>
                   <td>{{ alert.status }}</td>
                 </tr>
@@ -169,7 +171,7 @@
               </div>
               <div class="change-info">
                 <div class="arrow-{{ change_data.arrow }}"></div>
-                <span class="percentage-text">{{ change_data.percent }}%</span>
+                <span class="percentage-text" style="color: {% if change_data.arrow == 'up' %}#dc3545{% else %}#28a745{% endif %};">{{ change_data.percent }}%</span>
                 <p class="change-text">{{ change_data.type }} IN COST</p>
               </div>
               {% else %}

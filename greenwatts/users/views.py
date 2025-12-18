@@ -206,21 +206,30 @@ def dashboard(request):
     # CO2 emissions for selected filter (calculated from energy)
     co2_emissions = energy_usage * co2_rate
 
-    # Active alerts: Show overall computation as single entry with scaled thresholds
+    # Active alerts: Show device-level data with scaled thresholds
     base_thresholds = get_base_thresholds()
     scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
     
-    if energy_usage > scaled_thresholds['energy_moderate_max']:
-        status = 'High'
-    elif energy_usage > scaled_thresholds['energy_efficient_max']:
-        status = 'Moderate'
-    else:
-        status = 'Efficient'
-    active_alerts = [{
-        'office_name': office.name,
-        'energy_usage': energy_usage,
-        'status': status
-    }]
+    active_alerts = []
+    for device in devices:
+        device_energy = SensorReading.objects.filter(
+            device=device,
+            **filter_kwargs
+        ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+        
+        if device_energy > scaled_thresholds['energy_moderate_max']:
+            status = 'High'
+        elif device_energy > scaled_thresholds['energy_efficient_max']:
+            status = 'Moderate'
+        else:
+            status = 'Efficient'
+            
+        active_alerts.append({
+            'device_id': device.device_id,
+            'appliance_type': device.appliance_type or 'Unknown',
+            'energy_usage': device_energy,
+            'status': status
+        })
 
     # Change in cost data - filter consistently based on level
     if level == 'month':
@@ -292,13 +301,19 @@ def dashboard(request):
         change_percent = 0
     is_decrease = change_percent < 0
     change_percent_abs = round(min(abs(change_percent), 100), 2)
-    max_cost = max(current_cost, prev_cost) if current_cost > 0 or prev_cost > 0 else 1
-    heights = [(prev_cost / max_cost * 100) if max_cost > 0 else 0, (current_cost / max_cost * 100) if max_cost > 0 else 0]
+    if current_cost > 0 or prev_cost > 0:
+        max_cost = max(current_cost, prev_cost)
+        if max_cost > 0:
+            heights = [(prev_cost / max_cost * 100), (current_cost / max_cost * 100)]
+        else:
+            heights = [50, 50]
+    else:
+        heights = [50, 50]
     change_data = {
         'bar1_label': bar1_label,
-        'bar1_height': heights[0],
+        'bar1_height': round(heights[0], 1),
         'bar2_label': bar2_label,
-        'bar2_height': heights[1],
+        'bar2_height': round(heights[1], 1),
         'percent': change_percent_abs,
         'type': 'DECREASE' if is_decrease else 'INCREASE',
         'arrow': 'down' if is_decrease else 'up',

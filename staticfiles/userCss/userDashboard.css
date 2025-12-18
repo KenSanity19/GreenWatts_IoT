@@ -298,8 +298,18 @@ h3.alerts {
   margin-bottom: 5px;
 }
 
+.arrow-up {
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 20px solid transparent !important;
+  border-right: 20px solid transparent !important;
+  border-bottom: 30px solid #dc3545 !important;
+  border-top: none !important;
+  margin-bottom: 5px !important;
+  display: block !important;
+}
+
 .percentage-text {
-  color: #28a745; /* Green */
   font-weight: bold;
   font-size: 1.5rem;
   margin-bottom: 5px;
