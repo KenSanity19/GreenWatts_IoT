@@ -44,7 +44,7 @@
           ><i class="fas fa-chart-bar"></i> Reports</a
         >
         <a href="{% url 'users:user_energy_cost' %}" class="active"
-          ><i class="fas fa-dollar-sign"></i> Energy Cost</a
+          ><i class="fas fa-peso-sign"></i> Energy Cost</a
         >
         <a href="{% url 'users:user_emmision' %}"
           ><i class="fas fa-leaf"></i> CO2 Emission</a
@@ -209,7 +209,7 @@
                 stepSize: Math.ceil(maxValue / 6),
                 color: "#fff",
                 callback: function (value) {
-                  return "₱" + value;
+                  return value + " kWh";
                 },
               },
               grid: {
@@ -227,7 +227,10 @@
                 minRotation: 0,
                 callback: function(value, index, values) {
                   const label = chartLabels[index];
-                  return Array.isArray(label) ? label[0] : label;
+                  if (Array.isArray(label)) {
+                    return [label[0], label[1]];
+                  }
+                  return label;
                 },
               },
             },

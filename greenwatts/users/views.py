@@ -1518,11 +1518,11 @@ def user_energy_cost(request):
         chart_labels = [[d.strftime('%A'), d.strftime('%Y-%m-%d')] for d in chart_dates]
         chart_data = []
         for d in chart_dates:
-            cost = SensorReading.objects.filter(
+            energy = SensorReading.objects.filter(
                 device__in=devices,
                 date=d
             ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-            chart_data.append(cost)
+            chart_data.append(energy)
     elif level == 'month':
         year = int(selected_year) if selected_year else dt.now().year
         month = int(selected_month) if selected_month else dt.now().month
@@ -1533,11 +1533,11 @@ def user_energy_cost(request):
         chart_labels = [[d.strftime('%d'), d.strftime('%Y-%m-%d')] for d in chart_dates]
         chart_data = []
         for d in chart_dates:
-            cost = SensorReading.objects.filter(
+            energy = SensorReading.objects.filter(
                 device__in=devices,
                 date=d
             ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-            chart_data.append(cost)
+            chart_data.append(energy)
     elif level == 'year':
         monthly_data = SensorReading.objects.filter(
             device__in=devices,
@@ -1553,11 +1553,10 @@ def user_energy_cost(request):
         chart_data = [0] * 12
         for item in monthly_data:
             energy = item['total_energy'] or 0
-            cost = energy * cost_rate
-            chart_data[item['month'] - 1] = cost
+            chart_data[item['month'] - 1] = energy
     else:  # day
         chart_labels = [[selected_date.strftime('%A'), selected_date.strftime('%Y-%m-%d')]]
-        chart_data = [total_cost]
+        chart_data = [total_energy]
     
     # Labels for chart header
     if level == 'week':
