@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.db.models.functions import ExtractYear, ExtractMonth
 from datetime import datetime, timedelta, date
 from .utils import get_random_energy_tip, get_scaled_thresholds
+from ..sensors.utils import calculate_energy_metrics_with_historical_rates
 import json
 import csv
 
@@ -294,26 +295,22 @@ def admin_dashboard(request):
     if not selected_day and selected_date:
         selected_day = selected_date.strftime('%m/%d/%Y')
 
-    # Get current settings for calculations
-    cost_settings = CostSettings.get_current_rate()
-    co2_settings = CO2Settings.get_current_rate()
-    
-    # Aggregate sums from sensor readings with dynamic calculations
-    sensor_aggregates = SensorReading.objects.filter(
+    # Get sensor readings for historical rate calculations
+    sensor_readings = SensorReading.objects.filter(
         **filter_kwargs,
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).aggregate(
-        total_energy_usage=Sum('total_energy_kwh'),
-        total_peak_power=Sum('peak_power_w')
     )
     
-    total_energy = sensor_aggregates['total_energy_usage'] or 0
+    # Calculate metrics using historical rates
+    historical_metrics = calculate_energy_metrics_with_historical_rates(sensor_readings)
+    
+    total_energy = sensor_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
     aggregates = {
         'total_energy_usage': total_energy,
-        'total_cost_predicted': total_energy * cost_settings.cost_per_kwh,
-        'total_co2_emission': total_energy * co2_settings.co2_emission_factor
+        'total_cost_predicted': historical_metrics['total_cost'],
+        'total_co2_emission': historical_metrics['total_co2']
     }
 
     # Calculate predicted CO2 emission based on filter level
@@ -410,17 +407,19 @@ def admin_dashboard(request):
             prev_month = 12
             prev_year -= 1
         
-        current_energy = SensorReading.objects.filter(
+        current_readings = SensorReading.objects.filter(
             date__year=current_year, date__month=current_month,
             device__office__office_id__in=valid_office_ids
-        ).exclude(device__office__name='DS').aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-        current_cost = current_energy * cost_settings.cost_per_kwh
+        ).exclude(device__office__name='DS')
+        current_metrics = calculate_energy_metrics_with_historical_rates(current_readings)
+        current_cost = current_metrics['total_cost']
         
-        prev_energy = SensorReading.objects.filter(
+        prev_readings = SensorReading.objects.filter(
             date__year=prev_year, date__month=prev_month,
             device__office__office_id__in=valid_office_ids
-        ).exclude(device__office__name='DS').aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-        prev_cost = prev_energy * cost_settings.cost_per_kwh
+        ).exclude(device__office__name='DS')
+        prev_metrics = calculate_energy_metrics_with_historical_rates(prev_readings)
+        prev_cost = prev_metrics['total_cost']
         
         change_costs = [prev_cost, current_cost]
         change_dates = [date(prev_year, prev_month, 1), date(current_year, current_month, 1)]
@@ -430,11 +429,11 @@ def admin_dashboard(request):
         change_dates = [previous_date, selected_date]
         change_costs = []
         for d in change_dates:
-            energy = SensorReading.objects.filter(
+            daily_readings = SensorReading.objects.filter(
                 date=d, device__office__office_id__in=valid_office_ids
-            ).exclude(device__office__name='DS').aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-            cost = energy * cost_settings.cost_per_kwh
-            change_costs.append(cost)
+            ).exclude(device__office__name='DS')
+            daily_metrics = calculate_energy_metrics_with_historical_rates(daily_readings)
+            change_costs.append(daily_metrics['total_cost'])
     else:
         # Default to last two days with data
         change_dates_qs = SensorReading.objects.filter(
@@ -443,11 +442,11 @@ def admin_dashboard(request):
         change_dates = list(change_dates_qs)
         change_costs = []
         for d in change_dates:
-            energy = SensorReading.objects.filter(
+            daily_readings = SensorReading.objects.filter(
                 date=d, device__office__office_id__in=valid_office_ids
-            ).exclude(device__office__name='DS').aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-            cost = energy * cost_settings.cost_per_kwh
-            change_costs.append(cost)
+            ).exclude(device__office__name='DS')
+            daily_metrics = calculate_energy_metrics_with_historical_rates(daily_readings)
+            change_costs.append(daily_metrics['total_cost'])
 
     if len(change_costs) >= 2:
         latest_cost = change_costs[1]  # selected_date or latest
@@ -579,10 +578,6 @@ def office_usage(request):
 
     # Get all valid office ids from Office table
     valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
-    
-    # Get current settings
-    cost_settings = CostSettings.get_current_rate()
-    co2_settings = CO2Settings.get_current_rate()
 
     # Year options: all years with data
     years_with_data = SensorReading.objects.filter(
@@ -629,27 +624,32 @@ def office_usage(request):
     if not selected_day and selected_date:
         selected_day = selected_date.strftime('%m/%d/%Y')
 
-    # Filter office_data for table and pie chart based on filter_kwargs from sensor readings
-    office_data_raw = SensorReading.objects.filter(**filter_kwargs).filter(
+    # Get office data with historical rates
+    office_names = SensorReading.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).values(
-        office_name=F('device__office__name')
-    ).annotate(
-        total_energy=Sum('total_energy_kwh')
-    ).order_by('-total_energy')
+    ).values_list('device__office__name', flat=True).distinct()
     
-    # Add calculated cost and CO2 to each office
     office_data = []
-    for record in office_data_raw:
-        energy = record['total_energy'] or 0
+    for office_name in office_names:
+        office_readings = SensorReading.objects.filter(
+            **filter_kwargs,
+            device__office__name=office_name,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(device__office__name='DS')
+        
+        energy = office_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+        metrics = calculate_energy_metrics_with_historical_rates(office_readings)
+        
         office_data.append({
-            'office_name': record['office_name'],
+            'office_name': office_name,
             'total_energy': energy,
-            'total_cost': energy * cost_settings.cost_per_kwh,
-            'total_co2': energy * co2_settings.co2_emission_factor
+            'total_cost': metrics['total_cost'],
+            'total_co2': metrics['total_co2']
         })
+    
+    office_data.sort(key=lambda x: x['total_energy'], reverse=True)
 
     # Get thresholds for the selected date and scale based on level
     base_thresholds = get_threshold_for_date(selected_date or datetime.now().date())
@@ -1067,40 +1067,31 @@ def admin_costs(request):
     # Week options: filtered by selected month/year if available
     week_options = get_week_options(valid_office_ids, selected_month, selected_year)
 
-    # Get current settings
-    cost_settings = CostSettings.get_current_rate()
-
-    # Aggregate totals for selected filter
-    aggregates = SensorReading.objects.filter(**filter_kwargs).filter(
+    # Get readings and calculate with historical rates
+    filtered_readings = SensorReading.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).aggregate(
-        total_energy=Sum('total_energy_kwh')
     )
 
-    num_days = SensorReading.objects.filter(**filter_kwargs).filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).dates('date', 'day').distinct().count() or 1
-
-    total_energy = aggregates['total_energy'] or 0
-    total_cost = total_energy * cost_settings.cost_per_kwh
+    num_days = filtered_readings.dates('date', 'day').distinct().count() or 1
+    total_energy = filtered_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+    
+    metrics = calculate_energy_metrics_with_historical_rates(filtered_readings)
+    total_cost = metrics['total_cost']
     avg_daily_cost = total_cost / num_days if num_days > 0 else 0
 
-    # Highest cost office
-    office_costs = SensorReading.objects.filter(**filter_kwargs).filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).values(
-        office_name=F('device__office__name')
-    ).annotate(
-        total_energy=Sum('total_energy_kwh')
-    ).order_by('-total_energy')
-
-    highest_office = office_costs.first()['office_name'] if office_costs and office_costs.first()['total_energy'] else 'NONE'
+    # Highest cost office using historical rates
+    office_names = filtered_readings.values_list('device__office__name', flat=True).distinct()
+    highest_office = 'NONE'
+    highest_cost = 0
+    
+    for office_name in office_names:
+        office_readings = filtered_readings.filter(device__office__name=office_name)
+        office_metrics = calculate_energy_metrics_with_historical_rates(office_readings)
+        if office_metrics['total_cost'] > highest_cost:
+            highest_cost = office_metrics['total_cost']
+            highest_office = office_name
 
     # Calculate period start and end based on level
     now = timezone.now().date()
@@ -1147,26 +1138,28 @@ def admin_costs(request):
         prev_start = period_start - timedelta(days=1)
         prev_end = period_end - timedelta(days=1)
 
-    # Previous cost
-    prev_energy = SensorReading.objects.filter(
+    # Previous cost with historical rates
+    prev_readings = SensorReading.objects.filter(
         date__gte=prev_start,
         date__lte=prev_end,
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    prev_cost = prev_energy * cost_settings.cost_per_kwh
+    )
+    prev_metrics = calculate_energy_metrics_with_historical_rates(prev_readings)
+    prev_cost = prev_metrics['total_cost']
 
-    # So far cost
+    # So far cost with historical rates
     so_far_end = min(period_end, now)
-    so_far_energy = SensorReading.objects.filter(
+    so_far_readings = SensorReading.objects.filter(
         date__gte=period_start,
         date__lte=so_far_end,
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    so_far_cost = so_far_energy * cost_settings.cost_per_kwh
+    )
+    so_far_metrics = calculate_energy_metrics_with_historical_rates(so_far_readings)
+    so_far_cost = so_far_metrics['total_cost']
 
     # Predicted cost
     total_days = (period_end - period_start).days + 1
@@ -1192,12 +1185,13 @@ def admin_costs(request):
         chart_labels = [f"{d.strftime('%a')}\n{d.strftime('%B %d')}" for d in chart_dates]
         chart_data = []
         for d in chart_dates:
-            energy = SensorReading.objects.filter(
+            daily_readings = SensorReading.objects.filter(
                 date=d,
                 device__office__office_id__in=valid_office_ids
             ).exclude(
                 device__office__name='DS'
-            ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+            )
+            energy = daily_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
             chart_data.append(energy)
     elif level == 'month':
         year = int(selected_year) if selected_year else datetime.now().year
@@ -1209,12 +1203,13 @@ def admin_costs(request):
         chart_labels = [f"{d.strftime('%a')}\n{d.strftime('%d')}" for d in chart_dates]  # Day name and day number
         chart_data = []
         for d in chart_dates:
-            energy = SensorReading.objects.filter(
+            daily_readings = SensorReading.objects.filter(
                 date=d,
                 device__office__office_id__in=valid_office_ids
             ).exclude(
                 device__office__name='DS'
-            ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+            )
+            energy = daily_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
             chart_data.append(energy)
     elif level == 'year':
         # Aggregate by month
@@ -1243,12 +1238,13 @@ def admin_costs(request):
         chart_labels = [f"{d.strftime('%a')}\n{d.strftime('%B %d')}" for d in chart_dates]
         chart_data = []
         for d in chart_dates:
-            energy = SensorReading.objects.filter(
+            daily_readings = SensorReading.objects.filter(
                 date=d,
                 device__office__office_id__in=valid_office_ids
             ).exclude(
                 device__office__name='DS'
-            ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+            )
+            energy = daily_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
             chart_data.append(energy)
 
     # Labels for chart header
@@ -1388,42 +1384,32 @@ def carbon_emission(request):
     # Week options: filtered by selected month/year if available
     week_options = get_week_options(valid_office_ids, selected_month, selected_year)
 
-    # Get current settings
-    cost_settings = CostSettings.get_current_rate()
-    co2_settings = CO2Settings.get_current_rate()
-
-    # Aggregates for selected filter
-    aggregates = SensorReading.objects.filter(**filter_kwargs).filter(
+    # Get readings and calculate with historical rates
+    filtered_readings = SensorReading.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).aggregate(
-        total_energy=Sum('total_energy_kwh')
     )
 
-    num_days = SensorReading.objects.filter(**filter_kwargs).filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).dates('date', 'day').distinct().count() or 1
-
-    total_energy_kwh = aggregates['total_energy'] or 0
-    total_cost = total_energy_kwh * cost_settings.cost_per_kwh
-    total_co2 = total_energy_kwh * co2_settings.co2_emission_factor
+    num_days = filtered_readings.dates('date', 'day').distinct().count() or 1
+    total_energy_kwh = filtered_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+    
+    metrics = calculate_energy_metrics_with_historical_rates(filtered_readings)
+    total_cost = metrics['total_cost']
+    total_co2 = metrics['total_co2']
     avg_daily_cost = total_cost / num_days if num_days > 0 else 0
 
-    # Highest CO2 emission office
-    highest_office_data = SensorReading.objects.filter(**filter_kwargs).filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).values(
-        office_name=F('device__office__name')
-    ).annotate(
-        total_energy=Sum('total_energy_kwh')
-    ).order_by('-total_energy')
-
-    highest_co2_office = highest_office_data.first()['office_name'] if highest_office_data and highest_office_data.first()['total_energy'] else 'NONE'
+    # Highest CO2 emission office using historical rates
+    office_names = filtered_readings.values_list('device__office__name', flat=True).distinct()
+    highest_co2_office = 'NONE'
+    highest_co2 = 0
+    
+    for office_name in office_names:
+        office_readings = filtered_readings.filter(device__office__name=office_name)
+        office_metrics = calculate_energy_metrics_with_historical_rates(office_readings)
+        if office_metrics['total_co2'] > highest_co2:
+            highest_co2 = office_metrics['total_co2']
+            highest_co2_office = office_name
 
     # Determine previous period for comparison
     if level == 'week':
@@ -1467,26 +1453,28 @@ def carbon_emission(request):
         previous_label = f"{prev_start.strftime('%B %d, %Y')} Total"
         period_label = f"{period_start.strftime('%B %d, %Y')}"
 
-    # Previous CO2
-    prev_energy = SensorReading.objects.filter(
+    # Previous CO2 with historical rates
+    prev_readings = SensorReading.objects.filter(
         date__gte=prev_start,
         date__lte=prev_end,
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    prev_co2 = prev_energy * co2_settings.co2_emission_factor
+    )
+    prev_metrics = calculate_energy_metrics_with_historical_rates(prev_readings)
+    prev_co2 = prev_metrics['total_co2']
 
-    # So far CO2
+    # So far CO2 with historical rates
     so_far_end = min(period_end, now)
-    so_far_energy = SensorReading.objects.filter(
+    so_far_readings = SensorReading.objects.filter(
         date__gte=period_start,
         date__lte=so_far_end,
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    so_far_co2 = so_far_energy * co2_settings.co2_emission_factor
+    )
+    so_far_metrics = calculate_energy_metrics_with_historical_rates(so_far_readings)
+    so_far_co2 = so_far_metrics['total_co2']
 
     # Predicted CO2
     total_days = (period_end - period_start).days + 1
@@ -1979,30 +1967,32 @@ def export_reports(request):
     valid_office_ids = get_valid_office_ids()
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, None)
     
-    # Get current settings for calculations
-    cost_settings = CostSettings.get_current_rate()
-    co2_settings = CO2Settings.get_current_rate()
-    
-    office_data_raw = SensorReading.objects.filter(**filter_kwargs).filter(
+    # Get office data with historical rates
+    office_names = SensorReading.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).values(
-        office_name=F('device__office__name')
-    ).annotate(
-        total_energy=Sum('total_energy_kwh')
-    ).order_by('-total_energy')
+    ).values_list('device__office__name', flat=True).distinct()
     
-    # Calculate cost and CO2 dynamically
     office_data = []
-    for record in office_data_raw:
-        energy = record['total_energy'] or 0
+    for office_name in office_names:
+        office_readings = SensorReading.objects.filter(
+            **filter_kwargs,
+            device__office__name=office_name,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(device__office__name='DS')
+        
+        energy = office_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+        metrics = calculate_energy_metrics_with_historical_rates(office_readings)
+        
         office_data.append({
-            'office_name': record['office_name'],
+            'office_name': office_name,
             'total_energy': energy,
-            'total_cost': energy * cost_settings.cost_per_kwh,
-            'total_co2': energy * co2_settings.co2_emission_factor
+            'total_cost': metrics['total_cost'],
+            'total_co2': metrics['total_co2']
         })
+    
+    office_data.sort(key=lambda x: x['total_energy'], reverse=True)
     
     response = HttpResponse(content_type='text/csv')
     filename = f"energy_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
