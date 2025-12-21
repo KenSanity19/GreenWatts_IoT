@@ -4,8 +4,9 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.db.models import Max, Sum
 from ..lazy_imports import json, get_timezone_utils
-from .models import Device, SensorReading, EnergyRecord, CostSettings, CO2Settings
+from .models import Device, SensorReading, EnergyRecord, CostSettings, CO2Settings, SystemLog, WeeklySpikeAnalysis
 from greenwatts.adminpanel.models import WiFiNetwork
+from .analytics import SpikeAnalyzer, SystemLogger
 
 def index(request):
     return HttpResponse("Hello from Sensors app")
@@ -142,6 +143,16 @@ def _process_batch_readings(device, readings, reading_count):
     try:
         print(f"[{datetime.now()}] Processing {reading_count} readings for Device {device.device_id}")
 
+        # Log data reception
+        SystemLogger.log_data_received(device, reading_count)
+        SystemLogger.log_device_status(device, True)
+
+        # Initialize spike analyzer
+        spike_analyzer = SpikeAnalyzer()
+        
+        # Detect spikes in real-time
+        detected_spikes = spike_analyzer.detect_spikes(device.device_id, readings)
+
         # Create SensorReading objects
         sensor_readings = []
         for reading in readings:
@@ -179,16 +190,21 @@ def _process_batch_readings(device, readings, reading_count):
 
             # Calculate daily aggregate
             _calculate_daily_aggregate(device, sensor_readings)
+            
+            # Generate weekly analysis if it's a new week
+            spike_analyzer.generate_weekly_analysis(device.device_id)
 
         return JsonResponse({
             "status": "success",
             "message": f"Received and stored {len(sensor_readings)} readings",
             "device_id": device.device_id,
-            "readings_stored": len(sensor_readings)
+            "readings_stored": len(sensor_readings),
+            "spikes_detected": len(detected_spikes)
         }, status=200)
 
     except Exception as e:
         print(f"Error processing batch readings: {e}")
+        SystemLogger.log_device_status(device, False)
         return JsonResponse({
             "status": "error",
             "message": f"Error processing readings: {str(e)}"
@@ -250,3 +266,114 @@ def _calculate_daily_aggregate(device, sensor_readings):
 
     except Exception as e:
         print(f"Error calculating daily aggregate: {e}")
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_system_logs(request):
+    """Get 24-hour system logs with optional device filtering"""
+    try:
+        device_id = request.GET.get('device_id')
+        logs = SystemLogger.get_24h_logs(device_id)
+        
+        logs_data = []
+        for log in logs[:100]:  # Limit to 100 recent logs
+            logs_data.append({
+                'timestamp': log.timestamp.isoformat(),
+                'log_type': log.log_type,
+                'device_id': log.device.device_id if log.device else None,
+                'message': log.message,
+                'metadata': log.metadata
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'logs': logs_data,
+            'count': len(logs_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_weekly_analysis(request):
+    """Get weekly spike analysis for devices"""
+    try:
+        device_id = request.GET.get('device_id')
+        
+        if device_id:
+            analyses = WeeklySpikeAnalysis.objects.filter(device_id=device_id)[:4]
+        else:
+            analyses = WeeklySpikeAnalysis.objects.all()[:20]
+        
+        analysis_data = []
+        for analysis in analyses:
+            analysis_data.append({
+                'device_id': analysis.device.device_id,
+                'week_start': analysis.week_start.isoformat(),
+                'week_end': analysis.week_end.isoformat(),
+                'spike_count': analysis.spike_count,
+                'max_spike_power': analysis.max_spike_power,
+                'avg_baseline_power': analysis.avg_baseline_power,
+                'spike_threshold': analysis.spike_threshold,
+                'total_spike_duration_minutes': analysis.total_spike_duration_minutes,
+                'interpretation': analysis.interpretation,
+                'created_at': analysis.created_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'analyses': analysis_data,
+            'count': len(analysis_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def generate_analysis(request):
+    """Manually trigger weekly analysis generation"""
+    try:
+        data = json.loads(request.body)
+        device_id = data.get('device_id')
+        
+        if not device_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'device_id is required'
+            }, status=400)
+        
+        analyzer = SpikeAnalyzer()
+        analysis = analyzer.generate_weekly_analysis(device_id)
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Analysis generated successfully',
+            'analysis': {
+                'device_id': analysis.device.device_id,
+                'week_start': analysis.week_start.isoformat(),
+                'spike_count': analysis.spike_count,
+                'interpretation': analysis.interpretation
+            }
+        })
+        
+    except Device.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Device {device_id} not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)

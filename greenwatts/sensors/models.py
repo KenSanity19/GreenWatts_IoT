@@ -85,3 +85,76 @@ class EnergyRecord(models.Model):
 
     def __str__(self):
         return f"EnergyRecord {self.record_id} for Device {self.device.device_id}"
+
+
+class SystemLog(models.Model):
+    LOG_TYPES = [
+        ('data_received', 'Data Received'),
+        ('device_offline', 'Device Offline'),
+        ('device_online', 'Device Online'),
+        ('threshold_exceeded', 'Threshold Exceeded'),
+        ('system_error', 'System Error'),
+        ('spike_detected', 'Spike Detected'),
+    ]
+    
+    log_id = models.AutoField(primary_key=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    log_type = models.CharField(max_length=20, choices=LOG_TYPES)
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, null=True, blank=True)
+    message = models.TextField()
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "tbl_system_log"
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['timestamp', 'log_type']),
+            models.Index(fields=['device', 'timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.log_type} - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+
+
+class WeeklySpikeAnalysis(models.Model):
+    analysis_id = models.AutoField(primary_key=True)
+    week_start = models.DateField()
+    week_end = models.DateField()
+    device = models.ForeignKey(Device, on_delete=models.CASCADE)
+    spike_count = models.IntegerField(default=0)
+    max_spike_power = models.FloatField(default=0.0)
+    avg_baseline_power = models.FloatField(default=0.0)
+    spike_threshold = models.FloatField(default=0.0)
+    total_spike_duration_minutes = models.IntegerField(default=0)
+    interpretation = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "tbl_weekly_spike_analysis"
+        ordering = ['-week_start']
+        unique_together = ['week_start', 'device']
+
+    def __str__(self):
+        return f"Spike Analysis - Device {self.device.device_id} - Week {self.week_start}"
+
+
+class PowerSpike(models.Model):
+    spike_id = models.AutoField(primary_key=True)
+    device = models.ForeignKey(Device, on_delete=models.CASCADE)
+    timestamp = models.DateTimeField()
+    peak_power = models.FloatField()
+    baseline_power = models.FloatField()
+    spike_magnitude = models.FloatField()  # peak_power - baseline_power
+    duration_seconds = models.IntegerField(default=10)
+    detected_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "tbl_power_spike"
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['device', 'timestamp']),
+            models.Index(fields=['timestamp']),
+        ]
+
+    def __str__(self):
+        return f"Spike {self.spike_id} - {self.peak_power}W at {self.timestamp}"

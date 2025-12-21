@@ -14,6 +14,9 @@ GreenWatts is an IoT-based energy monitoring system that tracks real-time electr
 - Offline data queuing for reliable data collection
 - Daily energy summaries and reports
 - **2-Factor Authentication (2FA)** via Gmail API for enhanced security
+- **24-hour system logging** for comprehensive monitoring
+- **Weekly spike analysis** with automated interpretations
+- **Real-time power spike detection** and alerting
 
 ## System Architecture
 
@@ -210,6 +213,74 @@ The system automatically calculates and stores daily energy records with the fol
 - Carbon emissions (kg CO2)
 - Cost estimates (PHP)
 
+#### 3. System Logs
+
+**GET** `/api/system-logs/`
+
+Retrieve 24-hour system logs with optional device filtering.
+
+**Query Parameters:**
+- `device_id` (optional): Filter logs for specific device
+
+**Response:**
+```json
+{
+  "status": "success",
+  "logs": [
+    {
+      "timestamp": "2024-01-15T10:30:00Z",
+      "log_type": "data_received",
+      "device_id": 1,
+      "message": "Received 8640 sensor readings",
+      "metadata": {"readings_count": 8640}
+    }
+  ],
+  "count": 1
+}
+```
+
+#### 4. Weekly Spike Analysis
+
+**GET** `/api/weekly-analysis/`
+
+Retrieve weekly power spike analysis with interpretations.
+
+**Query Parameters:**
+- `device_id` (optional): Filter analysis for specific device
+
+**Response:**
+```json
+{
+  "status": "success",
+  "analyses": [
+    {
+      "device_id": 1,
+      "week_start": "2024-01-08",
+      "week_end": "2024-01-14",
+      "spike_count": 12,
+      "max_spike_power": 1850.5,
+      "avg_baseline_power": 450.2,
+      "spike_threshold": 900.4,
+      "total_spike_duration_minutes": 2,
+      "interpretation": "Moderate spike activity (12 spikes) - monitor equipment usage. Significant power spike (1850.5W) - review high-power equipment usage.",
+      "created_at": "2024-01-15T00:05:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+**POST** `/api/generate-analysis/`
+
+Manually trigger weekly analysis generation.
+
+**Request:**
+```json
+{
+  "device_id": 1
+}
+```
+
 ### Data Models
 
 #### Device
@@ -328,6 +399,9 @@ For setup instructions, see:
 - `tbl_sensor_reading` - Raw sensor data
 - `tbl_energy_record` - Daily energy summaries
 - `tbl_threshold` - Energy efficiency thresholds
+- `tbl_system_log` - 24-hour system activity logs
+- `tbl_weekly_spike_analysis` - Weekly power spike analysis
+- `tbl_power_spike` - Individual power spike records
 
 ## Development Guidelines
 
@@ -353,6 +427,12 @@ python manage.py test
 
 # Test specific app
 python manage.py test greenwatts.sensors
+
+# Generate weekly analysis
+python manage.py run_weekly_analysis
+
+# Generate analysis for specific device
+python manage.py run_weekly_analysis --device-id 1
 ```
 
 ## Deployment
