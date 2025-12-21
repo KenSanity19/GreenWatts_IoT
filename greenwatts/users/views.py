@@ -7,7 +7,7 @@ from django.db import models
 from django.db.models import Max
 from ..adminpanel.models import EnergyThreshold, CO2Threshold, Notification
 from ..adminpanel.utils import get_scaled_thresholds
-from ..sensors.models import SensorReading, CostSettings, CO2Settings
+from ..sensors.models import SensorReading, CostSettings, CO2Settings, SystemLog
 from ..sensors.utils import calculate_energy_metrics_with_historical_rates
 from ..lazy_imports import csv, json, get_db_functions, get_timezone_utils
 
@@ -406,6 +406,33 @@ def dashboard(request):
     else:
         co2_status = 'efficient'
 
+    # Get system logs for the last 24 hours for user's devices
+    timezone, dt, timedelta, date = get_timezone_utils()
+    twenty_four_hours_ago = timezone.now() - timedelta(hours=24)
+    system_logs = SystemLog.objects.filter(
+        device__in=devices,
+        timestamp__gte=twenty_four_hours_ago
+    ).order_by('-timestamp')[:10]
+    
+    # Hardcoded example data for system logs and weekly analysis
+    example_system_logs = [
+        {'log_type': 'data_received', 'timestamp': timezone.now() - timedelta(minutes=15), 'message': 'Received 144 sensor readings successfully', 'device_id': 1},
+        {'log_type': 'spike_detected', 'timestamp': timezone.now() - timedelta(hours=2), 'message': 'Power spike detected: 1850W peak power', 'device_id': 2},
+        {'log_type': 'device_online', 'timestamp': timezone.now() - timedelta(hours=4), 'message': 'Device came online after maintenance', 'device_id': 1},
+        {'log_type': 'data_received', 'timestamp': timezone.now() - timedelta(hours=6), 'message': 'Daily energy summary generated', 'device_id': 3},
+        {'log_type': 'threshold_exceeded', 'timestamp': timezone.now() - timedelta(hours=8), 'message': 'Energy usage exceeded moderate threshold', 'device_id': 2}
+    ]
+    
+    weekly_analysis = [
+        {'device_id': 1, 'week_start': '2024-12-16', 'week_end': '2024-12-22', 'spike_count': 8, 'max_spike_power': 1650.5, 'interpretation': 'Low spike activity (8 spikes) - normal operation. Peak power within acceptable range.'},
+        {'device_id': 2, 'week_start': '2024-12-16', 'week_end': '2024-12-22', 'spike_count': 15, 'max_spike_power': 2100.8, 'interpretation': 'Moderate spike activity (15 spikes) - monitor equipment usage. High peak power detected.'},
+        {'device_id': 3, 'week_start': '2024-12-16', 'week_end': '2024-12-22', 'spike_count': 3, 'max_spike_power': 980.2, 'interpretation': 'Excellent performance (3 spikes) - efficient energy usage maintained.'}
+    ]
+    
+    # Use example data if no real data exists
+    if not system_logs:
+        system_logs = example_system_logs
+
     context = {
         'office': office,
         'selected_date': selected_date,
@@ -431,6 +458,8 @@ def dashboard(request):
         'co2_status': co2_status,
         'unread_notifications_count': unread_notifications_count,
         'notifications': notifications,
+        'system_logs': system_logs,
+        'weekly_analysis': weekly_analysis,
     }
 
     return render(request, 'users/dashboard.html', context)

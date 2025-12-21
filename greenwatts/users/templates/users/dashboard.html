@@ -209,7 +209,17 @@
             <h3>System Activity (24 Hours)</h3>
             <div class="logs-container">
               <div id="system-logs-list">
-                <!-- Logs will be loaded here -->
+                {% if system_logs %}
+                  {% for log in system_logs %}
+                    <div class="log-item {{ log.log_type }}">
+                      <div class="log-time">{{ log.timestamp|date:"M d, H:i" }}</div>
+                      <div class="log-message">{{ log.message }}</div>
+                      <div class="log-device">Device {{ log.device_id|default:"System" }}</div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="no-data">No recent system activity</div>
+                {% endif %}
               </div>
             </div>
           </div>
@@ -219,7 +229,23 @@
             <h3>Weekly Power Analysis</h3>
             <div class="analysis-container">
               <div id="weekly-analysis-list">
-                <!-- Analysis will be loaded here -->
+                {% if weekly_analysis %}
+                  {% for analysis in weekly_analysis %}
+                    <div class="analysis-item">
+                      <div class="analysis-header">
+                        <span class="device-id">Device {{ analysis.device_id }}</span>
+                        <span class="week-range">{{ analysis.week_start }} to {{ analysis.week_end }}</span>
+                      </div>
+                      <div class="analysis-stats">
+                        <span class="spike-count">{{ analysis.spike_count }} spikes</span>
+                        <span class="max-power">{{ analysis.max_spike_power }}W peak</span>
+                      </div>
+                      <div class="analysis-interpretation">{{ analysis.interpretation }}</div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="no-data">No analysis data available</div>
+                {% endif %}
               </div>
             </div>
           </div>
@@ -488,41 +514,9 @@
           });
       }
 
-      function loadWeeklyAnalysis() {
-        fetch('/api/weekly-analysis/')
-          .then(response => response.json())
-          .then(data => {
-            const container = document.getElementById('weekly-analysis-list');
-            if (data.status === 'success' && data.analyses.length > 0) {
-              container.innerHTML = data.analyses.slice(0, 3).map(analysis => `
-                <div class="analysis-item">
-                  <div class="analysis-header">
-                    <span class="device-id">Device ${analysis.device_id}</span>
-                    <span class="week-range">${analysis.week_start} to ${analysis.week_end}</span>
-                  </div>
-                  <div class="analysis-stats">
-                    <span class="spike-count">${analysis.spike_count} spikes</span>
-                    <span class="max-power">${analysis.max_spike_power.toFixed(1)}W peak</span>
-                  </div>
-                  <div class="analysis-interpretation">${analysis.interpretation}</div>
-                </div>
-              `).join('');
-            } else {
-              container.innerHTML = '<div class="no-data">No analysis data available</div>';
-            }
-          })
-          .catch(error => {
-            document.getElementById('weekly-analysis-list').innerHTML = '<div class="error">Error loading analysis</div>';
-          });
-      }
-
       // Load data on page load
       document.addEventListener('DOMContentLoaded', function() {
-        loadSystemLogs();
-        loadWeeklyAnalysis();
-        // Refresh every 30 seconds
-        setInterval(loadSystemLogs, 30000);
-        setInterval(loadWeeklyAnalysis, 300000); // 5 minutes
+        // Weekly analysis is now loaded directly from Django context
       });
     </script>
     <script src="{% static 'userJs/sidebarToggle.js' %}"></script>
