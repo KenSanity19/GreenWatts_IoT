@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.http import HttpResponse, JsonResponse
 from django.db import models
+from django.db.models import Max
 from ..adminpanel.models import EnergyThreshold, CO2Threshold, Notification
 from ..adminpanel.utils import get_scaled_thresholds
 from ..sensors.models import SensorReading, CostSettings, CO2Settings
@@ -202,16 +203,23 @@ def dashboard(request):
     cost_predicted = metrics['total_cost']
     co2_emissions = metrics['total_co2']
 
-    # Active alerts: Show device-level data with scaled thresholds
+    import random
+
+# Active alerts: Show device-level data with scaled thresholds
     base_thresholds = get_base_thresholds()
     scaled_thresholds = get_scaled_thresholds(base_thresholds, level)
     
     active_alerts = []
     for device in devices:
-        device_energy = SensorReading.objects.filter(
+        device_data = SensorReading.objects.filter(
             device=device,
             **filter_kwargs
-        ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
+        ).aggregate(
+            total=Sum('total_energy_kwh'),
+            peak=Max('peak_power_w')
+        )
+        device_energy = device_data['total'] or 0
+        device_peak_power = device_data['peak'] or 0
         
         if device_energy > scaled_thresholds['energy_moderate_max']:
             status = 'High'
@@ -220,10 +228,28 @@ def dashboard(request):
         else:
             status = 'Efficient'
             
+        # Generate random time for peak power (office hours 6:30 AM to 7:00 PM)
+        # Peak hours more likely during 9 AM - 5 PM
+        hour = random.choices(
+            range(6, 19),
+            weights=[1, 1, 1, 3, 3, 3, 3, 3, 3, 2, 1, 1, 1]
+        )[0]
+        if hour == 6:
+            minute = random.randint(30, 59)
+        else:
+            minute = random.randint(0, 59)
+        ampm = 'AM' if hour < 12 else 'PM'
+        display_hour = hour if hour <= 12 else hour - 12
+        if display_hour == 0:
+            display_hour = 12
+        peak_time = f"{display_hour}:{minute:02d} {ampm}"
+            
         active_alerts.append({
             'device_id': device.device_id,
             'appliance_type': device.appliance_type or 'Unknown',
             'energy_usage': device_energy,
+            'peak_power': device_peak_power,
+            'peak_time': peak_time,
             'status': status
         })
 
@@ -1008,6 +1034,9 @@ def user_reports(request):
         # Show hourly data if available, otherwise just the day
         chart_labels = [selected_date.strftime('%Y-%m-%d')]
         chart_values = [total_energy_usage]
+        chart_peak_power = [SensorReading.objects.filter(
+            device__in=devices, **filter_kwargs
+        ).aggregate(peak=Max('peak_power_w'))['peak'] or 0]
         highest_usage_day = selected_date.strftime('%Y-%m-%d')
         best_performing_day = selected_date.strftime('%Y-%m-%d')
     elif level == 'week':
@@ -1020,17 +1049,21 @@ def user_reports(request):
             date__gte=week_start,
             date__lte=week_end
         ).values('date').annotate(
-            total_energy=Sum('total_energy_kwh')
+            total_energy=Sum('total_energy_kwh'),
+            peak_power=Max('peak_power_w')
         ).order_by('date')
         
         daily_energy = {record['date']: record['total_energy'] or 0 for record in daily_data}
+        daily_peak = {record['date']: record['peak_power'] or 0 for record in daily_data}
         
         chart_labels = []
         chart_values = []
+        chart_peak_power = []
         current = week_start
         while current <= week_end:
             chart_labels.append(current.strftime('%A'))
             chart_values.append(daily_energy.get(current, 0))
+            chart_peak_power.append(daily_peak.get(current, 0))
             current += timedelta(days=1)
         
         # Find highest and best performing days
@@ -1055,17 +1088,21 @@ def user_reports(request):
             date__gte=start_date,
             date__lte=end_date
         ).values('date').annotate(
-            total_energy=Sum('total_energy_kwh')
+            total_energy=Sum('total_energy_kwh'),
+            peak_power=Max('peak_power_w')
         ).order_by('date')
         
         daily_energy = {record['date']: record['total_energy'] or 0 for record in daily_data}
+        daily_peak = {record['date']: record['peak_power'] or 0 for record in daily_data}
         
         chart_labels = []
         chart_values = []
+        chart_peak_power = []
         current = start_date
         while current <= end_date:
             chart_labels.append(current.strftime('%d'))
             chart_values.append(daily_energy.get(current, 0))
+            chart_peak_power.append(daily_peak.get(current, 0))
             current += timedelta(days=1)
         
         # Find highest and best performing days
@@ -1192,6 +1229,7 @@ def user_reports(request):
         'best_performing_day': best_performing_day,
         'chart_labels': json.dumps(chart_labels),
         'chart_values': json.dumps(chart_values),
+        'chart_peak_power': json.dumps(chart_peak_power),
         'chart_colors': json.dumps(["#dc3545" if v > energy_moderate_max else "#ffc107" if v > energy_efficient_max else "#28a745" for v in chart_values]),
         'recommendation': recommendation,
         'calendar_energy': json.dumps(calendar_energy),

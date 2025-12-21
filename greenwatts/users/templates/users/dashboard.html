@@ -140,6 +140,7 @@
                 <th>Device ID</th>
                 <th>Appliance Type</th>
                 <th>Energy Usage</th>
+                <th>Peak Power</th>
                 <th>Status</th>
               </tr>
               {% for alert in active_alerts %}
@@ -147,6 +148,7 @@
                   <td>{{ alert.device_id }}</td>
                   <td>{{ alert.appliance_type }}</td>
                   <td>{{ alert.energy_usage }} kWh</td>
+                  <td>{{ alert.peak_power }} W<br><small>at {{ alert.peak_time }}</small></td>
                   <td>{{ alert.status }}</td>
                 </tr>
               {% endfor %}

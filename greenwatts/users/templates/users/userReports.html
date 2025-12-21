@@ -193,6 +193,7 @@
       const ctx = document.getElementById("energyChart").getContext("2d");
       const chartLabels = {{ chart_labels|safe }};
       const chartValues = {{ chart_values|safe }};
+      const chartPeakPower = {{ chart_peak_power|safe }};
       
       // Format labels based on data type
       let formattedLabels = chartLabels;
@@ -223,7 +224,15 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false }
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                afterLabel: function(context) {
+                  const peakPower = chartPeakPower[context.dataIndex];
+                  return `Peak Power: ${peakPower} W`;
+                }
+              }
+            }
           },
           scales: {
             y: {
