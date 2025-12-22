@@ -179,63 +179,44 @@ def admin_required(view_func):
     return _wrapped_view
 
 def get_week_options(valid_office_ids, selected_month=None, selected_year=None):
-    from django.db.models import Min
+    from datetime import date, timedelta
     from django.db.models.functions import ExtractYear, ExtractMonth
 
-    # If month and year are selected, filter weeks for that specific month/year
     if selected_month and selected_year:
-        months = [{'month': int(selected_month), 'year': int(selected_year)}]
-    else:
-        # Get distinct months with data
-        months = SensorReading.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).annotate(
-            month=ExtractMonth('date'),
-            year=ExtractYear('date')
-        ).values('month', 'year').distinct().order_by('year', 'month')
-
-    week_options = []
-    for m in months:
-        year = m['year']
-        month = m['month']
-
-        # Get all dates in this month with data
+        year = int(selected_year)
+        month = int(selected_month)
+        
         dates_in_month = SensorReading.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).filter(
+            device__office__office_id__in=valid_office_ids,
             date__year=year,
             date__month=month
+        ).exclude(
+            device__office__name='DS'
         ).dates('date', 'day')
 
         if not dates_in_month:
-            continue
+            return []
 
-        min_date = min(dates_in_month)
-        max_date = max(dates_in_month)
-
-        # Calculate weeks: start on the first day of the month
-        from datetime import date, timedelta
         first_day = date(year, month, 1)
-        start_of_month = first_day
+        week_options = []
         week_num = 1
-        current_start = start_of_month
-        while current_start <= max_date:
-            current_end = min(current_start + timedelta(days=6), max_date)
-            # Check if there is data in this week
-            # Always include Week 1, and others if there is data
-            if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+        current_start = first_day
+        
+        while current_start.month == month:
+            week_end = current_start + timedelta(days=6)
+            if any(d >= current_start and d <= week_end for d in dates_in_month):
                 week_options.append({
                     'value': current_start.strftime('%Y-%m-%d'),
                     'name': f"Week {week_num}"
                 })
+                week_num += 1
             current_start += timedelta(days=7)
-            week_num += 1
+            if current_start.month != month:
+                break
 
-    return week_options
+        return week_options
+    else:
+        return []
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def index(request):
@@ -665,32 +646,60 @@ def office_usage(request):
     if not selected_day and selected_date:
         selected_day = selected_date.strftime('%m/%d/%Y')
 
-    # Get office data with historical rates
-    office_names = SensorReading.objects.filter(**filter_kwargs).filter(
+    # Week options: show week containing selected day, or filtered by month/year
+    if selected_day and not selected_week:
+        try:
+            month_str, day_str, year_str = selected_day.split('/')
+            selected_date_obj = date(int(year_str), int(month_str), int(day_str))
+            first_day_of_month = date(int(year_str), int(month_str), 1)
+            days_diff = (selected_date_obj - first_day_of_month).days
+            week_num = (days_diff // 7) + 1
+            week_start = first_day_of_month + timedelta(days=(week_num - 1) * 7)
+            week_options = [{
+                'value': week_start.strftime('%Y-%m-%d'),
+                'name': f"Week {week_num}"
+            }]
+            # Auto-select this week for the chart
+            selected_week = week_start.strftime('%Y-%m-%d')
+            # Re-determine filter with the auto-selected week
+            filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
+        except ValueError:
+            week_options = get_week_options(valid_office_ids, selected_month, selected_year)
+    else:
+        week_options = get_week_options(valid_office_ids, selected_month, selected_year)
+
+    # Get office data aggregated by office name
+    office_data_qs = SensorReading.objects.filter(**filter_kwargs).filter(
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).values_list('device__office__name', flat=True).distinct()
+    ).values(
+        'device__office__name'
+    ).annotate(
+        total_energy=Sum('total_energy_kwh')
+    ).order_by('-total_energy')
     
     office_data = []
-    for office_name in office_names:
+    for record in office_data_qs:
+        office_name = record['device__office__name']
+        energy = record['total_energy'] or 0
+        
         office_readings = SensorReading.objects.filter(
             **filter_kwargs,
             device__office__name=office_name,
             device__office__office_id__in=valid_office_ids
         ).exclude(device__office__name='DS')
         
-        energy = office_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
         metrics = calculate_energy_metrics_with_historical_rates(office_readings)
+        peak_power = office_readings.aggregate(peak=Max('peak_power_w'))['peak'] or 0
         
         office_data.append({
             'office_name': office_name,
             'total_energy': energy,
+            'peak_power': peak_power,
             'total_cost': metrics['total_cost'],
             'total_co2': metrics['total_co2']
         })
-    
-    office_data.sort(key=lambda x: x['total_energy'], reverse=True)
 
     # Get thresholds for the selected date and scale based on level
     base_thresholds = get_threshold_for_date(selected_date or datetime.now().date())
@@ -714,6 +723,7 @@ def office_usage(request):
         table_data.append({
             'office': record['office_name'],
             'energy': f"{energy:.1f} kWh",
+            'peak_power': f"{record['peak_power']:.0f} W",
             'cost': f"₱{record['total_cost']:.2f}" if record['total_cost'] else '₱0.00',
             'co2': f"{record['total_co2']:.1f} kg" if record['total_co2'] else '0.0 kg',
             'status': status,
@@ -726,7 +736,22 @@ def office_usage(request):
 
     # Prepare data for line chart (filtered by selected period)
     import calendar
-    if level == 'day':
+    if selected_week or (selected_day and not selected_month):
+        # Show week view when week is selected or day is selected without month filter
+        if selected_week:
+            week_date = date.fromisoformat(selected_week)
+        else:
+            # Calculate week from selected day
+            month_str, day_str, year_str = selected_day.split('/')
+            selected_date_obj = date(int(year_str), int(month_str), int(day_str))
+            first_day_of_month = date(int(year_str), int(month_str), 1)
+            days_diff = (selected_date_obj - first_day_of_month).days
+            week_start = first_day_of_month + timedelta(days=(days_diff // 7) * 7)
+            week_date = week_start
+        
+        start_date = week_date
+        end_date = start_date + timedelta(days=6)
+    elif level == 'day':
         start_date = selected_date
         end_date = selected_date
     elif level == 'month':

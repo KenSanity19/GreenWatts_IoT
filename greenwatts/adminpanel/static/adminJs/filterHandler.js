@@ -58,6 +58,31 @@
         .catch(error => console.error('Error fetching days:', error));
     }
 
+    function updateWeekOptions(month, year) {
+      if (!weekSelect) return;
+      
+      const currentSelected = weekSelect.value;
+      const params = new URLSearchParams();
+      if (month) params.append('month', month);
+      if (year) params.append('year', year);
+      
+      fetch(`/adminpanel/get-weeks/?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            weekSelect.innerHTML = '<option value="">Select Week</option>';
+            data.weeks.forEach(week => {
+              const option = document.createElement('option');
+              option.value = week.value;
+              option.textContent = week.name;
+              if (week.value === currentSelected) option.selected = true;
+              weekSelect.appendChild(option);
+            });
+          }
+        })
+        .catch(error => console.error('Error fetching weeks:', error));
+    }
+
     // Day select handler
     if (daySelect && !daySelect.dataset.handlerAttached) {
       daySelect.dataset.handlerAttached = 'true';
@@ -81,11 +106,13 @@
         
         if (this.value) {
           const selectedYear = yearSelect ? yearSelect.value : '';
-          updateDayOptions(this.value, selectedYear);
+          const currentYear = selectedYear || new Date().getFullYear().toString();
+          updateDayOptions(this.value, currentYear);
+          updateWeekOptions(this.value, currentYear);
           
           // Auto-set year if not selected
           if (yearSelect && !yearSelect.value) {
-            yearSelect.value = new Date().getFullYear().toString();
+            yearSelect.value = currentYear;
           }
         }
         updateFilters();
@@ -102,6 +129,7 @@
         const selectedMonth = monthSelect ? monthSelect.value : '';
         if (selectedMonth) {
           updateDayOptions(selectedMonth, this.value);
+          updateWeekOptions(selectedMonth, this.value);
         }
         updateFilters();
       });
@@ -113,18 +141,18 @@
       weekSelect.addEventListener('change', function() {
         if (this.value) {
           if (daySelect) daySelect.value = '';
-          if (monthSelect) monthSelect.value = '';
-          if (yearSelect) yearSelect.value = '';
+          // Don't clear month/year when week is selected - week should be filtered by month/year
         }
         updateFilters();
       });
     }
 
-    // Initialize day options on page load if month is selected
+    // Initialize day and week options on page load if month is selected
     const initialMonth = monthSelect ? monthSelect.value : '';
     const initialYear = yearSelect ? yearSelect.value : '';
-    if (initialMonth && daySelect) {
-      updateDayOptions(initialMonth, initialYear);
+    if (initialMonth) {
+      if (daySelect) updateDayOptions(initialMonth, initialYear);
+      if (weekSelect) updateWeekOptions(initialMonth, initialYear);
     }
   });
 })();
