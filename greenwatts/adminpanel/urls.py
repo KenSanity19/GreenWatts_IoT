@@ -25,4 +25,7 @@ urlpatterns = [
     path('export-reports/', views.export_reports, name='export_reports'),
     path('createWifi/', views.create_wifi, name='create_wifi'),
     path('editWifi/<int:id>/', views.edit_wifi, name='edit_wifi'),
+    # API endpoints
+    path('api/system-logs/', views.api_system_logs, name='api_system_logs'),
+    path('api/weekly-analysis/', views.api_weekly_analysis, name='api_weekly_analysis'),
 ]

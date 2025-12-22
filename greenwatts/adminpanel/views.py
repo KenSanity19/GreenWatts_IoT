@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.views.decorators.cache import cache_control
 from functools import wraps
 from .models import Admin, EnergyThreshold, CO2Threshold, Notification, WiFiNetwork
-from ..sensors.models import CostSettings, CO2Settings
+from ..sensors.models import CostSettings, CO2Settings, SystemLog, WeeklySpikeAnalysis
 from greenwatts.users.models import Office
 from ..sensors.models import Device, SensorReading, CostSettings, CO2Settings
 from django.db.models import Sum, F, Max, Q
@@ -2154,6 +2154,52 @@ def send_notification(request):
         return redirect('adminpanel:admin_reports')
     
     return redirect('adminpanel:admin_reports')
+
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def api_system_logs(request):
+    from datetime import timedelta
+    
+    time_threshold = timezone.now() - timedelta(hours=24)
+    logs = SystemLog.objects.filter(
+        timestamp__gte=time_threshold,
+        device__device_id__in=[1,2,3,4,5,6,7,8,9]
+    ).select_related('device').order_by('-timestamp')[:20]
+    
+    logs_data = []
+    for log in logs:
+        logs_data.append({
+            'timestamp': log.timestamp.isoformat(),
+            'log_type': log.log_type,
+            'device_id': log.device.device_id if log.device else None,
+            'message': log.message
+        })
+    
+    return JsonResponse({
+        'status': 'success',
+        'logs': logs_data
+    })
+
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def api_weekly_analysis(request):
+    analyses = WeeklySpikeAnalysis.objects.select_related('device').order_by('-week_start')[:10]
+    
+    analyses_data = []
+    for analysis in analyses:
+        analyses_data.append({
+            'device_id': analysis.device.device_id,
+            'week_start': analysis.week_start.strftime('%m/%d'),
+            'week_end': analysis.week_end.strftime('%m/%d'),
+            'spike_count': analysis.spike_count,
+            'max_spike_power': f"{analysis.max_spike_power:.1f}",
+            'interpretation': analysis.interpretation
+        })
+    
+    return JsonResponse({
+        'status': 'success',
+        'analyses': analyses_data
+    })
 
 def admin_logout(request):
     request.session.flush()  # Clear the session
