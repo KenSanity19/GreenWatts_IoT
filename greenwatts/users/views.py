@@ -415,18 +415,22 @@ def dashboard(request):
     ).order_by('-timestamp')[:10]
     
     # Hardcoded example data for system logs and weekly analysis
+    from datetime import datetime
+    base_date = datetime(2025, 12, 19, 12, 0, 0, tzinfo=timezone.get_current_timezone())
+    spike_time = datetime(2025, 12, 19, 17, 18, 0, tzinfo=timezone.get_current_timezone())
+    
     example_system_logs = [
-        {'log_type': 'data_received', 'timestamp': timezone.now() - timedelta(minutes=15), 'message': 'Received 144 sensor readings successfully', 'device_id': 1},
-        {'log_type': 'spike_detected', 'timestamp': timezone.now() - timedelta(hours=2), 'message': 'Power spike detected: 1850W peak power', 'device_id': 2},
-        {'log_type': 'device_online', 'timestamp': timezone.now() - timedelta(hours=4), 'message': 'Device came online after maintenance', 'device_id': 1},
-        {'log_type': 'data_received', 'timestamp': timezone.now() - timedelta(hours=6), 'message': 'Daily energy summary generated', 'device_id': 3},
-        {'log_type': 'threshold_exceeded', 'timestamp': timezone.now() - timedelta(hours=8), 'message': 'Energy usage exceeded moderate threshold', 'device_id': 2}
+        {'log_type': 'data_received', 'timestamp': base_date - timedelta(minutes=15), 'message': 'Received 1 accumulated data for 24 hrs readings', 'device_id': 1},
+        {'log_type': 'spike_detected', 'timestamp': spike_time, 'message': 'Power spike detected: 2445.4W peak power', 'device_id': 2},
+        {'log_type': 'device_online', 'timestamp': base_date - timedelta(hours=4), 'message': 'Device connection established successfully', 'device_id': 1},
+        {'log_type': 'data_received', 'timestamp': base_date - timedelta(hours=6), 'message': 'Daily energy summary generated', 'device_id': 3},
+        {'log_type': 'threshold_exceeded', 'timestamp': base_date - timedelta(hours=8), 'message': 'Energy usage exceeded moderate threshold', 'device_id': 2}
     ]
     
     weekly_analysis = [
-        {'device_id': 1, 'week_start': '2024-12-16', 'week_end': '2024-12-22', 'spike_count': 8, 'max_spike_power': 1650.5, 'interpretation': 'Low spike activity (8 spikes) - normal operation. Peak power within acceptable range.'},
-        {'device_id': 2, 'week_start': '2024-12-16', 'week_end': '2024-12-22', 'spike_count': 15, 'max_spike_power': 2100.8, 'interpretation': 'Moderate spike activity (15 spikes) - monitor equipment usage. High peak power detected.'},
-        {'device_id': 3, 'week_start': '2024-12-16', 'week_end': '2024-12-22', 'spike_count': 3, 'max_spike_power': 980.2, 'interpretation': 'Excellent performance (3 spikes) - efficient energy usage maintained.'}
+        {'device_id': 1, 'week_start': '2025-12-16', 'week_end': '2025-12-21', 'spike_count': 8, 'max_spike_power': 2445.4, 'interpretation': 'Low spike activity (8 spikes) - normal operation. Peak power within acceptable range.'},
+        {'device_id': 2, 'week_start': '2025-12-16', 'week_end': '2025-12-21', 'spike_count': 15, 'max_spike_power': 1200.0, 'interpretation': 'Moderate spike activity (15 spikes) - monitor equipment usage. High peak power detected.'},
+        {'device_id': 3, 'week_start': '2025-12-16', 'week_end': '2025-12-21', 'spike_count': 3, 'max_spike_power': 980.2, 'interpretation': 'Excellent performance (3 spikes) - efficient energy usage maintained.'}
     ]
     
     # Use example data if no real data exists
