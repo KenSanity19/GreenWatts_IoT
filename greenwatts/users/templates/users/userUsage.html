@@ -396,6 +396,7 @@
       const ctx = document.getElementById('usageChart').getContext('2d');
       const chartLabels = {{ chart_labels|safe }};
       const chartDates = {{ chart_dates|safe }};
+      const chartPeakPower = {{ chart_peak_power|safe }};
       const usageChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -407,7 +408,17 @@
             backgroundColor: 'rgba(66, 133, 244, 0.1)',
             borderWidth: 2,
             fill: true,
-            tension: 0.4
+            tension: 0.4,
+            yAxisID: 'y'
+          }, {
+            label: 'Peak Power (W)',
+            data: chartPeakPower,
+            borderColor: '#ff6b6b',
+            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+            borderWidth: 2,
+            fill: false,
+            tension: 0.4,
+            yAxisID: 'y1'
           }]
         },
         options: {
@@ -415,7 +426,8 @@
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              display: false
+              display: true,
+              position: 'top'
             },
             tooltip: {
               callbacks: {
@@ -427,12 +439,35 @@
           },
           scales: {
             y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
               beginAtZero: true,
               grid: {
                 color: '#e0e0e0'
               },
               ticks: {
                 color: '#000'
+              },
+              title: {
+                display: true,
+                text: 'Energy (kWh)'
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              beginAtZero: true,
+              grid: {
+                drawOnChartArea: false
+              },
+              ticks: {
+                color: '#000'
+              },
+              title: {
+                display: true,
+                text: 'Peak Power (W)'
               }
             },
             x: {

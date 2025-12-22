@@ -686,18 +686,22 @@ def office_usage(request):
             date__gte=week_start,
             date__lte=week_end
         ).values('date').annotate(
-            total_energy=Sum('total_energy_kwh')
+            total_energy=Sum('total_energy_kwh'),
+            peak_power=Max('peak_power_w')
         ).order_by('date')
         
         date_dict = {record['date']: record['total_energy'] or 0 for record in week_data}
+        peak_dict = {record['date']: record['peak_power'] or 0 for record in week_data}
         chart_labels = []
         chart_dates = []
         chart_data = []
+        chart_peak_power = []
         current = week_start
         while current <= week_end:
             chart_labels.append(current.strftime('%a'))
             chart_dates.append(current.strftime('%A - %B %d, %Y'))
             chart_data.append(date_dict.get(current, 0))
+            chart_peak_power.append(peak_dict.get(current, 0))
             current += timedelta(days=1)
     elif selected_date:
         week_start = selected_date - timedelta(days=6)
@@ -706,18 +710,22 @@ def office_usage(request):
             date__gte=week_start,
             date__lte=selected_date
         ).values('date').annotate(
-            total_energy=Sum('total_energy_kwh')
+            total_energy=Sum('total_energy_kwh'),
+            peak_power=Max('peak_power_w')
         ).order_by('date')
         
         date_dict = {record['date']: record['total_energy'] or 0 for record in week_data}
+        peak_dict = {record['date']: record['peak_power'] or 0 for record in week_data}
         chart_labels = []
         chart_dates = []
         chart_data = []
+        chart_peak_power = []
         current = week_start
         while current <= selected_date:
             chart_labels.append(current.strftime('%a'))
             chart_dates.append(current.strftime('%A - %B %d, %Y'))
             chart_data.append(date_dict.get(current, 0))
+            chart_peak_power.append(peak_dict.get(current, 0))
             current += timedelta(days=1)
     else:
         # For month/year filters, get last 7 days with data
@@ -725,17 +733,20 @@ def office_usage(request):
             device__in=devices,
             **filter_kwargs
         ).values('date').annotate(
-            total_energy=Sum('total_energy_kwh')
+            total_energy=Sum('total_energy_kwh'),
+            peak_power=Max('peak_power_w')
         ).order_by('-date')[:7]
         week_data = list(reversed(week_data))
         
         chart_labels = []
         chart_dates = []
         chart_data = []
+        chart_peak_power = []
         for record in week_data:
             chart_labels.append(record['date'].strftime('%a'))
             chart_dates.append(record['date'].strftime('%A - %B %d, %Y'))
             chart_data.append(record['total_energy'] or 0)
+            chart_peak_power.append(record['peak_power'] or 0)
 
     # Calculate rank change vs previous period based on level
     if level == 'day':
@@ -846,6 +857,7 @@ def office_usage(request):
         'chart_labels': json.dumps(chart_labels),
         'chart_dates': json.dumps(chart_dates),
         'chart_data': json.dumps(chart_data),
+        'chart_peak_power': json.dumps(chart_peak_power),
         'pie_chart_labels': json.dumps(pie_chart_labels),
         'pie_chart_data': json.dumps(pie_chart_data),
         'unread_notifications_count': unread_notifications_count,
