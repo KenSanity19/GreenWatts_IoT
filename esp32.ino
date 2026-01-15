@@ -36,7 +36,7 @@ const char *supabaseUrl = "https://sfweuxojewjwxyzomyal.supabase.co/rest/v1/tbl_
 const char *supabaseApiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmd2V1eG9qZXdqd3h5em9teWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwMjA0ODEsImV4cCI6MjA3NTU5NjQ4MX0.DiA1tj4Z66oLbiWo0fxGgKEFep-RE_wrybWp_LVwLT0";
 
 // ------------------ Device Settings ------------------
-const char *deviceId = "6";
+const char *deviceId = "3";
 
 // ------------------ PZEM Settings ------------------
 #define PZEM_RX 16
@@ -44,6 +44,10 @@ const char *deviceId = "6";
 #define PZEM_BAUD 9600
 HardwareSerial pzemSerial(1);
 PZEM004Tv30 pzem(pzemSerial, PZEM_RX, PZEM_TX);
+
+const float voltageCalibrationFactor = 0.67;
+const float currentCalibrationFactor = 1.1618;
+const float voltageDisplayDivider = 1000.0; // Display voltage as decimal (e.g., 0.230 instead of 230)
 
 // ------------------ Reading Interval ------------------
 const unsigned long READ_INTERVAL = 10000; // 10 seconds
@@ -77,6 +81,59 @@ const int daylightOffset_sec = 0;
 // =========================================================
 void checkMissedDailyUpload();
 void sendToSupabase(float voltage, float current, float energy_kwh, float peak_power_w);
+void testPLDTLANG();
+
+// =========================================================
+// TEST PLDTLANG CONNECTION
+// =========================================================
+void testPLDTLANG()
+{
+  Serial.println("\n=== Testing PLDTLANG Connection ===");
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  delay(1000);
+  WiFi.mode(WIFI_STA);
+  delay(1000);
+
+  Serial.println("Attempting to connect to PLDTLANG...");
+  WiFi.begin("PLDTLANG", "Successed@123");
+
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 60)
+  {
+    delay(500);
+    Serial.print(".");
+    if (attempts % 10 == 9)
+    {
+      Serial.println();
+      Serial.print("Status: ");
+      Serial.println(WiFi.status());
+    }
+    attempts++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    Serial.println("\n✓ PLDTLANG Connected!");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+    Serial.print("Signal: ");
+    Serial.print(WiFi.RSSI());
+    Serial.println(" dBm");
+  }
+  else
+  {
+    Serial.println("\n✗ PLDTLANG Failed!");
+    Serial.print("Final Status: ");
+    Serial.println(WiFi.status());
+    Serial.println("\nPossible issues:");
+    Serial.println("- Check if router is 2.4GHz (ESP32 doesn't support 5GHz)");
+    Serial.println("- Verify password is correct");
+    Serial.println("- Check signal strength (move ESP32 closer)");
+    Serial.println("- Router might have MAC filtering enabled");
+  }
+  Serial.println("================================\n");
+}
 
 // =========================================================
 // FETCH WIFI NETWORKS FROM ADMIN PANEL
@@ -153,28 +210,51 @@ void ensureWiFiConnected()
 {
   if (WiFi.status() != WL_CONNECTED)
   {
-    Serial.println("WiFi lost! Trying networks...");
+    Serial.println("\n=== WiFi Connection Attempt ===");
+    Serial.println("Scanning available networks...");
 
-    // Aggressive WiFi reset
+    int n = WiFi.scanNetworks();
+    Serial.print("Found ");
+    Serial.print(n);
+    Serial.println(" networks:");
+    for (int i = 0; i < n; i++)
+    {
+      Serial.print(i + 1);
+      Serial.print(": ");
+      Serial.print(WiFi.SSID(i));
+      Serial.print(" (");
+      Serial.print(WiFi.RSSI(i));
+      Serial.println(" dBm)");
+    }
+    Serial.println();
+
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
-    delay(2000);
+    delay(1000);
     WiFi.mode(WIFI_STA);
-    delay(2000);
+    delay(1000);
 
     // Try hardcoded networks first
     for (int i = 0; i < numHardcodedNetworks; i++)
     {
-      Serial.print("Trying hardcoded: ");
+      Serial.print("Connecting to: ");
       Serial.println(hardcodedNetworks[i].ssid);
+      Serial.print("Password: ");
+      Serial.println(hardcodedNetworks[i].password);
+
       WiFi.begin(hardcodedNetworks[i].ssid, hardcodedNetworks[i].password);
 
-      int hardcodedRetries = 0;
-      while (WiFi.status() != WL_CONNECTED && hardcodedRetries < 20)
+      int retries = 0;
+      while (WiFi.status() != WL_CONNECTED && retries < 40)
       {
         delay(500);
         Serial.print(".");
-        hardcodedRetries++;
+        if (retries % 10 == 9)
+        {
+          Serial.print(" Status: ");
+          Serial.println(WiFi.status());
+        }
+        retries++;
       }
 
       if (WiFi.status() == WL_CONNECTED)
@@ -193,8 +273,10 @@ void ensureWiFiConnected()
         return;
       }
       Serial.println(" Failed!");
+      Serial.print("WiFi Status Code: ");
+      Serial.println(WiFi.status());
       WiFi.disconnect(true);
-      delay(2000);
+      delay(1000);
     }
 
     // Try dynamic networks from database
@@ -627,6 +709,8 @@ void setup()
   Serial.begin(115200);
   delay(1000);
 
+  Serial.println("\n\n=== GreenWatts ESP32 Starting ===");
+
   if (!SPIFFS.begin(true))
     Serial.println("SPIFFS Mount Failed!");
 
@@ -636,6 +720,9 @@ void setup()
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
   delay(1000);
+
+  // Test PLDTLANG connection first
+  testPLDTLANG();
 
   ensureWiFiConnected();
 
@@ -670,13 +757,10 @@ void loop()
     float current = pzem.current();
     float power = pzem.power();
 
-    // Debug: Show raw PZEM values
-    Serial.print("Raw PZEM - V:");
-    Serial.print(voltage);
-    Serial.print(", I:");
-    Serial.print(current);
-    Serial.print(", P:");
-    Serial.println(power);
+    // Apply calibration
+    voltage = voltage * voltageCalibrationFactor;
+    current = current * currentCalibrationFactor;
+    power = voltage * current;
 
     // Only process valid readings
     if (!isnan(voltage) && !isnan(current) && !isnan(power) && voltage > 0)
@@ -714,7 +798,7 @@ void loop()
         Serial.print("Time: ");
         Serial.println(timeStr);
         Serial.print("Voltage: ");
-        Serial.print(voltage, 2);
+        Serial.print(voltage / voltageDisplayDivider, 3);
         Serial.println(" V");
         Serial.print("Current: ");
         Serial.print(current, 3);
