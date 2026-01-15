@@ -51,7 +51,15 @@ class CostSettings(models.Model):
 
     @classmethod
     def get_current_rate(cls):
+        from django.utils import timezone
         return cls.objects.filter(ended_at__isnull=True).first() or cls.objects.create()
+    
+    def save(self, *args, **kwargs):
+        # Mark previous records as ended when creating a new one
+        if not self.pk:  # Only for new records
+            from django.utils import timezone
+            self.__class__.objects.filter(ended_at__isnull=True).update(ended_at=timezone.now())
+        super().save(*args, **kwargs)
 
 
 class CO2Settings(models.Model):
@@ -68,7 +76,15 @@ class CO2Settings(models.Model):
 
     @classmethod
     def get_current_rate(cls):
+        from django.utils import timezone
         return cls.objects.filter(ended_at__isnull=True).first() or cls.objects.create()
+    
+    def save(self, *args, **kwargs):
+        # Mark previous records as ended when creating a new one
+        if not self.pk:  # Only for new records
+            from django.utils import timezone
+            self.__class__.objects.filter(ended_at__isnull=True).update(ended_at=timezone.now())
+        super().save(*args, **kwargs)
 
 
 class EnergyRecord(models.Model):

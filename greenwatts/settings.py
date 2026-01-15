@@ -90,7 +90,8 @@ DATABASES = {
             'postgresql://postgres.sfweuxojewjwxyzomyal:Greenwatts!123@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
         ),
         conn_max_age=600,
-        ssl_require=True
+        ssl_require=True,
+        conn_health_checks=True
     )
 }
 
@@ -119,7 +120,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
 
 USE_I18N = True
 
