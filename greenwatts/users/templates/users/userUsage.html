@@ -22,6 +22,23 @@
         color: white !important;
         background-color: #2c3e50 !important;
       }
+      
+      .chart-tabs .tab {
+        cursor: pointer;
+        padding: 8px 16px;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        user-select: none;
+      }
+      
+      .chart-tabs .tab:hover {
+        background-color: rgba(66, 133, 244, 0.1);
+      }
+      
+      .chart-tabs .tab.active {
+        background-color: #4285f4;
+        color: white;
+      }
     </style>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -175,8 +192,8 @@
           <div class="chart-container">
             <div class="chart-header">
               <div class="chart-tabs">
-                <span class="tab active">Energy Usage (kWh)</span>
-                <span class="tab">CO2 Emission (kg)</span>
+                <span class="tab active" data-chart="energy">Energy Usage (kWh)</span>
+                <span class="tab" data-chart="co2">CO2 Emission (kg)</span>
               </div>
               <select id="week-select" class="chart-period">
                 <option value="">Week</option>
@@ -397,6 +414,10 @@
       const chartLabels = {{ chart_labels|safe }};
       const chartDates = {{ chart_dates|safe }};
       const chartPeakPower = {{ chart_peak_power|safe }};
+      const chartCO2Data = {{ chart_co2_data|safe }};
+      
+      let currentChartType = 'energy';
+      
       const usageChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -484,6 +505,37 @@
             }
           }
         }
+      });
+      
+      // Chart tab switching functionality
+      document.querySelectorAll('.chart-tabs .tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          const chartType = this.getAttribute('data-chart');
+          
+          // Update active tab
+          document.querySelectorAll('.chart-tabs .tab').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          
+          if (chartType === 'co2') {
+            // Switch to CO2 data
+            usageChart.data.datasets[0].label = 'CO2 Emission (kg)';
+            usageChart.data.datasets[0].data = chartCO2Data;
+            usageChart.data.datasets[0].borderColor = '#28a745';
+            usageChart.data.datasets[0].backgroundColor = 'rgba(40, 167, 69, 0.1)';
+            usageChart.options.scales.y.title.text = 'CO2 Emission (kg)';
+            currentChartType = 'co2';
+          } else {
+            // Switch to Energy data
+            usageChart.data.datasets[0].label = 'Energy Usage (kWh)';
+            usageChart.data.datasets[0].data = {{ chart_data|safe }};
+            usageChart.data.datasets[0].borderColor = '#4285f4';
+            usageChart.data.datasets[0].backgroundColor = 'rgba(66, 133, 244, 0.1)';
+            usageChart.options.scales.y.title.text = 'Energy (kWh)';
+            currentChartType = 'energy';
+          }
+          
+          usageChart.update();
+        });
       });
 
       // Pie Chart
