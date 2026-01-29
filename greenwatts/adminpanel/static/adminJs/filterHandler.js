@@ -24,11 +24,9 @@
         params.append('selected_day', day);
       } else if (week) {
         params.append('selected_week', week);
-      } else if (month) {
+      } else if (month && year) {
         params.append('selected_month', month);
-        // Auto-set year to current year if not selected
-        const selectedYear = year || new Date().getFullYear().toString();
-        params.append('selected_year', selectedYear);
+        params.append('selected_year', year);
       } else if (year) {
         params.append('selected_year', year);
       }
@@ -127,13 +125,9 @@
         
         if (this.value) {
           const selectedYear = yearSelect ? yearSelect.value : '';
-          const currentYear = selectedYear || new Date().getFullYear().toString();
-          updateDayOptions(this.value, currentYear);
-          updateWeekOptions(this.value, currentYear);
-          
-          // Auto-set year if not selected
-          if (yearSelect && !yearSelect.value) {
-            yearSelect.value = currentYear;
+          if (selectedYear) {
+            updateDayOptions(this.value, selectedYear);
+            updateWeekOptions(this.value, selectedYear);
           }
         }
         updateFilters();
@@ -146,16 +140,12 @@
       yearSelect.addEventListener('change', function() {
         if (daySelect) daySelect.value = '';
         if (weekSelect) weekSelect.value = '';
+        if (monthSelect) monthSelect.value = ''; // Clear month when year is selected
         
         if (this.value) {
           updateMonthOptions(this.value);
         }
         
-        const selectedMonth = monthSelect ? monthSelect.value : '';
-        if (selectedMonth) {
-          updateDayOptions(selectedMonth, this.value);
-          updateWeekOptions(selectedMonth, this.value);
-        }
         updateFilters();
       });
     }

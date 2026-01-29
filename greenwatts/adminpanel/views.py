@@ -10,7 +10,7 @@ from greenwatts.users.models import Office
 from ..sensors.models import Device, SensorReading, CostSettings, CO2Settings
 from django.db.models import Sum, F, Max, Q
 from django.utils import timezone
-from django.db.models.functions import ExtractYear, ExtractMonth
+from django.db.models.functions import ExtractYear, ExtractMonth, TruncMonth
 from datetime import datetime, timedelta, date
 from .utils import get_random_energy_tip, get_scaled_thresholds
 from ..sensors.utils import calculate_energy_metrics_with_historical_rates
@@ -147,7 +147,7 @@ def determine_filter_level(selected_day, selected_month, selected_year, selected
         level = 'month'
     elif selected_year:
         filter_kwargs = {'date__year': int(selected_year)}
-        level = 'month'
+        level = 'year'
     else:
         # Default to latest date
         latest_data = get_latest_date_filter()
@@ -330,7 +330,22 @@ def admin_dashboard(request):
     }
 
     # Calculate predicted CO2 emission based on filter level
-    if level == 'month':
+    if level == 'year':
+        # For year: predict based on current year's monthly average
+        current_year = int(selected_year)
+        
+        # Get months with data so far in the year
+        months_with_data = SensorReading.objects.filter(
+            date__year=current_year,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(device__office__name='DS').dates('date', 'month').count()
+        
+        if months_with_data > 0:
+            monthly_avg = (aggregates['total_co2_emission'] or 0) / months_with_data
+            predicted_co2_emission = monthly_avg * 12
+        else:
+            predicted_co2_emission = aggregates['total_co2_emission'] or 0
+    elif level == 'month':
         # For month: predict based on current month's daily average
         current_year = int(selected_year)
         current_month = int(selected_month)
@@ -353,7 +368,11 @@ def admin_dashboard(request):
         predicted_co2_emission = (aggregates['total_co2_emission'] or 0) * 2
 
     # Prepare dates for display based on filter level
-    if level == 'month':
+    if level == 'year':
+        current_year = int(selected_year)
+        current_date = f"{current_year}"
+        predicted_date = f"End of {current_year}"
+    elif level == 'month':
         current_year = int(selected_year)
         current_month = int(selected_month)
         current_date = date(current_year, current_month, 1).strftime("%B %Y")
@@ -413,7 +432,28 @@ def admin_dashboard(request):
         co2_emission_progress = min(100, (aggregates['total_co2_emission'] or 0) / predicted_co2_emission * 100)
 
     # Change in cost data - filter consistently based on level
-    if level == 'month':
+    if level == 'year':
+        # Compare current year with previous year
+        current_year = int(selected_year)
+        prev_year = current_year - 1
+        
+        current_readings = SensorReading.objects.filter(
+            date__year=current_year,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(device__office__name='DS')
+        current_metrics = calculate_energy_metrics_with_historical_rates(current_readings)
+        current_cost = current_metrics['total_cost']
+        
+        prev_readings = SensorReading.objects.filter(
+            date__year=prev_year,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(device__office__name='DS')
+        prev_metrics = calculate_energy_metrics_with_historical_rates(prev_readings)
+        prev_cost = prev_metrics['total_cost']
+        
+        change_costs = [prev_cost, current_cost]
+        change_dates = [date(prev_year, 1, 1), date(current_year, 1, 1)]
+    elif level == 'month':
         # Compare current month with previous month
         current_year = int(selected_year)
         current_month = int(selected_month)
@@ -490,7 +530,10 @@ def admin_dashboard(request):
                 max(min_height, (latest_cost / max_cost) * 100)
             ]
         
-        if level == 'month':
+        if level == 'year':
+            bar1_label = str(change_dates[0].year)  # previous year
+            bar2_label = str(change_dates[1].year)  # current year
+        elif level == 'month':
             bar1_label = change_dates[0].strftime('%B %Y')  # previous month
             bar2_label = change_dates[1].strftime('%B %Y')  # current month
         else:
@@ -754,12 +797,12 @@ def office_usage(request):
     elif level == 'day':
         start_date = selected_date
         end_date = selected_date
-    elif level == 'month':
-        start_date = date(int(selected_year), int(selected_month), 1)
-        end_date = date(int(selected_year), int(selected_month), calendar.monthrange(int(selected_year), int(selected_month))[1])
     elif level == 'year':
         start_date = date(int(selected_year), 1, 1)
         end_date = date(int(selected_year), 12, 31)
+    elif level == 'month':
+        start_date = date(int(selected_year), int(selected_month), 1)
+        end_date = date(int(selected_year), int(selected_month), calendar.monthrange(int(selected_year), int(selected_month))[1])
     elif level == 'week':
         week_date = date.fromisoformat(selected_week)
         start_date = week_date
@@ -775,19 +818,36 @@ def office_usage(request):
         device__office__office_id__in=valid_office_ids
     ).exclude(
         device__office__name='DS'
-    ).annotate(
-        day_date=TruncDay('date')
-    ).values(
-        'day_date',
-        office_name=F('device__office__name')
-    ).annotate(
-        total_energy=Sum('total_energy_kwh')
-    ).order_by('day_date', 'office_name')
+    )
+    
+    if level == 'year':
+        # For yearly view, aggregate by month
+        line_data = line_data.annotate(
+            month_date=TruncMonth('date')
+        ).values(
+            'month_date',
+            office_name=F('device__office__name')
+        ).annotate(
+            total_energy=Sum('total_energy_kwh')
+        ).order_by('month_date', 'office_name')
+    else:
+        # For other views, aggregate by day
+        line_data = line_data.annotate(
+            day_date=TruncDay('date')
+        ).values(
+            'day_date',
+            office_name=F('device__office__name')
+        ).annotate(
+            total_energy=Sum('total_energy_kwh')
+        ).order_by('day_date', 'office_name')
 
     # Group data by date and office
     date_dict = {}
     for item in line_data:
-        date_key = item['day_date'].strftime('%Y-%m-%d')
+        if level == 'year':
+            date_key = item['month_date'].strftime('%Y-%m')
+        else:
+            date_key = item['day_date'].strftime('%Y-%m-%d')
         office = item['office_name']
         energy = item['total_energy'] or 0
         if date_key not in date_dict:
@@ -796,11 +856,18 @@ def office_usage(request):
 
     # Generate dates for the range
     full_dates = []
-    current_date = start_date
-    while current_date <= end_date:
-        date_str = current_date.strftime('%Y-%m-%d')
-        full_dates.append(date_str)
-        current_date += timedelta(days=1)
+    if level == 'year':
+        # Generate months for the year
+        for month in range(1, 13):
+            date_str = f"{selected_year}-{month:02d}"
+            full_dates.append(date_str)
+    else:
+        # Generate days for the range
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime('%Y-%m-%d')
+            full_dates.append(date_str)
+            current_date += timedelta(days=1)
     dates = sorted(full_dates)
 
     # Get offices from line_data or fallback to office_data
@@ -812,10 +879,19 @@ def office_usage(request):
     # Prepare labels (day and date) for the range
     line_labels = []
     for date_str in dates:
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-        day_abbr = date_obj.strftime('%a')
-        full_date = date_obj.strftime('%B %d, %Y')
-        line_labels.append({'day': day_abbr, 'date': full_date})
+        if level == 'year':
+            # For yearly view, show month names
+            year, month = date_str.split('-')
+            month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            month_name = month_names[int(month) - 1]
+            line_labels.append({'day': month_name, 'date': f"{month_name} {year}"})
+        else:
+            # For other views, show day abbreviation and full date
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            day_abbr = date_obj.strftime('%a')
+            full_date = date_obj.strftime('%B %d, %Y')
+            line_labels.append({'day': day_abbr, 'date': full_date})
 
     # Prepare datasets
     line_datasets = []
@@ -1148,7 +1224,10 @@ def admin_costs(request):
 
     # Calculate period start and end based on level
     now = timezone.now().date()
-    if level == 'week':
+    if level == 'year':
+        period_start = date(int(selected_year), 1, 1)
+        period_end = date(int(selected_year), 12, 31)
+    elif level == 'week':
         if selected_week:
             period_start = date.fromisoformat(selected_week)
         else:
@@ -1170,7 +1249,10 @@ def admin_costs(request):
         period_end = selected_date
 
     # Calculate previous period
-    if level == 'week':
+    if level == 'year':
+        prev_start = date(int(selected_year) - 1, 1, 1)
+        prev_end = date(int(selected_year) - 1, 12, 31)
+    elif level == 'week':
         prev_start = period_start - timedelta(days=7)
         prev_end = period_end - timedelta(days=7)
     elif level == 'month':
@@ -1184,9 +1266,6 @@ def admin_costs(request):
         prev_start = date(prev_year, prev_month, 1)
         _, last_day = monthrange(prev_year, prev_month)
         prev_end = date(prev_year, prev_month, last_day)
-    elif level == 'year':
-        prev_start = date(int(selected_year) - 1, 1, 1)
-        prev_end = date(int(selected_year) - 1, 12, 31)
     else:  # day
         prev_start = period_start - timedelta(days=1)
         prev_end = period_end - timedelta(days=1)
@@ -1301,15 +1380,15 @@ def admin_costs(request):
             chart_data.append(energy)
 
     # Labels for chart header
-    if level == 'week':
+    if level == 'year':
+        previous_label = f"{prev_start.year} Total"
+        period_label = f"{selected_year}"
+    elif level == 'week':
         previous_label = f"Previous Week ({prev_start.strftime('%B %d')} - {prev_end.strftime('%d, %Y')})"
         period_label = f"Week ({period_start.strftime('%B %d')} - {period_end.strftime('%d, %Y')})"
     elif level == 'month':
         previous_label = f"{prev_start.strftime('%B %Y')} Total"
         period_label = f"{period_start.strftime('%B %Y')}"
-    elif level == 'year':
-        previous_label = f"{prev_year} Total"
-        period_label = f"{selected_year}"
     else:  # day
         previous_label = f"{prev_start.strftime('%B %d, %Y')} Total"
         period_label = f"{period_start.strftime('%B %d, %Y')}"
@@ -1460,7 +1539,14 @@ def carbon_emission(request):
             highest_co2_office = office_name
 
     # Determine previous period for comparison
-    if level == 'week':
+    if level == 'year':
+        period_start = date(int(selected_year or now.year), 1, 1)
+        period_end = date(int(selected_year or now.year), 12, 31)
+        prev_start = date(int(selected_year or now.year) - 1, 1, 1)
+        prev_end = date(int(selected_year or now.year) - 1, 12, 31)
+        previous_label = f"{prev_start.year} Total"
+        period_label = f"{selected_year or now.year}"
+    elif level == 'week':
         if selected_week:
             period_start = date.fromisoformat(selected_week)
         else:
@@ -1484,13 +1570,6 @@ def carbon_emission(request):
         prev_end = date(prev_year, prev_month, last_day_prev)
         previous_label = f"{prev_start.strftime('%B %Y')} Total"
         period_label = f"{period_start.strftime('%B %Y')}"
-    elif level == 'year':
-        period_start = date(int(selected_year or now.year), 1, 1)
-        period_end = date(int(selected_year or now.year), 12, 31)
-        prev_start = date(int(selected_year or now.year) - 1, 1, 1)
-        prev_end = date(int(selected_year or now.year) - 1, 12, 31)
-        previous_label = f"{prev_start.year} Total"
-        period_label = f"{selected_year or now.year}"
     else:  # day
         period_start = selected_date or now
         period_end = selected_date or now
@@ -1542,7 +1621,37 @@ def carbon_emission(request):
     change_class = 'red-arrow' if change_percent > 0 else 'green-arrow'
 
     # Chart data based on level
-    if level == 'week':
+    if level == 'year':
+        # Aggregate by month for yearly view
+        monthly_data = SensorReading.objects.filter(
+            date__year=int(selected_year or now.year),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).annotate(
+            month=ExtractMonth('date')
+        ).values('month').annotate(
+            total_energy=Sum('total_energy_kwh')
+        ).order_by('month')
+        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        prev_month_data = [0] * 12
+        current_month_data = [0] * 12
+        for item in monthly_data:
+            current_month_data[item['month'] - 1] = (item['total_energy'] or 0) * co2_settings.co2_emission_factor
+        # For year, prev is previous year
+        prev_year_data = SensorReading.objects.filter(
+            date__year=int(selected_year or now.year) - 1,
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).annotate(
+            month=ExtractMonth('date')
+        ).values('month').annotate(
+            total_energy=Sum('total_energy_kwh')
+        ).order_by('month')
+        for item in prev_year_data:
+            prev_month_data[item['month'] - 1] = (item['total_energy'] or 0) * co2_settings.co2_emission_factor
+    elif level == 'week':
         week_date = date.fromisoformat(selected_week)
         start_date = week_date
         end_date = start_date + timedelta(days=6)
@@ -1581,36 +1690,6 @@ def carbon_emission(request):
             ).aggregate(total=Sum('total_energy_kwh'))['total'] or 0
             current_month_data.append(energy * co2_settings.co2_emission_factor)
         prev_month_data = [0] * len(chart_dates)
-    elif level == 'year':
-        # Aggregate by month
-        monthly_data = SensorReading.objects.filter(
-            date__year=int(selected_year or now.year),
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).annotate(
-            month=ExtractMonth('date')
-        ).values('month').annotate(
-            total_energy=Sum('total_energy_kwh')
-        ).order_by('month')
-        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        prev_month_data = [0] * 12
-        current_month_data = [0] * 12
-        for item in monthly_data:
-            current_month_data[item['month'] - 1] = (item['total_energy'] or 0) * co2_settings.co2_emission_factor
-        # For year, prev is previous year
-        prev_year_data = SensorReading.objects.filter(
-            date__year=int(selected_year or now.year) - 1,
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).annotate(
-            month=ExtractMonth('date')
-        ).values('month').annotate(
-            total_energy=Sum('total_energy_kwh')
-        ).order_by('month')
-        for item in prev_year_data:
-            prev_month_data[item['month'] - 1] = (item['total_energy'] or 0) * co2_settings.co2_emission_factor
     else:  # day
         # Default to last 12 days
         chart_dates_desc = SensorReading.objects.filter(

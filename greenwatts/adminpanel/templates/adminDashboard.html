@@ -414,8 +414,9 @@
         
         if (yearSelect) {
           yearSelect.addEventListener('change', function() {
-            // Clear day when year is selected
+            // Clear day and month when year is selected
             if (daySelect) daySelect.value = '';
+            if (monthSelect) monthSelect.value = '';
             
             // Update month options based on selected year
             const selectedYear = yearSelect.value;
@@ -423,12 +424,6 @@
               updateMonthOptions(selectedYear);
             } else {
               resetMonthOptions();
-            }
-            
-            // Update day options if month is also selected
-            const selectedMonth = monthSelect ? monthSelect.value : '';
-            if (selectedMonth && selectedYear) {
-              updateDayOptions(selectedMonth, selectedYear);
             }
             
             updateFilters();
