@@ -36,6 +36,27 @@
       window.location.href = '?' + params.toString();
     }
 
+    function updateMonthOptions(year) {
+      if (!monthSelect) return;
+      
+      const currentSelected = monthSelect.value;
+      fetch(`/adminpanel/get-months/?year=${year}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            monthSelect.innerHTML = '<option value="">Month</option>';
+            data.months.forEach(month => {
+              const option = document.createElement('option');
+              option.value = month.value;
+              option.textContent = month.name;
+              if (month.value === currentSelected) option.selected = true;
+              monthSelect.appendChild(option);
+            });
+          }
+        })
+        .catch(error => console.error('Error fetching months:', error));
+    }
+
     function updateDayOptions(month, year) {
       if (!daySelect) return;
       
@@ -66,7 +87,7 @@
       if (month) params.append('month', month);
       if (year) params.append('year', year);
       
-      fetch(`/adminpanel/get-weeks/?${params.toString()}`)
+      fetch(`/adminpanel/get_weeks/?${params.toString()}`)
         .then(response => response.json())
         .then(data => {
           if (data.status === 'success') {
@@ -126,6 +147,10 @@
         if (daySelect) daySelect.value = '';
         if (weekSelect) weekSelect.value = '';
         
+        if (this.value) {
+          updateMonthOptions(this.value);
+        }
+        
         const selectedMonth = monthSelect ? monthSelect.value : '';
         if (selectedMonth) {
           updateDayOptions(selectedMonth, this.value);
@@ -147,9 +172,14 @@
       });
     }
 
+    // Initialize month options on page load if year is selected
+    const initialYear = yearSelect ? yearSelect.value : '';
+    if (initialYear) {
+      updateMonthOptions(initialYear);
+    }
+    
     // Initialize day and week options on page load if month is selected
     const initialMonth = monthSelect ? monthSelect.value : '';
-    const initialYear = yearSelect ? yearSelect.value : '';
     if (initialMonth) {
       if (daySelect) updateDayOptions(initialMonth, initialYear);
       if (weekSelect) updateWeekOptions(initialMonth, initialYear);

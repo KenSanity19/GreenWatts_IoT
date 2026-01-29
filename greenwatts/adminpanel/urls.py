@@ -22,6 +22,7 @@ urlpatterns = [
     path('thresholdHistory/', views.threshold_history, name='threshold_history'),
     path('get-days/', views.get_days, name='get_days'),
     path('get_weeks/', views.get_weeks, name='get_weeks'),
+    path('get-months/', views.get_months, name='get_months'),
     path('export-reports/', views.export_reports, name='export_reports'),
     path('createWifi/', views.create_wifi, name='create_wifi'),
     path('editWifi/<int:id>/', views.edit_wifi, name='edit_wifi'),

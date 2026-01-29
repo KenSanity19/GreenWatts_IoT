@@ -80,13 +80,21 @@ def get_year_options(valid_office_ids):
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     return [str(y) for y in years_with_data]
 
-def get_month_options(valid_office_ids):
-    """Get month options: all months with data"""
-    months_with_data = SensorReading.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+def get_month_options(valid_office_ids, selected_year=None):
+    """Get month options: all months with data, or filtered by year if selected"""
+    if selected_year:
+        months_with_data = SensorReading.objects.filter(
+            date__year=int(selected_year),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    else:
+        months_with_data = SensorReading.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
     return [{'value': str(m), 'name': MONTH_NAMES[m-1]} for m in months_with_data]
 
 def get_day_options(valid_office_ids, selected_month=None, selected_year=None):
@@ -287,8 +295,8 @@ def admin_dashboard(request):
     # Year options: all years with data
     year_options = get_year_options(valid_office_ids)
 
-    # Month options: all months with data
-    month_options = get_month_options(valid_office_ids)
+    # Month options: filtered by year if selected
+    month_options = get_month_options(valid_office_ids, selected_year)
 
     # Day options: all days with data, or filtered by month/year if selected
     day_options = get_day_options(valid_office_ids, selected_month, selected_year)
@@ -609,16 +617,8 @@ def office_usage(request):
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
 
-    # Month options: all months with data
-    months_with_data = SensorReading.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-    
-    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                   'July', 'August', 'September', 'October', 'November', 'December']
-    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+    # Month options: filtered by year if selected
+    month_options = get_month_options(valid_office_ids, selected_year)
 
     # Day options: all days with data, or filtered by month/year if selected
     if selected_month and selected_year:
@@ -918,16 +918,8 @@ def admin_reports(request):
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
 
-    # Month options: all months with data
-    months_with_data = SensorReading.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-
-    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                   'July', 'August', 'September', 'October', 'November', 'December']
-    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+    # Month options: filtered by year if selected
+    month_options = get_month_options(valid_office_ids, selected_year)
 
     # Day options: all days with data, or filtered by month/year if selected
     if selected_month and selected_year:
@@ -1096,16 +1088,8 @@ def admin_costs(request):
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
 
-    # Month options: all months with data
-    months_with_data = SensorReading.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-    
-    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                   'July', 'August', 'September', 'October', 'November', 'December']
-    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+    # Month options: filtered by year if selected
+    month_options = get_month_options(valid_office_ids, selected_year)
 
     # Day options: all days with data, or filtered by month/year if selected
     if selected_month and selected_year:
@@ -1413,16 +1397,8 @@ def carbon_emission(request):
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
 
-    # Month options: all months with data
-    months_with_data = SensorReading.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-    
-    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                   'July', 'August', 'September', 'October', 'November', 'December']
-    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+    # Month options: filtered by year if selected
+    month_options = get_month_options(valid_office_ids, selected_year)
 
     # Day options: all days with data, or filtered by month/year if selected
     if selected_month and selected_year:
@@ -2025,6 +2001,31 @@ def get_weeks(request):
         return JsonResponse({
             'status': 'success',
             'weeks': week_options
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@admin_required
+def get_months(request):
+    year = request.GET.get('year')
+    
+    if not year:
+        return JsonResponse({'status': 'error', 'message': 'Year required'})
+    
+    try:
+        valid_office_ids = get_valid_office_ids()
+        months_with_data = SensorReading.objects.filter(
+            date__year=int(year),
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+        
+        month_options = [{'value': str(m), 'name': MONTH_NAMES[m-1]} for m in months_with_data]
+        
+        return JsonResponse({
+            'status': 'success',
+            'months': month_options
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})

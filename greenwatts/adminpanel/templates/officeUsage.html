@@ -327,6 +327,240 @@
       }
       setInterval(updateTime, 1000);
       updateTime();
+
+      // Handle filter dropdown changes
+      document.addEventListener('DOMContentLoaded', function() {
+        const daySelect = document.getElementById('day-select');
+        const monthSelect = document.getElementById('month-select');
+        const yearSelect = document.getElementById('year-select');
+        const weekSelect = document.getElementById('week-select');
+        
+        function updateFilters() {
+          const params = new URLSearchParams();
+          const day = daySelect ? daySelect.value : '';
+          const month = monthSelect ? monthSelect.value : '';
+          const year = yearSelect ? yearSelect.value : '';
+          const week = weekSelect ? weekSelect.value : '';
+
+          if (day) params.append('selected_day', day);
+          if (month) params.append('selected_month', month);
+          if (year) params.append('selected_year', year);
+          if (week) params.append('selected_week', week);
+
+          const queryString = params.toString();
+          window.location.href = queryString ? `?${queryString}` : '?';
+        }
+
+        // Add event listeners only if elements exist
+        if (daySelect) {
+          daySelect.addEventListener('change', function() {
+            const selectedDay = daySelect.value;
+            if (selectedDay) {
+              const [month, day, year] = selectedDay.split('/');
+              const monthValue = parseInt(month).toString();
+              
+              if (monthSelect) {
+                let monthOption = monthSelect.querySelector(`option[value="${monthValue}"]`);
+                if (!monthOption) {
+                  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                    'July', 'August', 'September', 'October', 'November', 'December'];
+                  monthOption = document.createElement('option');
+                  monthOption.value = monthValue;
+                  monthOption.textContent = monthNames[parseInt(monthValue) - 1];
+                  monthSelect.appendChild(monthOption);
+                }
+                monthSelect.value = monthValue;
+              }
+              
+              if (yearSelect) {
+                let yearOption = yearSelect.querySelector(`option[value="${year}"]`);
+                if (!yearOption) {
+                  yearOption = document.createElement('option');
+                  yearOption.value = year;
+                  yearOption.textContent = year;
+                  yearSelect.appendChild(yearOption);
+                }
+                yearSelect.value = year;
+              }
+            } else {
+              if (monthSelect) monthSelect.value = '';
+              if (yearSelect) yearSelect.value = '';
+            }
+            updateFilters();
+          });
+        }
+        
+        if (monthSelect) {
+          monthSelect.addEventListener('change', function() {
+            const selectedMonth = monthSelect.value;
+            const selectedYear = yearSelect ? yearSelect.value : '';
+
+            if (selectedMonth) {
+              updateDayOptions(selectedMonth, selectedYear);
+              updateWeekOptions(selectedMonth, selectedYear);
+            } else {
+              if (daySelect) daySelect.value = '';
+              if (weekSelect) weekSelect.value = '';
+              resetDayOptions();
+              resetWeekOptions();
+            }
+            updateFilters();
+          });
+        }
+        
+        function updateDayOptions(month, year) {
+          fetch(`/adminpanel/get-days/?month=${month}&year=${year || new Date().getFullYear()}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success' && daySelect) {
+                const currentSelected = daySelect.value;
+                daySelect.innerHTML = '<option value="">Day</option>';
+                data.days.forEach(day => {
+                  const option = document.createElement('option');
+                  option.value = day;
+                  option.textContent = day;
+                  if (day === currentSelected) option.selected = true;
+                  daySelect.appendChild(option);
+                });
+              }
+            })
+            .catch(error => console.error('Error fetching days:', error));
+        }
+        
+        function updateWeekOptions(month, year) {
+          const params = new URLSearchParams();
+          if (month) params.append('month', month);
+          if (year) params.append('year', year);
+          
+          fetch(`/adminpanel/get_weeks/?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success' && weekSelect) {
+                const currentSelected = weekSelect.value;
+                weekSelect.innerHTML = '<option value="">Select Week</option>';
+                data.weeks.forEach(week => {
+                  const option = document.createElement('option');
+                  option.value = week.value;
+                  option.textContent = week.name;
+                  if (week.value === currentSelected) option.selected = true;
+                  weekSelect.appendChild(option);
+                });
+              }
+            })
+            .catch(error => console.error('Error fetching weeks:', error));
+        }
+        
+        function resetDayOptions() {
+          if (daySelect) {
+            const currentSelected = '{{ selected_day|escapejs }}';
+            const allDays = {{ day_options|safe }};
+            daySelect.innerHTML = '<option value="">Day</option>';
+            allDays.forEach(day => {
+              const option = document.createElement('option');
+              option.value = day;
+              option.textContent = day;
+              if (day === currentSelected) option.selected = true;
+              daySelect.appendChild(option);
+            });
+          }
+        }
+        
+        function resetWeekOptions() {
+          if (weekSelect) {
+            const currentSelected = '{{ selected_week|escapejs }}';
+            const allWeeks = {{ week_options|safe }};
+            weekSelect.innerHTML = '<option value="">Select Week</option>';
+            allWeeks.forEach(week => {
+              const option = document.createElement('option');
+              option.value = week.value;
+              option.textContent = week.name;
+              if (week.value === currentSelected) option.selected = true;
+              weekSelect.appendChild(option);
+            });
+          }
+        }
+        
+        if (yearSelect) {
+          yearSelect.addEventListener('change', function() {
+            // Clear day and week when year is selected
+            if (daySelect) daySelect.value = '';
+            if (weekSelect) weekSelect.value = '';
+            
+            // Update month options based on selected year
+            const selectedYear = yearSelect.value;
+            if (selectedYear) {
+              updateMonthOptions(selectedYear);
+            } else {
+              resetMonthOptions();
+            }
+            
+            // Update day and week options if month is also selected
+            const selectedMonth = monthSelect ? monthSelect.value : '';
+            if (selectedMonth && selectedYear) {
+              updateDayOptions(selectedMonth, selectedYear);
+              updateWeekOptions(selectedMonth, selectedYear);
+            }
+            
+            updateFilters();
+          });
+        }
+        
+        if (weekSelect) {
+          weekSelect.addEventListener('change', function() {
+            if (this.value) {
+              if (daySelect) daySelect.value = '';
+            }
+            updateFilters();
+          });
+        }
+        
+        function updateMonthOptions(year) {
+          fetch(`/adminpanel/get-months/?year=${year}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success' && monthSelect) {
+                const currentSelected = monthSelect.value;
+                monthSelect.innerHTML = '<option value="">Month</option>';
+                data.months.forEach(month => {
+                  const option = document.createElement('option');
+                  option.value = month.value;
+                  option.textContent = month.name;
+                  if (month.value === currentSelected) option.selected = true;
+                  monthSelect.appendChild(option);
+                });
+              }
+            })
+            .catch(error => console.error('Error fetching months:', error));
+        }
+        
+        function resetMonthOptions() {
+          if (monthSelect) {
+            const currentSelected = '{{ selected_month|escapejs }}';
+            const allMonths = {{ month_options|safe }};
+            monthSelect.innerHTML = '<option value="">Month</option>';
+            allMonths.forEach(month => {
+              const option = document.createElement('option');
+              option.value = month.value;
+              option.textContent = month.name;
+              if (month.value === currentSelected) option.selected = true;
+              monthSelect.appendChild(option);
+            });
+          }
+        }
+        
+        // Check if year is pre-selected on page load and filter months
+        const initialYear = yearSelect ? yearSelect.value : '';
+        if (initialYear) {
+          updateMonthOptions(initialYear);
+        }
+        
+        // Check if month is pre-selected on page load and filter days/weeks
+        const initialMonth = monthSelect ? monthSelect.value : '';
+        if (initialMonth) {
+          updateDayOptions(initialMonth, initialYear);
+          updateWeekOptions(initialMonth, initialYear);
+        }
+      });
     </script>
   </body>
 </html>
