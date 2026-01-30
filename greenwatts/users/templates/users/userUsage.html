@@ -175,8 +175,8 @@
           <div class="chart-container">
             <div class="chart-header">
               <div class="chart-tabs">
-                <span class="tab active">Energy Usage (kWh)</span>
-                <span class="tab">CO2 Emission (kg)</span>
+                <button class="tab active" data-chart="energy">Energy Usage (kWh)</button>
+                <button class="tab" data-chart="co2">CO2 Emission (kg)</button>
               </div>
               <select id="week-select" class="chart-period">
                 <option value="">Week</option>
@@ -319,6 +319,26 @@
             .catch(error => console.error('Error fetching days:', error));
         }
         
+        function updateDaysByYear(year) {
+          if (!year) return;
+          fetch(`/get-user-days/?year=${year}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success' && daySelect) {
+                const currentSelected = daySelect.value;
+                daySelect.innerHTML = '<option value="">Day</option>';
+                data.days.forEach(day => {
+                  const option = document.createElement('option');
+                  option.value = day;
+                  option.textContent = day;
+                  if (day === currentSelected) option.selected = true;
+                  daySelect.appendChild(option);
+                });
+              }
+            })
+            .catch(error => console.error('Error fetching days:', error));
+        }
+        
         function resetDayOptions() {
           if (daySelect) {
             const allDays = {{ day_options|safe }};
@@ -340,6 +360,7 @@
             const selectedYear = yearSelect.value;
             if (selectedYear) {
               updateMonthOptions(selectedYear);
+              updateDaysByYear(selectedYear);
             } else {
               resetMonthOptions();
             }
@@ -349,6 +370,8 @@
             if (selectedMonth && selectedYear) {
               updateDayOptions(selectedMonth, selectedYear);
               updateWeekOptions(selectedMonth, selectedYear);
+            } else {
+              resetWeekOptions();
             }
             
             updateFilters();
@@ -426,20 +449,26 @@
         const initialYear = yearSelect ? yearSelect.value : '';
         if (initialYear) {
           updateMonthOptions(initialYear);
+          updateDaysByYear(initialYear);
         }
         if (initialMonth && initialYear) {
           updateDayOptions(initialMonth, initialYear);
           updateWeekOptions(initialMonth, initialYear);
+        } else {
+          resetWeekOptions();
         }
         
 
       });
 
-      // Line Chart
       const ctx = document.getElementById('usageChart').getContext('2d');
       const chartLabels = {{ chart_labels|safe }};
       const chartDates = {{ chart_dates|safe }};
       const chartPeakPower = {{ chart_peak_power|safe }};
+      const chartCO2Data = {{ chart_co2_data|safe }};
+      
+      let currentChartType = 'energy';
+      
       const usageChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -527,6 +556,51 @@
             }
           }
         }
+      });
+      
+      // Chart tab switching functionality
+      document.querySelectorAll('.chart-tabs .tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          // Remove active class from all tabs
+          document.querySelectorAll('.chart-tabs .tab').forEach(t => t.classList.remove('active'));
+          // Add active class to clicked tab
+          this.classList.add('active');
+          
+          const chartType = this.getAttribute('data-chart');
+          currentChartType = chartType;
+          
+          if (chartType === 'energy') {
+            // Show Energy Usage and Peak Power
+            usageChart.data.datasets[0].data = {{ chart_data|safe }};
+            usageChart.data.datasets[0].label = 'Energy Usage (kWh)';
+            usageChart.data.datasets[0].borderColor = '#4285f4';
+            usageChart.data.datasets[0].backgroundColor = 'rgba(66, 133, 244, 0.1)';
+            
+            usageChart.data.datasets[1].data = chartPeakPower;
+            usageChart.data.datasets[1].label = 'Peak Power (W)';
+            usageChart.data.datasets[1].borderColor = '#ff6b6b';
+            usageChart.data.datasets[1].backgroundColor = 'rgba(255, 107, 107, 0.1)';
+            usageChart.data.datasets[1].hidden = false;
+            
+            usageChart.options.scales.y.title.text = 'Energy (kWh)';
+            usageChart.options.scales.y1.title.text = 'Peak Power (W)';
+            usageChart.options.scales.y1.display = true;
+          } else if (chartType === 'co2') {
+            // Show CO2 Emission only
+            usageChart.data.datasets[0].data = chartCO2Data;
+            usageChart.data.datasets[0].label = 'CO2 Emission (kg)';
+            usageChart.data.datasets[0].borderColor = '#28a745';
+            usageChart.data.datasets[0].backgroundColor = 'rgba(40, 167, 69, 0.1)';
+            
+            // Hide second dataset completely
+            usageChart.data.datasets[1].hidden = true;
+            
+            usageChart.options.scales.y.title.text = 'CO2 Emission (kg)';
+            usageChart.options.scales.y1.display = false;
+          }
+          
+          usageChart.update();
+        });
       });
 
       // Pie Chart

@@ -152,6 +152,11 @@ def dashboard(request):
             date__month=int(selected_month),
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
+    elif selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+            date__year=int(selected_year),
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
     else:
         day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
             device__in=devices
@@ -180,7 +185,7 @@ def dashboard(request):
         level = 'month'
     elif selected_year:
         filter_kwargs = {'date__year': int(selected_year)}
-        level = 'month'
+        level = 'year'
     else:
         # Default to latest date
         latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
@@ -285,6 +290,27 @@ def dashboard(request):
         
         bar1_label = date(prev_year, prev_month, 1).strftime('%B %Y')
         bar2_label = date(current_year, current_month, 1).strftime('%B %Y')
+    elif level == 'year' and selected_year:
+        # Compare current year with previous year
+        current_year = int(selected_year)
+        prev_year = current_year - 1
+        
+        current_readings = SensorReading.objects.filter(
+            date__year=current_year,
+            device__in=devices
+        )
+        current_metrics = calculate_energy_metrics_with_historical_rates(current_readings)
+        current_cost = current_metrics['total_cost']
+        
+        prev_readings = SensorReading.objects.filter(
+            date__year=prev_year,
+            device__in=devices
+        )
+        prev_metrics = calculate_energy_metrics_with_historical_rates(prev_readings)
+        prev_cost = prev_metrics['total_cost']
+        
+        bar1_label = str(prev_year)
+        bar2_label = str(current_year)
     elif selected_date:
         # Compare selected_date and previous day
         previous_date = selected_date - timedelta(days=1)
@@ -376,6 +402,24 @@ def dashboard(request):
         
         month_so_far_co2 = co2_emissions
         predicted_date = date(current_year, current_month, days_in_month)
+    elif level == 'year' and selected_year:
+        # For year: predict based on current year's monthly average
+        current_year = int(selected_year)
+        
+        # Get months with data so far in the year
+        months_with_data = SensorReading.objects.filter(
+            date__year=current_year,
+            device__in=devices
+        ).dates('date', 'month').count()
+        
+        if months_with_data > 0:
+            monthly_avg = co2_emissions / months_with_data
+            predicted_co2 = monthly_avg * 12
+        else:
+            predicted_co2 = co2_emissions
+        
+        month_so_far_co2 = co2_emissions
+        predicted_date = date(current_year, 12, 31)
     else:
         # Default prediction for other levels
         predicted_co2 = co2_emissions * 2
@@ -557,6 +601,11 @@ def office_usage(request):
             date__month=int(selected_month),
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
+    elif selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+            date__year=int(selected_year),
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
     else:
         day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
             device__in=devices
@@ -619,7 +668,7 @@ def office_usage(request):
         level = 'month'
     elif selected_year:
         filter_kwargs = {'date__year': int(selected_year)}
-        level = 'month'
+        level = 'year'
     else:
         # Default to latest date
         latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
@@ -627,6 +676,7 @@ def office_usage(request):
         if latest_date:
             filter_kwargs = {'date': latest_date}
             selected_date = latest_date
+            selected_day = latest_date.strftime('%m/%d/%Y')
             selected_month = None  # Don't pre-select month when using latest date
             selected_year = str(latest_date.year)  # Show year for month filtering
             level = 'day'
@@ -704,12 +754,20 @@ def office_usage(request):
         chart_dates = []
         chart_data = []
         chart_peak_power = []
+        chart_co2_data = []
         current = week_start
         while current <= week_end:
             chart_labels.append(current.strftime('%a'))
             chart_dates.append(current.strftime('%A - %B %d, %Y'))
-            chart_data.append(date_dict.get(current, 0))
+            energy = date_dict.get(current, 0)
+            chart_data.append(energy)
             chart_peak_power.append(peak_dict.get(current, 0))
+            # Calculate CO2 for this day using historical rates
+            daily_readings = SensorReading.objects.filter(
+                device__in=devices, date=current
+            )
+            daily_metrics = calculate_energy_metrics_with_historical_rates(daily_readings)
+            chart_co2_data.append(daily_metrics['total_co2'])
             current += timedelta(days=1)
     elif selected_date:
         week_start = selected_date - timedelta(days=6)
@@ -728,12 +786,20 @@ def office_usage(request):
         chart_dates = []
         chart_data = []
         chart_peak_power = []
+        chart_co2_data = []
         current = week_start
         while current <= selected_date:
             chart_labels.append(current.strftime('%a'))
             chart_dates.append(current.strftime('%A - %B %d, %Y'))
-            chart_data.append(date_dict.get(current, 0))
+            energy = date_dict.get(current, 0)
+            chart_data.append(energy)
             chart_peak_power.append(peak_dict.get(current, 0))
+            # Calculate CO2 for this day using historical rates
+            daily_readings = SensorReading.objects.filter(
+                device__in=devices, date=current
+            )
+            daily_metrics = calculate_energy_metrics_with_historical_rates(daily_readings)
+            chart_co2_data.append(daily_metrics['total_co2'])
             current += timedelta(days=1)
     else:
         # For month/year filters, get last 7 days with data
@@ -750,11 +816,19 @@ def office_usage(request):
         chart_dates = []
         chart_data = []
         chart_peak_power = []
+        chart_co2_data = []
         for record in week_data:
             chart_labels.append(record['date'].strftime('%a'))
             chart_dates.append(record['date'].strftime('%A - %B %d, %Y'))
-            chart_data.append(record['total_energy'] or 0)
+            energy = record['total_energy'] or 0
+            chart_data.append(energy)
             chart_peak_power.append(record['peak_power'] or 0)
+            # Calculate CO2 for this day using historical rates
+            daily_readings = SensorReading.objects.filter(
+                device__in=devices, date=record['date']
+            )
+            daily_metrics = calculate_energy_metrics_with_historical_rates(daily_readings)
+            chart_co2_data.append(daily_metrics['total_co2'])
 
     # Calculate rank change vs previous period based on level
     if level == 'day':
@@ -866,6 +940,7 @@ def office_usage(request):
         'chart_dates': json.dumps(chart_dates),
         'chart_data': json.dumps(chart_data),
         'chart_peak_power': json.dumps(chart_peak_power),
+        'chart_co2_data': json.dumps(chart_co2_data),
         'pie_chart_labels': json.dumps(pie_chart_labels),
         'pie_chart_data': json.dumps(pie_chart_data),
         'unread_notifications_count': unread_notifications_count,
@@ -1026,7 +1101,7 @@ def user_reports(request):
             level = 'month'
         elif selected_year:
             filter_kwargs = {'date__year': int(selected_year)}
-            level = 'month'
+            level = 'year'
         else:
             # Default to latest date
             latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
@@ -2223,18 +2298,24 @@ def get_user_days(request):
     month = request.GET.get('month')
     year = request.GET.get('year')
     
-    if not month or not year:
-        return JsonResponse({'status': 'error', 'message': 'Month and year required'})
+    if not year:
+        return JsonResponse({'status': 'error', 'message': 'Year required'})
     
     try:
         office = request.user
         devices = office.devices.all()
         
-        days = SensorReading.objects.filter(
-            date__year=int(year),
-            date__month=int(month),
-            device__in=devices
-        ).dates('date', 'day').order_by('-date')
+        if month:
+            days = SensorReading.objects.filter(
+                date__year=int(year),
+                date__month=int(month),
+                device__in=devices
+            ).dates('date', 'day').order_by('-date')
+        else:
+            days = SensorReading.objects.filter(
+                date__year=int(year),
+                device__in=devices
+            ).dates('date', 'day').order_by('-date')
         
         day_options = [d.strftime('%m/%d/%Y') for d in days]
         

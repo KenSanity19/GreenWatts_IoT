@@ -298,14 +298,27 @@ header h1 {
 }
 
 .tab {
+  background: transparent;
+  border: none;
   color: #888;
   cursor: pointer;
   font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.tab:hover {
+  background: #f0f0f0;
+  color: #333;
 }
 
 .tab.active {
   color: #000;
   font-weight: bold;
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
 }
 
 .chart-period {

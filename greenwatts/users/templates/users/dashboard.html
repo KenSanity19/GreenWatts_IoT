@@ -423,6 +423,26 @@
             .catch(error => console.error('Error fetching days:', error));
         }
         
+        function updateDaysByYear(year) {
+          if (!year) return;
+          fetch(`/get-user-days/?year=${year}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success' && daySelect) {
+                const currentSelected = daySelect.value;
+                daySelect.innerHTML = '<option value="">Day</option>';
+                data.days.forEach(day => {
+                  const option = document.createElement('option');
+                  option.value = day;
+                  option.textContent = day;
+                  if (day === currentSelected) option.selected = true;
+                  daySelect.appendChild(option);
+                });
+              }
+            })
+            .catch(error => console.error('Error fetching days:', error));
+        }
+        
         function resetDayOptions() {
           if (daySelect) {
             const allDays = {{ day_options|safe }};
@@ -445,6 +465,7 @@
             const selectedYear = yearSelect.value;
             if (selectedYear) {
               updateMonthOptions(selectedYear);
+              updateDaysByYear(selectedYear);
             } else {
               resetMonthOptions();
             }
@@ -496,6 +517,7 @@
         const initialYear = yearSelect ? yearSelect.value : '';
         if (initialYear) {
           updateMonthOptions(initialYear);
+          updateDaysByYear(initialYear);
         }
         
 
