@@ -75,6 +75,9 @@
       <!-- Filters -->
       <div class="filters">
         <select id="week-select">
+          {% if not selected_week %}
+          <option value="">Week</option>
+          {% endif %}
           {% for option in week_options %}
           <option value="{{ option.value }}" {% if option.value == selected_week %}selected{% endif %}>{{ option.name }}</option>
           {% endfor %}
@@ -315,8 +318,8 @@
                   option.textContent = month.name;
                   monthSelect.appendChild(option);
                 });
-                // Clear week options when year changes
-                if (weekSelect) {
+                // Only clear week options when year changes if no week is currently selected
+                if (weekSelect && !weekSelect.value) {
                   weekSelect.innerHTML = '<option value="">Week</option>';
                 }
               }
@@ -346,7 +349,6 @@
           } else {
             resetMonthOptions();
           }
-          updateFilters();
         });
         
         // Filter months on page load if year is pre-selected
