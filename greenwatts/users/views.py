@@ -1309,6 +1309,54 @@ def user_energy_cost(request):
     from calendar import monthrange
     import json
 
+    # Week options function
+    def get_user_week_options(devices, selected_month=None, selected_year=None):
+        from django.db.models.functions import ExtractYear, ExtractMonth
+        
+        if selected_month and selected_year:
+            months = [{'month': int(selected_month), 'year': int(selected_year)}]
+        else:
+            months = SensorReading.objects.filter(
+                device__in=devices
+            ).annotate(
+                month=ExtractMonth('date'),
+                year=ExtractYear('date')
+            ).values('month', 'year').distinct().order_by('year', 'month')
+        
+        week_options = []
+        for m in months:
+            year = m['year']
+            month = m['month']
+            
+            dates_in_month = SensorReading.objects.filter(
+                device__in=devices
+            ).filter(
+                date__year=year,
+                date__month=month
+            ).dates('date', 'day')
+            
+            if not dates_in_month:
+                continue
+            
+            min_date = min(dates_in_month)
+            max_date = max(dates_in_month)
+            
+            first_day = date(year, month, 1)
+            start_of_month = first_day
+            week_num = 1
+            current_start = start_of_month
+            while current_start <= max_date:
+                current_end = min(current_start + timedelta(days=6), max_date)
+                if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+                    week_options.append({
+                        'value': current_start.strftime('%Y-%m-%d'),
+                        'name': f"Week {week_num}"
+                    })
+                current_start += timedelta(days=7)
+                week_num += 1
+        
+        return week_options
+
     office = request.user
     devices = office.devices.all()
     
@@ -1368,54 +1416,6 @@ def user_energy_cost(request):
         day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
             device__in=devices
         ).dates('date', 'day').order_by('-date')]
-    
-    # Week options function
-    def get_user_week_options(devices, selected_month=None, selected_year=None):
-        from django.db.models.functions import ExtractYear, ExtractMonth
-        
-        if selected_month and selected_year:
-            months = [{'month': int(selected_month), 'year': int(selected_year)}]
-        else:
-            months = SensorReading.objects.filter(
-                device__in=devices
-            ).annotate(
-                month=ExtractMonth('date'),
-                year=ExtractYear('date')
-            ).values('month', 'year').distinct().order_by('year', 'month')
-        
-        week_options = []
-        for m in months:
-            year = m['year']
-            month = m['month']
-            
-            dates_in_month = SensorReading.objects.filter(
-                device__in=devices
-            ).filter(
-                date__year=year,
-                date__month=month
-            ).dates('date', 'day')
-            
-            if not dates_in_month:
-                continue
-            
-            min_date = min(dates_in_month)
-            max_date = max(dates_in_month)
-            
-            first_day = date(year, month, 1)
-            start_of_month = first_day
-            week_num = 1
-            current_start = start_of_month
-            while current_start <= max_date:
-                current_end = min(current_start + timedelta(days=6), max_date)
-                if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
-                    week_options.append({
-                        'value': current_start.strftime('%Y-%m-%d'),
-                        'name': f"Week {week_num}"
-                    })
-                current_start += timedelta(days=7)
-                week_num += 1
-        
-        return week_options
     
     week_options = get_user_week_options(devices, selected_month, selected_year)
     
@@ -1730,54 +1730,6 @@ def user_emmision(request):
     from ..sensors.models import SensorReading
     from datetime import datetime as dt
 
-    office = request.user
-    devices = office.devices.all()
-    
-    # Get unread notifications count
-    unread_notifications_count = get_unread_notifications_count(office)
-
-    # Get selected day, month, year, week from request
-    selected_day = request.GET.get('selected_day')
-    selected_month = request.GET.get('selected_month')
-    selected_year = request.GET.get('selected_year')
-    selected_week = request.GET.get('selected_week')
-
-    # Auto-select latest data if no filters provided
-    if not any([selected_day, selected_month, selected_year, selected_week]):
-        latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
-        if latest_data['latest_date']:
-            latest_date = latest_data['latest_date']
-            temp_month = str(latest_date.month)
-            temp_year = str(latest_date.year)
-            # Generate week options for the latest date's month/year
-            week_options = get_user_week_options(devices, temp_month, temp_year)
-            # Auto-select latest week for CO2 emission page
-            if week_options:
-                selected_week = week_options[-1]['value']
-            # Keep month and year unselected
-            selected_month = None
-            selected_year = None
-
-    # Force month filtering when month is selected
-    if selected_month and not selected_day and not selected_week:
-        if not selected_year:
-            selected_year = str(dt.now().year)
-
-    # Year options: all years with data for this office
-    years_with_data = SensorReading.objects.filter(
-        device__in=devices
-    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
-    year_options = [str(y) for y in years_with_data]
-
-    # Month options: all months with data for this office
-    months_with_data = SensorReading.objects.filter(
-        device__in=devices
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-    
-    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                   'July', 'August', 'September', 'October', 'November', 'December']
-    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
-
     # Week options function
     def get_user_week_options(devices, selected_month=None, selected_year=None):
         from django.db.models.functions import ExtractYear, ExtractMonth
@@ -1825,6 +1777,54 @@ def user_emmision(request):
                 week_num += 1
         
         return week_options
+
+    office = request.user
+    devices = office.devices.all()
+    
+    # Get unread notifications count
+    unread_notifications_count = get_unread_notifications_count(office)
+
+    # Get selected day, month, year, week from request
+    selected_day = request.GET.get('selected_day')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+    selected_week = request.GET.get('selected_week')
+
+    # Auto-select latest data if no filters provided
+    if not any([selected_day, selected_month, selected_year, selected_week]):
+        latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        if latest_data['latest_date']:
+            latest_date = latest_data['latest_date']
+            temp_month = str(latest_date.month)
+            temp_year = str(latest_date.year)
+            # Generate week options for the latest date's month/year
+            week_options = get_user_week_options(devices, temp_month, temp_year)
+            # Auto-select latest week for CO2 emission page
+            if week_options:
+                selected_week = week_options[-1]['value']
+            # Keep month and year unselected
+            selected_month = None
+            selected_year = None
+
+    # Force month filtering when month is selected
+    if selected_month and not selected_day and not selected_week:
+        if not selected_year:
+            selected_year = str(dt.now().year)
+
+    # Year options: all years with data for this office
+    years_with_data = SensorReading.objects.filter(
+        device__in=devices
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
+
+    # Month options: all months with data for this office
+    months_with_data = SensorReading.objects.filter(
+        device__in=devices
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
 
     week_options = get_user_week_options(devices, selected_month, selected_year)
     
@@ -2270,6 +2270,34 @@ def mark_notifications_read(request):
         ).update(is_read=True)
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'})
+
+@login_required
+def get_user_months(request):
+    year = request.GET.get('year')
+    
+    if not year:
+        return JsonResponse({'status': 'error', 'message': 'Year required'})
+    
+    try:
+        office = request.user
+        devices = office.devices.all()
+        ExtractMonth = get_db_functions()[1]
+        
+        months_with_data = SensorReading.objects.filter(
+            device__in=devices,
+            date__year=int(year)
+        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+        
+        month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December']
+        month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+        
+        return JsonResponse({
+            'status': 'success',
+            'months': month_options
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required
 def get_user_weeks(request):

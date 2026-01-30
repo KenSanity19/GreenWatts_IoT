@@ -292,7 +292,72 @@
         window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
       }
       
+      function filterReports() {
+        const params = new URLSearchParams();
+        const week = document.getElementById('week-select').value;
+        const month = document.getElementById('month-select').value;
+        const year = document.getElementById('year-select').value;
+        
+        if (week) params.append('selected_week', week);
+        if (month) params.append('selected_month', month);
+        if (year) params.append('selected_year', year);
+        
+        window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
+      }
+      
+      function updateMonthOptions(year) {
+        fetch(`/get-user-months/?year=${year}`)
+          .then(response => response.json())
+          .then(data => {
+            const monthSelect = document.getElementById('month-select');
+            if (data.status === 'success' && monthSelect) {
+              const currentSelected = monthSelect.value;
+              monthSelect.innerHTML = '<option value="">Month</option>';
+              data.months.forEach(month => {
+                const option = document.createElement('option');
+                option.value = month.value;
+                option.textContent = month.name;
+                if (month.value === currentSelected) option.selected = true;
+                monthSelect.appendChild(option);
+              });
+            }
+          })
+          .catch(error => console.error('Error fetching months:', error));
+      }
+      
+      function resetMonthOptions() {
+        const monthSelect = document.getElementById('month-select');
+        if (monthSelect) {
+          const allMonths = {{ month_options|safe }};
+          monthSelect.innerHTML = '<option value="">Month</option>';
+          allMonths.forEach(month => {
+            const option = document.createElement('option');
+            option.value = month.value;
+            option.textContent = month.name;
+            monthSelect.appendChild(option);
+          });
+        }
+      }
+      
       document.addEventListener('DOMContentLoaded', function() {
+        const yearSelect = document.getElementById('year-select');
+        if (yearSelect) {
+          yearSelect.addEventListener('change', function() {
+            const selectedYear = yearSelect.value;
+            if (selectedYear) {
+              updateMonthOptions(selectedYear);
+            } else {
+              resetMonthOptions();
+            }
+          });
+          
+          // Filter months on page load if year is pre-selected
+          const initialYear = yearSelect.value;
+          if (initialYear) {
+            updateMonthOptions(initialYear);
+          }
+        }
+        
         document.getElementById('export-btn').addEventListener('click', function() {
           const params = new URLSearchParams();
           const week = document.getElementById('week-select').value;

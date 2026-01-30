@@ -335,8 +335,16 @@
         if (yearSelect) {
           yearSelect.addEventListener('change', function() {
             if (daySelect) daySelect.value = '';
-            const selectedMonth = monthSelect ? monthSelect.value : '';
+            
+            // Update month options based on selected year
             const selectedYear = yearSelect.value;
+            if (selectedYear) {
+              updateMonthOptions(selectedYear);
+            } else {
+              resetMonthOptions();
+            }
+            
+            const selectedMonth = monthSelect ? monthSelect.value : '';
             
             if (selectedMonth && selectedYear) {
               updateDayOptions(selectedMonth, selectedYear);
@@ -345,6 +353,38 @@
             
             updateFilters();
           });
+        }
+        
+        function updateMonthOptions(year) {
+          fetch(`/get-user-months/?year=${year}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success' && monthSelect) {
+                const currentSelected = monthSelect.value;
+                monthSelect.innerHTML = '<option value="">Month</option>';
+                data.months.forEach(month => {
+                  const option = document.createElement('option');
+                  option.value = month.value;
+                  option.textContent = month.name;
+                  if (month.value === currentSelected) option.selected = true;
+                  monthSelect.appendChild(option);
+                });
+              }
+            })
+            .catch(error => console.error('Error fetching months:', error));
+        }
+        
+        function resetMonthOptions() {
+          if (monthSelect) {
+            const allMonths = {{ month_options|safe }};
+            monthSelect.innerHTML = '<option value="">Month</option>';
+            allMonths.forEach(month => {
+              const option = document.createElement('option');
+              option.value = month.value;
+              option.textContent = month.name;
+              monthSelect.appendChild(option);
+            });
+          }
         }
         
         function updateWeekOptions(month, year) {
@@ -384,7 +424,10 @@
         
         const initialMonth = monthSelect ? monthSelect.value : '';
         const initialYear = yearSelect ? yearSelect.value : '';
-        if (initialMonth) {
+        if (initialYear) {
+          updateMonthOptions(initialYear);
+        }
+        if (initialMonth && initialYear) {
           updateDayOptions(initialMonth, initialYear);
           updateWeekOptions(initialMonth, initialYear);
         }

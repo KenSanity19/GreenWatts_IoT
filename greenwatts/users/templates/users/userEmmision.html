@@ -303,9 +303,55 @@
           window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
         }
         
+        function updateMonthOptions(year) {
+          fetch(`/get-user-months/?year=${year}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success' && monthSelect) {
+                const currentSelected = monthSelect.value;
+                monthSelect.innerHTML = '<option value="">Month</option>';
+                data.months.forEach(month => {
+                  const option = document.createElement('option');
+                  option.value = month.value;
+                  option.textContent = month.name;
+                  if (month.value === currentSelected) option.selected = true;
+                  monthSelect.appendChild(option);
+                });
+              }
+            })
+            .catch(error => console.error('Error fetching months:', error));
+        }
+        
+        function resetMonthOptions() {
+          if (monthSelect) {
+            const allMonths = {{ month_options|safe }};
+            monthSelect.innerHTML = '<option value="">Month</option>';
+            allMonths.forEach(month => {
+              const option = document.createElement('option');
+              option.value = month.value;
+              option.textContent = month.name;
+              monthSelect.appendChild(option);
+            });
+          }
+        }
+        
         weekSelect.addEventListener('change', updateFilters);
         monthSelect.addEventListener('change', updateFilters);
-        yearSelect.addEventListener('change', updateFilters);
+        yearSelect.addEventListener('change', function() {
+          const selectedYear = yearSelect.value;
+          if (selectedYear) {
+            updateMonthOptions(selectedYear);
+          } else {
+            resetMonthOptions();
+          }
+          updateFilters();
+        });
+        
+        // Filter months on page load if year is pre-selected
+        const initialYear = yearSelect.value;
+        if (initialYear) {
+          updateMonthOptions(initialYear);
+        }
       });
     </script>
     <script src="{% static 'userJs/sidebarToggle.js' %}"></script>
