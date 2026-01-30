@@ -259,7 +259,7 @@ def dashboard(request):
         })
 
     # Change in cost data - filter consistently based on level
-    if level == 'month':
+    if level == 'month' and selected_month and selected_year:
         # Compare current month with previous month
         current_year = int(selected_year)
         current_month = int(selected_month)
@@ -355,7 +355,7 @@ def dashboard(request):
     }
 
     # Carbon footprint calculation based on level
-    if level == 'month':
+    if level == 'month' and selected_month and selected_year:
         # For month: predict based on current month's daily average
         current_year = int(selected_year)
         current_month = int(selected_month)
@@ -1314,48 +1314,38 @@ def user_energy_cost(request):
         from django.db.models.functions import ExtractYear, ExtractMonth
         
         if selected_month and selected_year:
-            months = [{'month': int(selected_month), 'year': int(selected_year)}]
-        else:
-            months = SensorReading.objects.filter(
-                device__in=devices
-            ).annotate(
-                month=ExtractMonth('date'),
-                year=ExtractYear('date')
-            ).values('month', 'year').distinct().order_by('year', 'month')
-        
-        week_options = []
-        for m in months:
-            year = m['year']
-            month = m['month']
+            year = int(selected_year)
+            month = int(selected_month)
             
             dates_in_month = SensorReading.objects.filter(
-                device__in=devices
-            ).filter(
+                device__in=devices,
                 date__year=year,
                 date__month=month
             ).dates('date', 'day')
             
             if not dates_in_month:
-                continue
-            
-            min_date = min(dates_in_month)
-            max_date = max(dates_in_month)
+                return []
             
             first_day = date(year, month, 1)
-            start_of_month = first_day
+            week_options = []
             week_num = 1
-            current_start = start_of_month
-            while current_start <= max_date:
-                current_end = min(current_start + timedelta(days=6), max_date)
-                if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+            current_start = first_day
+            
+            while current_start.month == month:
+                week_end = current_start + timedelta(days=6)
+                if any(d >= current_start and d <= week_end for d in dates_in_month):
                     week_options.append({
                         'value': current_start.strftime('%Y-%m-%d'),
                         'name': f"Week {week_num}"
                     })
+                    week_num += 1
                 current_start += timedelta(days=7)
-                week_num += 1
-        
-        return week_options
+                if current_start.month != month:
+                    break
+            
+            return week_options
+        else:
+            return []
 
     office = request.user
     devices = office.devices.all()
@@ -1374,16 +1364,13 @@ def user_energy_cost(request):
         latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
         if latest_data['latest_date']:
             latest_date = latest_data['latest_date']
-            temp_month = str(latest_date.month)
-            temp_year = str(latest_date.year)
+            selected_month = str(latest_date.month)
+            selected_year = str(latest_date.year)
             # Generate week options for the latest date's month/year
-            week_options = get_user_week_options(devices, temp_month, temp_year)
+            week_options = get_user_week_options(devices, selected_month, selected_year)
             # Auto-select latest week for energy costs page
             if week_options:
                 selected_week = week_options[-1]['value']
-            # Keep month and year unselected
-            selected_month = None
-            selected_year = None
     
     # Force month filtering when month is selected
     if selected_month and not selected_day and not selected_week:
@@ -1396,10 +1383,16 @@ def user_energy_cost(request):
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
     
-    # Month options: all months with data for this office
-    months_with_data = SensorReading.objects.filter(
-        device__in=devices
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    # Month options: filtered by year if selected
+    if selected_year:
+        months_with_data = SensorReading.objects.filter(
+            device__in=devices,
+            date__year=int(selected_year)
+        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    else:
+        months_with_data = SensorReading.objects.filter(
+            device__in=devices
+        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
     
     month_names = ['January', 'February', 'March', 'April', 'May', 'June',
                    'July', 'August', 'September', 'October', 'November', 'December']
@@ -1735,48 +1728,38 @@ def user_emmision(request):
         from django.db.models.functions import ExtractYear, ExtractMonth
         
         if selected_month and selected_year:
-            months = [{'month': int(selected_month), 'year': int(selected_year)}]
-        else:
-            months = SensorReading.objects.filter(
-                device__in=devices
-            ).annotate(
-                month=ExtractMonth('date'),
-                year=ExtractYear('date')
-            ).values('month', 'year').distinct().order_by('year', 'month')
-        
-        week_options = []
-        for m in months:
-            year = m['year']
-            month = m['month']
+            year = int(selected_year)
+            month = int(selected_month)
             
             dates_in_month = SensorReading.objects.filter(
-                device__in=devices
-            ).filter(
+                device__in=devices,
                 date__year=year,
                 date__month=month
             ).dates('date', 'day')
             
             if not dates_in_month:
-                continue
-            
-            min_date = min(dates_in_month)
-            max_date = max(dates_in_month)
+                return []
             
             first_day = date(year, month, 1)
-            start_of_month = first_day
+            week_options = []
             week_num = 1
-            current_start = start_of_month
-            while current_start <= max_date:
-                current_end = min(current_start + timedelta(days=6), max_date)
-                if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+            current_start = first_day
+            
+            while current_start.month == month:
+                week_end = current_start + timedelta(days=6)
+                if any(d >= current_start and d <= week_end for d in dates_in_month):
                     week_options.append({
                         'value': current_start.strftime('%Y-%m-%d'),
                         'name': f"Week {week_num}"
                     })
+                    week_num += 1
                 current_start += timedelta(days=7)
-                week_num += 1
-        
-        return week_options
+                if current_start.month != month:
+                    break
+            
+            return week_options
+        else:
+            return []
 
     office = request.user
     devices = office.devices.all()
@@ -1795,16 +1778,13 @@ def user_emmision(request):
         latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
         if latest_data['latest_date']:
             latest_date = latest_data['latest_date']
-            temp_month = str(latest_date.month)
-            temp_year = str(latest_date.year)
+            selected_month = str(latest_date.month)
+            selected_year = str(latest_date.year)
             # Generate week options for the latest date's month/year
-            week_options = get_user_week_options(devices, temp_month, temp_year)
+            week_options = get_user_week_options(devices, selected_month, selected_year)
             # Auto-select latest week for CO2 emission page
             if week_options:
                 selected_week = week_options[-1]['value']
-            # Keep month and year unselected
-            selected_month = None
-            selected_year = None
 
     # Force month filtering when month is selected
     if selected_month and not selected_day and not selected_week:
@@ -1817,10 +1797,16 @@ def user_emmision(request):
     ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
     year_options = [str(y) for y in years_with_data]
 
-    # Month options: all months with data for this office
-    months_with_data = SensorReading.objects.filter(
-        device__in=devices
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    # Month options: filtered by year if selected
+    if selected_year:
+        months_with_data = SensorReading.objects.filter(
+            device__in=devices,
+            date__year=int(selected_year)
+        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    else:
+        months_with_data = SensorReading.objects.filter(
+            device__in=devices
+        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
     
     month_names = ['January', 'February', 'March', 'April', 'May', 'June',
                    'July', 'August', 'September', 'October', 'November', 'December']
@@ -2313,48 +2299,38 @@ def get_user_weeks(request):
             from datetime import date, timedelta
 
             if selected_month and selected_year:
-                months = [{'month': int(selected_month), 'year': int(selected_year)}]
-            else:
-                months = SensorReading.objects.filter(
-                    device__in=devices
-                ).annotate(
-                    month=ExtractMonth('date'),
-                    year=ExtractYear('date')
-                ).values('month', 'year').distinct().order_by('year', 'month')
-
-            week_options = []
-            for m in months:
-                year = m['year']
-                month = m['month']
-
+                year = int(selected_year)
+                month = int(selected_month)
+                
                 dates_in_month = SensorReading.objects.filter(
-                    device__in=devices
-                ).filter(
+                    device__in=devices,
                     date__year=year,
                     date__month=month
                 ).dates('date', 'day')
-
+                
                 if not dates_in_month:
-                    continue
-
-                min_date = min(dates_in_month)
-                max_date = max(dates_in_month)
-
+                    return []
+                
                 first_day = date(year, month, 1)
-                start_of_month = first_day
+                week_options = []
                 week_num = 1
-                current_start = start_of_month
-                while current_start <= max_date:
-                    current_end = min(current_start + timedelta(days=6), max_date)
-                    if week_num == 1 or any(d >= current_start and d <= current_end for d in dates_in_month):
+                current_start = first_day
+                
+                while current_start.month == month:
+                    week_end = current_start + timedelta(days=6)
+                    if any(d >= current_start and d <= week_end for d in dates_in_month):
                         week_options.append({
                             'value': current_start.strftime('%Y-%m-%d'),
                             'name': f"Week {week_num}"
                         })
+                        week_num += 1
                     current_start += timedelta(days=7)
-                    week_num += 1
-
-            return week_options
+                    if current_start.month != month:
+                        break
+                
+                return week_options
+            else:
+                return []
         
         week_options = get_user_week_options(devices, month, year)
         

@@ -278,16 +278,19 @@
           .then(response => response.json())
           .then(data => {
             const monthSelect = document.getElementById('month-select');
+            const weekSelect = document.getElementById('week-select');
             if (data.status === 'success' && monthSelect) {
-              const currentSelected = monthSelect.value;
               monthSelect.innerHTML = '<option value="">Month</option>';
               data.months.forEach(month => {
                 const option = document.createElement('option');
                 option.value = month.value;
                 option.textContent = month.name;
-                if (month.value === currentSelected) option.selected = true;
                 monthSelect.appendChild(option);
               });
+              // Clear week options when year changes
+              if (weekSelect) {
+                weekSelect.innerHTML = '<option value="">Week</option>';
+              }
             }
           })
           .catch(error => console.error('Error fetching months:', error));
@@ -317,6 +320,7 @@
             } else {
               resetMonthOptions();
             }
+            filterEnergyCost();
           });
           
           // Filter months on page load if year is pre-selected
