@@ -72,30 +72,42 @@ def get_valid_office_ids():
     return set(Office.objects.values_list('office_id', flat=True))
 
 def get_year_options(valid_office_ids):
-    """Get year options: all years with data"""
-    years_with_data = SensorReading.objects.filter(
-        device__office__office_id__in=valid_office_ids
-    ).exclude(
-        device__office__name='DS'
-    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
-    return [str(y) for y in years_with_data]
+    """Get year options: all years with data (cached)"""
+    from django.core.cache import cache
+    cache_key = f"year_options_{hash(tuple(sorted(valid_office_ids)))}"
+    years = cache.get(cache_key)
+    if years is None:
+        years_with_data = SensorReading.objects.filter(
+            device__office__office_id__in=valid_office_ids
+        ).exclude(
+            device__office__name='DS'
+        ).values_list('date__year', flat=True).distinct().order_by('date__year')
+        years = [str(y) for y in years_with_data]
+        cache.set(cache_key, years, 300)  # Cache for 5 minutes
+    return years
 
 def get_month_options(valid_office_ids, selected_year=None):
-    """Get month options: all months with data, or filtered by year if selected"""
-    if selected_year:
-        months_with_data = SensorReading.objects.filter(
-            date__year=int(selected_year),
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-    else:
-        months_with_data = SensorReading.objects.filter(
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-    return [{'value': str(m), 'name': MONTH_NAMES[m-1]} for m in months_with_data]
+    """Get month options: all months with data, or filtered by year if selected (cached)"""
+    from django.core.cache import cache
+    cache_key = f"month_options_{hash(tuple(sorted(valid_office_ids)))}_{selected_year or 'all'}"
+    months = cache.get(cache_key)
+    if months is None:
+        if selected_year:
+            months_with_data = SensorReading.objects.filter(
+                date__year=int(selected_year),
+                device__office__office_id__in=valid_office_ids
+            ).exclude(
+                device__office__name='DS'
+            ).values_list('date__month', flat=True).distinct().order_by('date__month')
+        else:
+            months_with_data = SensorReading.objects.filter(
+                device__office__office_id__in=valid_office_ids
+            ).exclude(
+                device__office__name='DS'
+            ).values_list('date__month', flat=True).distinct().order_by('date__month')
+        months = [{'value': str(m), 'name': MONTH_NAMES[m-1]} for m in months_with_data]
+        cache.set(cache_key, months, 300)  # Cache for 5 minutes
+    return months
 
 def get_day_options(valid_office_ids, selected_month=None, selected_year=None):
     """Get day options: all days with data, or filtered by month/year if selected"""
@@ -154,8 +166,8 @@ def determine_filter_level(selected_day, selected_month, selected_year, selected
         filter_kwargs = latest_data['filter_kwargs']
         if filter_kwargs:
             selected_date = latest_data['selected_date']
-            selected_month = latest_data['selected_month']
-            selected_year = latest_data['selected_year']
+            selected_month = None  # Don't pre-select month when using latest date
+            selected_year = latest_data['selected_year']  # Show year for month filtering
             level = 'day'
 
     return filter_kwargs, selected_date, level, selected_month, selected_year
@@ -169,8 +181,8 @@ def get_latest_date_filter():
             'filter_kwargs': {'date': latest_date},
             'selected_date': latest_date,
             'selected_day': latest_date.strftime('%m/%d/%Y'),
-            'selected_month': str(latest_date.month),
-            'selected_year': str(latest_date.year)
+            'selected_month': None,  # Don't pre-select month when using latest date
+            'selected_year': str(latest_date.year)  # Show year for month filtering
         }
     return {'filter_kwargs': {}}
 
@@ -310,6 +322,10 @@ def admin_dashboard(request):
     # Auto-select latest day if no filters provided
     if not selected_day and selected_date:
         selected_day = selected_date.strftime('%m/%d/%Y')
+        # Don't pre-select month but show year when auto-selecting latest day
+        if not request.GET.get('selected_month') and not request.GET.get('selected_year'):
+            selected_month = None
+            selected_year = str(selected_date.year)
 
     # Get sensor readings for historical rate calculations
     sensor_readings = SensorReading.objects.filter(
@@ -688,6 +704,10 @@ def office_usage(request):
     # Auto-select latest day if no filters provided
     if not selected_day and selected_date:
         selected_day = selected_date.strftime('%m/%d/%Y')
+        # Don't pre-select month but show year when auto-selecting latest day
+        if not request.GET.get('selected_month') and not request.GET.get('selected_year'):
+            selected_month = None
+            selected_year = str(selected_date.year)
 
     # Week options: show week containing selected day, or filtered by month/year
     if selected_day and not selected_week:
@@ -1022,6 +1042,10 @@ def admin_reports(request):
     # Auto-select latest day if no filters provided
     if not selected_day and selected_date:
         selected_day = selected_date.strftime('%m/%d/%Y')
+        # Don't pre-select month but show year when auto-selecting latest day
+        if not request.GET.get('selected_month') and not request.GET.get('selected_year'):
+            selected_month = None
+            selected_year = str(selected_date.year)
 
     # Get current settings
     cost_settings = CostSettings.get_current_rate()
@@ -1186,9 +1210,19 @@ def admin_costs(request):
     # Determine filter date range
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
 
-    # Auto-select latest day if no filters provided
-    if not selected_day and selected_date:
+    # Week options: filtered by selected month/year if available
+    week_options = get_week_options(valid_office_ids, selected_month, selected_year)
+
+    # Auto-select latest day and week if no filters provided
+    if not selected_day and selected_date and not any([request.GET.get('selected_day'), request.GET.get('selected_month'), request.GET.get('selected_year'), request.GET.get('selected_week')]):
         selected_day = selected_date.strftime('%m/%d/%Y')
+        selected_month = str(selected_date.month)
+        selected_year = str(selected_date.year)
+        # Generate week options for the latest date's month/year
+        week_options = get_week_options(valid_office_ids, selected_month, selected_year)
+        # Auto-select latest week for energy costs page
+        if week_options:
+            selected_week = week_options[-1]['value']
 
     # Week options: filtered by selected month/year if available
     week_options = get_week_options(valid_office_ids, selected_month, selected_year)
@@ -1498,9 +1532,19 @@ def carbon_emission(request):
     # Determine filter date range
     filter_kwargs, selected_date, level, selected_month, selected_year = determine_filter_level(selected_day, selected_month, selected_year, selected_week)
     
-    # Auto-select latest day if no filters provided
-    if not selected_day and selected_date:
+    # Week options: filtered by selected month/year if available
+    week_options = get_week_options(valid_office_ids, selected_month, selected_year)
+
+    # Auto-select latest day and week if no filters provided
+    if not selected_day and selected_date and not any([request.GET.get('selected_day'), request.GET.get('selected_month'), request.GET.get('selected_year'), request.GET.get('selected_week')]):
         selected_day = selected_date.strftime('%m/%d/%Y')
+        selected_month = str(selected_date.month)
+        selected_year = str(selected_date.year)
+        # Generate week options for the latest date's month/year
+        week_options = get_week_options(valid_office_ids, selected_month, selected_year)
+        # Auto-select latest week for CO2 emission page
+        if week_options:
+            selected_week = week_options[-1]['value']
     
     # Get current date for calculations
     now = timezone.now().date()
@@ -1991,16 +2035,22 @@ def get_days(request):
         return JsonResponse({'status': 'error', 'message': 'Month and year required'})
     
     try:
-        valid_office_ids = set(Office.objects.values_list('office_id', flat=True))
-        days = SensorReading.objects.filter(
-            date__year=int(year),
-            date__month=int(month),
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).dates('date', 'day').order_by('-date')
+        from django.core.cache import cache
+        valid_office_ids = get_valid_office_ids()
+        cache_key = f"day_options_{month}_{year}_{hash(tuple(sorted(valid_office_ids)))}"
+        day_options = cache.get(cache_key)
         
-        day_options = [d.strftime('%m/%d/%Y') for d in days]
+        if day_options is None:
+            days = SensorReading.objects.filter(
+                date__year=int(year),
+                date__month=int(month),
+                device__office__office_id__in=valid_office_ids
+            ).exclude(
+                device__office__name='DS'
+            ).values_list('date', flat=True).distinct().order_by('-date')
+            
+            day_options = [d.strftime('%m/%d/%Y') for d in days]
+            cache.set(cache_key, day_options, 300)  # Cache for 5 minutes
         
         return JsonResponse({
             'status': 'success',
@@ -2087,21 +2137,12 @@ def get_weeks(request):
 @admin_required
 def get_months(request):
     year = request.GET.get('year')
-    
     if not year:
         return JsonResponse({'status': 'error', 'message': 'Year required'})
     
     try:
         valid_office_ids = get_valid_office_ids()
-        months_with_data = SensorReading.objects.filter(
-            date__year=int(year),
-            device__office__office_id__in=valid_office_ids
-        ).exclude(
-            device__office__name='DS'
-        ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-        
-        month_options = [{'value': str(m), 'name': MONTH_NAMES[m-1]} for m in months_with_data]
-        
+        month_options = get_month_options(valid_office_ids, year)
         return JsonResponse({
             'status': 'success',
             'months': month_options

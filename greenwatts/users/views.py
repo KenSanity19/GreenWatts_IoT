@@ -188,8 +188,8 @@ def dashboard(request):
             filter_kwargs = {'date': latest_date}
             selected_date = latest_date
             selected_day = latest_date.strftime('%m/%d/%Y')
-            selected_month = str(latest_date.month)
-            selected_year = str(latest_date.year)
+            selected_month = None  # Don't pre-select month when using latest date
+            selected_year = str(latest_date.year)  # Show year for month filtering
             level = 'day'
 
     # Get readings and calculate with historical rates
@@ -622,9 +622,8 @@ def office_usage(request):
         if latest_date:
             filter_kwargs = {'date': latest_date}
             selected_date = latest_date
-            selected_day = latest_date.strftime('%m/%d/%Y')
-            selected_month = str(latest_date.month)
-            selected_year = str(latest_date.year)
+            selected_month = None  # Don't pre-select month when using latest date
+            selected_year = str(latest_date.year)  # Show year for month filtering
             level = 'day'
 
     # Get current office data with historical rates
@@ -1030,8 +1029,8 @@ def user_reports(request):
             if latest_date:
                 filter_kwargs = {'date': latest_date}
                 selected_date = latest_date
-                selected_month = str(latest_date.month)
-                selected_year = str(latest_date.year)
+                selected_month = None  # Don't pre-select month when using latest date
+                selected_year = str(latest_date.year)  # Show year for month filtering
                 level = 'day'
 
         return filter_kwargs, selected_date, level, selected_month, selected_year
@@ -1322,8 +1321,16 @@ def user_energy_cost(request):
         latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
         if latest_data['latest_date']:
             latest_date = latest_data['latest_date']
-            selected_month = str(latest_date.month)
-            selected_year = str(latest_date.year)
+            temp_month = str(latest_date.month)
+            temp_year = str(latest_date.year)
+            # Generate week options for the latest date's month/year
+            week_options = get_user_week_options(devices, temp_month, temp_year)
+            # Auto-select latest week for energy costs page
+            if week_options:
+                selected_week = week_options[-1]['value']
+            # Keep month and year unselected
+            selected_month = None
+            selected_year = None
     
     # Force month filtering when month is selected
     if selected_month and not selected_day and not selected_week:
@@ -1449,8 +1456,8 @@ def user_energy_cost(request):
             if latest_date:
                 filter_kwargs = {'date': latest_date}
                 selected_date = latest_date
-                selected_month = str(latest_date.month)
-                selected_year = str(latest_date.year)
+                selected_month = None  # Don't pre-select month when using latest date
+                selected_year = str(latest_date.year)  # Show year for month filtering
                 level = 'day'
         
         return filter_kwargs, selected_date, level, selected_month, selected_year
@@ -1735,8 +1742,16 @@ def user_emmision(request):
         latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
         if latest_data['latest_date']:
             latest_date = latest_data['latest_date']
-            selected_month = str(latest_date.month)
-            selected_year = str(latest_date.year)
+            temp_month = str(latest_date.month)
+            temp_year = str(latest_date.year)
+            # Generate week options for the latest date's month/year
+            week_options = get_user_week_options(devices, temp_month, temp_year)
+            # Auto-select latest week for CO2 emission page
+            if week_options:
+                selected_week = week_options[-1]['value']
+            # Keep month and year unselected
+            selected_month = None
+            selected_year = None
 
     # Force month filtering when month is selected
     if selected_month and not selected_day and not selected_week:
@@ -1850,8 +1865,8 @@ def user_emmision(request):
             if latest_date:
                 filter_kwargs = {'date': latest_date}
                 selected_date = latest_date
-                selected_month = str(latest_date.month)
-                selected_year = str(latest_date.year)
+                selected_month = None  # Don't pre-select month when using latest date
+                selected_year = str(latest_date.year)  # Show year for month filtering
                 level = 'day'
         
         return filter_kwargs, selected_date, level, selected_month, selected_year
