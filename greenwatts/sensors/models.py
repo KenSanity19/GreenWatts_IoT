@@ -16,6 +16,29 @@ class Device(models.Model):
     def __str__(self):
         return self.appliance_type if self.appliance_type else f"Device {self.device_id}"
 
+class EnergyAggregation(models.Model):
+    device = models.ForeignKey(Device, on_delete=models.CASCADE)
+    date = models.DateField()
+    period_type = models.CharField(max_length=10, choices=[
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'), 
+        ('monthly', 'Monthly'),
+        ('yearly', 'Yearly')
+    ])
+    total_energy_kwh = models.FloatField(default=0)
+    peak_power_w = models.FloatField(default=0)
+    total_cost = models.FloatField(default=0)
+    total_co2 = models.FloatField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = "tbl_energy_aggregation"
+        unique_together = ['device', 'date', 'period_type']
+        indexes = [
+            models.Index(fields=['device', 'period_type', 'date']),
+            models.Index(fields=['period_type', 'date']),
+        ]
+
 class SensorReading(models.Model):
     reading_id = models.AutoField(primary_key=True)
     date = models.DateField() 
@@ -31,6 +54,8 @@ class SensorReading(models.Model):
         indexes = [
             models.Index(fields=['device', 'date']),
             models.Index(fields=['date']),
+            models.Index(fields=['device', '-date']),
+            models.Index(fields=['date', 'device']),
         ]
 
     def __str__(self):

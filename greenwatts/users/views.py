@@ -97,9 +97,10 @@ def dashboard(request):
     timezone, dt, timedelta, date = get_timezone_utils()
     from calendar import monthrange
     from ..sensors.models import SensorReading
+    from ..sensors.query_optimizers import QueryOptimizer
 
     office = request.user
-    devices = office.devices.all()
+    devices = office.devices.select_related().prefetch_related('sensor_readings')
     
     # Get unread notifications count and notifications data
     unread_notifications_count = get_unread_notifications_count(office)
@@ -192,16 +193,20 @@ def dashboard(request):
             selected_year = str(latest_date.year)  # Show year for month filtering
             level = 'day'
 
-    # Get readings and calculate with historical rates
-    filtered_readings = SensorReading.objects.filter(
-        device__in=devices,
-        **filter_kwargs
-    )
+    # Get readings and calculate with historical rates using ultra-fast query
+    aggregated_data = QueryOptimizer.get_fast_aggregated_data(devices, filter_kwargs, level)
+    energy_usage = aggregated_data['total_energy'] or 0
+    cost_predicted = aggregated_data['total_cost'] or 0
+    co2_emissions = aggregated_data['total_co2'] or 0
     
-    energy_usage = filtered_readings.aggregate(total=Sum('total_energy_kwh'))['total'] or 0
-    metrics = calculate_energy_metrics_with_historical_rates(filtered_readings)
-    cost_predicted = metrics['total_cost']
-    co2_emissions = metrics['total_co2']
+    # Only calculate historical rates if pre-computed data is missing
+    if cost_predicted == 0 and energy_usage > 0:
+        filtered_readings = SensorReading.objects.filter(
+            device__in=devices, **filter_kwargs
+        ).only('date', 'total_energy_kwh')
+        metrics = calculate_energy_metrics_with_historical_rates(filtered_readings)
+        cost_predicted = metrics['total_cost']
+        co2_emissions = metrics['total_co2']
 
     import random
 
