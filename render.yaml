@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: greenwatts
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT --workers 1 --max-requests 100 --max-requests-jitter 10 --timeout 120 --preload greenwatts.wsgi:application"
+    envVars:
+      - key: DEBUG
+        value: False
+      - key: PYTHON_VERSION
+        value: 3.11.0

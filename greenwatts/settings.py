@@ -29,7 +29,7 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ.get('SECRET_KEY', 'fallbacksecretkey')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['.onrender.com', 'localhost', '127.0.0.1']
 
@@ -89,7 +89,7 @@ DATABASES = {
             'DATABASE_URL',
             'postgresql://postgres.sfweuxojewjwxyzomyal:Greenwatts!123@aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require'
         ),
-        conn_max_age=600,
+        conn_max_age=0,  # Don't keep connections open to save memory
         ssl_require=True
     )
 }
@@ -176,6 +176,16 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@greenwatts.com')
 
+# Memory optimization settings
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440  # 2.5MB
+
+# Gunicorn settings for Render
+GUNICORN_WORKERS = 1
+GUNICORN_MAX_REQUESTS = 100
+GUNICORN_MAX_REQUESTS_JITTER = 10
+GUNICORN_TIMEOUT = 120
+
 # Logging configuration
 LOGGING = {
     'version': 1,
@@ -187,6 +197,6 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',
+        'level': 'WARNING' if not DEBUG else 'INFO',
     },
 }
