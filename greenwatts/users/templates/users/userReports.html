@@ -64,18 +64,21 @@
       <!-- Filters -->
       <div class="filters">
         <select id="week-select" onchange="filterReports()">
+          {% if not selected_week %}
+          <option value="">Week</option>
+          {% endif %}
           {% for option in week_options %}
           <option value="{{ option.value }}" {% if option.value == selected_week %}selected{% endif %}>{{ option.name }}</option>
           {% endfor %}
         </select>
         <select id="month-select" onchange="filterReports()">
-          {% for option in month_options %}
-          <option value="{{ option.value }}" {% if option.value == selected_month %}selected{% endif %}>{{ option.name }}</option>
+          {% for month in month_options %}
+          <option value="{{ month.value }}" {% if month.value == selected_month %}selected{% endif %}>{{ month.name }}</option>
           {% endfor %}
         </select>
         <select id="year-select" onchange="filterReports()">
-          {% for option in year_options %}
-          <option value="{{ option }}" {% if option == selected_year %}selected{% endif %}>{{ option }}</option>
+          {% for year in year_options %}
+          <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
           {% endfor %}
         </select>
 
@@ -254,6 +257,13 @@
                 padding: 20,
                 font: {
                   size: 12
+                },
+                callback: function(value, index, values) {
+                  const label = chartLabels[index];
+                  if (Array.isArray(label)) {
+                    return [label[0], label[1]];
+                  }
+                  return label;
                 }
               }
             }
@@ -285,22 +295,9 @@
         const month = document.getElementById('month-select').value;
         const year = document.getElementById('year-select').value;
         
-        if (week) params.append('selected_week', week);
-        if (month) params.append('selected_month', month);
-        if (year) params.append('selected_year', year);
-        
-        window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
-      }
-      
-      function filterReports() {
-        const params = new URLSearchParams();
-        const week = document.getElementById('week-select').value;
-        const month = document.getElementById('month-select').value;
-        const year = document.getElementById('year-select').value;
-        
-        if (week) params.append('selected_week', week);
-        if (month) params.append('selected_month', month);
-        if (year) params.append('selected_year', year);
+        if (week) params.set('selected_week', week);
+        if (month) params.set('selected_month', month);
+        if (year) params.set('selected_year', year);
         
         window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
       }
@@ -310,19 +307,58 @@
           .then(response => response.json())
           .then(data => {
             const monthSelect = document.getElementById('month-select');
+            const weekSelect = document.getElementById('week-select');
             if (data.status === 'success' && monthSelect) {
-              const currentSelected = monthSelect.value;
               monthSelect.innerHTML = '<option value="">Month</option>';
               data.months.forEach(month => {
                 const option = document.createElement('option');
                 option.value = month.value;
                 option.textContent = month.name;
-                if (month.value === currentSelected) option.selected = true;
                 monthSelect.appendChild(option);
               });
+              // Clear week options when year changes
+              if (weekSelect) {
+                weekSelect.innerHTML = '<option value="">Week</option>';
+              }
             }
           })
           .catch(error => console.error('Error fetching months:', error));
+      }
+      
+      function updateWeekOptions(year, month) {
+        if (!year || !month) {
+          const weekSelect = document.getElementById('week-select');
+          if (weekSelect) {
+            weekSelect.innerHTML = '<option value="">Week</option>';
+          }
+          return;
+        }
+        
+        fetch(`/get-user-weeks/?year=${year}&month=${month}`)
+          .then(response => response.json())
+          .then(data => {
+            const weekSelect = document.getElementById('week-select');
+            if (data.status === 'success' && weekSelect) {
+              const currentSelected = weekSelect.value;
+              weekSelect.innerHTML = '<option value="">Week</option>';
+              data.weeks.forEach(week => {
+                const option = document.createElement('option');
+                option.value = week.value;
+                option.textContent = week.name;
+                weekSelect.appendChild(option);
+              });
+              
+              // Auto-select latest week if no week was previously selected
+              if (!currentSelected && data.weeks.length > 0) {
+                const latestWeek = data.weeks[data.weeks.length - 1];
+                weekSelect.value = latestWeek.value;
+              } else if (currentSelected) {
+                // Try to restore previous selection
+                weekSelect.value = currentSelected;
+              }
+            }
+          })
+          .catch(error => console.error('Error fetching weeks:', error));
       }
       
       function resetMonthOptions() {
@@ -341,6 +377,8 @@
       
       document.addEventListener('DOMContentLoaded', function() {
         const yearSelect = document.getElementById('year-select');
+        const monthSelect = document.getElementById('month-select');
+        
         if (yearSelect) {
           yearSelect.addEventListener('change', function() {
             const selectedYear = yearSelect.value;
@@ -355,6 +393,21 @@
           const initialYear = yearSelect.value;
           if (initialYear) {
             updateMonthOptions(initialYear);
+          }
+        }
+        
+        if (monthSelect) {
+          monthSelect.addEventListener('change', function() {
+            const selectedYear = yearSelect ? yearSelect.value : '';
+            const selectedMonth = monthSelect.value;
+            updateWeekOptions(selectedYear, selectedMonth);
+          });
+          
+          // Update weeks on page load if month is pre-selected
+          const initialYear = yearSelect ? yearSelect.value : '';
+          const initialMonth = monthSelect.value;
+          if (initialYear && initialMonth) {
+            updateWeekOptions(initialYear, initialMonth);
           }
         }
         
