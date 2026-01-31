@@ -133,6 +133,8 @@ STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     BASE_DIR / "greenwatts" / "images",
+    BASE_DIR / "greenwatts" / "users" / "static",
+    BASE_DIR / "greenwatts" / "adminpanel" / "static",
 ]
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
