@@ -63,20 +63,30 @@
 
       <!-- Filters -->
       <div class="filters">
-        <select id="week-select" onchange="filterReports()">
+        <select id="week-select">
           {% if not selected_week %}
           <option value="">Week</option>
+          {% else %}
+          <option value="{{ selected_week }}">{{ selected_week_name|default:"Week" }}</option>
           {% endif %}
           {% for option in week_options %}
-          <option value="{{ option.value }}" {% if option.value == selected_week %}selected{% endif %}>{{ option.name }}</option>
+          {% if option.value != selected_week %}
+          <option value="{{ option.value }}">{{ option.name }}</option>
+          {% endif %}
           {% endfor %}
         </select>
-        <select id="month-select" onchange="filterReports()">
+        <select id="month-select">
+          {% if not selected_month %}
+          <option value="">Month</option>
+          {% endif %}
           {% for month in month_options %}
           <option value="{{ month.value }}" {% if month.value == selected_month %}selected{% endif %}>{{ month.name }}</option>
           {% endfor %}
         </select>
-        <select id="year-select" onchange="filterReports()">
+        <select id="year-select">
+          {% if not selected_year %}
+          <option value="">Year</option>
+          {% endif %}
           {% for year in year_options %}
           <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
           {% endfor %}
@@ -138,7 +148,7 @@
       <div class="chart-frame">
         <div class="chart-calendar-layout">
           <div class="chart-container">
-            <h2 class="chart-title">Energy Usage Trend</h2>
+            <h2 class="chart-title">Energy Usage Trend{% if level == 'year' %} - {{ selected_year }}{% elif level == 'month' %} - {% for month in month_options %}{% if month.value == selected_month %}{{ month.name }} {{ selected_year }}{% endif %}{% endfor %}{% elif level == 'week' %} - Week{% elif selected_date %} - {{ selected_date|date:"F d, Y" }}{% endif %}</h2>
             <div class="chart-inner">
               <canvas id="energyChart" style="height: 400px; width: 100%;"></canvas>
             </div>
@@ -295,9 +305,19 @@
         const month = document.getElementById('month-select').value;
         const year = document.getElementById('year-select').value;
         
-        if (week) params.set('selected_week', week);
-        if (month) params.set('selected_month', month);
-        if (year) params.set('selected_year', year);
+        // If only year is selected, clear month and week
+        if (year && !month && !week) {
+          params.set('selected_year', year);
+        }
+        // If only month is selected, clear week and year
+        else if (month && !year && !week) {
+          params.set('selected_month', month);
+        }
+        else {
+          if (week) params.set('selected_week', week);
+          if (month) params.set('selected_month', month);
+          if (year) params.set('selected_year', year);
+        }
         
         window.location.href = params.toString() ? '?' + params.toString() : window.location.pathname;
       }
@@ -309,11 +329,15 @@
             const monthSelect = document.getElementById('month-select');
             const weekSelect = document.getElementById('week-select');
             if (data.status === 'success' && monthSelect) {
+              const currentSelected = monthSelect.value;
               monthSelect.innerHTML = '<option value="">Month</option>';
               data.months.forEach(month => {
                 const option = document.createElement('option');
                 option.value = month.value;
                 option.textContent = month.name;
+                if (month.value === currentSelected) {
+                  option.selected = true;
+                }
                 monthSelect.appendChild(option);
               });
               // Clear week options when year changes
@@ -350,8 +374,7 @@
               
               // Auto-select latest week if no week was previously selected
               if (!currentSelected && data.weeks.length > 0) {
-                const latestWeek = data.weeks[data.weeks.length - 1];
-                weekSelect.value = latestWeek.value;
+                // Don't auto-select when filtering by month
               } else if (currentSelected) {
                 // Try to restore previous selection
                 weekSelect.value = currentSelected;
@@ -364,12 +387,16 @@
       function resetMonthOptions() {
         const monthSelect = document.getElementById('month-select');
         if (monthSelect) {
+          const currentSelected = monthSelect.value;
           const allMonths = {{ month_options|safe }};
           monthSelect.innerHTML = '<option value="">Month</option>';
           allMonths.forEach(month => {
             const option = document.createElement('option');
             option.value = month.value;
             option.textContent = month.name;
+            if (month.value === currentSelected) {
+              option.selected = true;
+            }
             monthSelect.appendChild(option);
           });
         }
@@ -384,6 +411,13 @@
             const selectedYear = yearSelect.value;
             if (selectedYear) {
               updateMonthOptions(selectedYear);
+              // Clear month and week selections when year changes
+              const monthSelect = document.getElementById('month-select');
+              const weekSelect = document.getElementById('week-select');
+              if (monthSelect) monthSelect.value = '';
+              if (weekSelect) weekSelect.value = '';
+              // Apply filter after clearing selections
+              filterReports();
             } else {
               resetMonthOptions();
             }
@@ -400,6 +434,18 @@
           monthSelect.addEventListener('change', function() {
             const selectedYear = yearSelect ? yearSelect.value : '';
             const selectedMonth = monthSelect.value;
+            
+            // Clear week when month changes
+            const weekSelect = document.getElementById('week-select');
+            if (weekSelect) {
+              weekSelect.value = '';
+            }
+            
+            // Apply filter after clearing week
+            if (selectedMonth) {
+              filterReports();
+            }
+            
             updateWeekOptions(selectedYear, selectedMonth);
           });
           
@@ -411,15 +457,33 @@
           }
         }
         
+        const weekSelect = document.getElementById('week-select');
+        if (weekSelect) {
+          weekSelect.addEventListener('change', function() {
+            // Apply filter immediately when week changes
+            filterReports();
+          });
+        }
+        
         document.getElementById('export-btn').addEventListener('click', function() {
           const params = new URLSearchParams();
           const week = document.getElementById('week-select').value;
           const month = document.getElementById('month-select').value;
           const year = document.getElementById('year-select').value;
           
-          if (week) params.append('selected_week', week);
-          if (month) params.append('selected_month', month);
-          if (year) params.append('selected_year', year);
+          // If only year is selected, clear month and week for export
+          if (year && !month && !week) {
+            params.append('selected_year', year);
+          }
+          // If only month is selected, clear week and year for export
+          else if (month && !year && !week) {
+            params.append('selected_month', month);
+          }
+          else {
+            if (week) params.append('selected_week', week);
+            if (month) params.append('selected_month', month);
+            if (year) params.append('selected_year', year);
+          }
           
           window.open('{% url "users:export_user_reports" %}' + (params.toString() ? '?' + params.toString() : ''), '_blank');
         });

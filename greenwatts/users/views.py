@@ -967,46 +967,6 @@ def user_reports(request):
     selected_year = request.GET.get('selected_year')
     selected_week = request.GET.get('selected_week')
 
-    # Auto-select latest data if no filters provided
-    if not any([selected_day, selected_month, selected_year, selected_week]):
-        latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
-        if latest_data['latest_date']:
-            latest_date = latest_data['latest_date']
-            selected_month = str(latest_date.month)
-            selected_year = str(latest_date.year)
-
-    # Force month filtering when month is selected
-    if selected_month and not selected_day and not selected_week:
-        if not selected_year:
-            selected_year = str(dt.now().year)
-
-    # Year options: all years with data for this office
-    years_with_data = SensorReading.objects.filter(
-        device__in=devices
-    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
-    year_options = [str(y) for y in years_with_data]
-
-    # Month options: all months with data for this office
-    months_with_data = SensorReading.objects.filter(
-        device__in=devices
-    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
-    
-    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                   'July', 'August', 'September', 'October', 'November', 'December']
-    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
-
-    # Day options: all days with data, or filtered by month/year if selected
-    if selected_month and selected_year:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
-            date__year=int(selected_year),
-            date__month=int(selected_month),
-            device__in=devices
-        ).dates('date', 'day').order_by('-date')]
-    else:
-        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
-            device__in=devices
-        ).dates('date', 'day').order_by('-date')]
-
     # Week options: filtered by selected month/year if available
     def get_user_week_options(devices, selected_month=None, selected_year=None):
         from django.db.models import Min
@@ -1064,12 +1024,71 @@ def user_reports(request):
         return week_options
 
     week_options = get_user_week_options(devices, selected_month, selected_year)
-    
-    # Auto-select latest week if no week selected but month/year are set
-    if not selected_week and selected_month and selected_year and week_options:
-        selected_week = week_options[-1]['value']  # Latest week
 
-    # Determine filter kwargs and level
+    # Handle month-only filtering (without year)
+    if selected_month and not selected_year and not selected_day and not selected_week:
+        # Get the most recent year with data for this month
+        recent_year = SensorReading.objects.filter(
+            device__in=devices,
+            date__month=int(selected_month)
+        ).aggregate(latest_year=Max('date__year'))['latest_year']
+        if recent_year:
+            selected_year = str(recent_year)
+
+    # Force month filtering when month is selected
+    if selected_month and not selected_day and not selected_week:
+        if not selected_year:
+            selected_year = str(dt.now().year)
+
+    # Year options: all years with data for this office
+    years_with_data = SensorReading.objects.filter(
+        device__in=devices
+    ).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('year')
+    year_options = [str(y) for y in years_with_data]
+
+    # Month options: all months with data for this office
+    months_with_data = SensorReading.objects.filter(
+        device__in=devices
+    ).annotate(month=ExtractMonth('date')).values_list('month', flat=True).distinct().order_by('month')
+    
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
+                   'July', 'August', 'September', 'October', 'November', 'December']
+    month_options = [{'value': str(m), 'name': month_names[m-1]} for m in months_with_data]
+
+    # Day options: all days with data, or filtered by month/year if selected
+    if selected_month and selected_year:
+        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+            date__year=int(selected_year),
+            date__month=int(selected_month),
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
+    else:
+        day_options = [d.strftime('%m/%d/%Y') for d in SensorReading.objects.filter(
+            device__in=devices
+        ).dates('date', 'day').order_by('-date')]
+
+    # Auto-select latest week with data if no filters provided
+    if not any([selected_day, selected_month, selected_year, selected_week]):
+        latest_data = SensorReading.objects.filter(device__in=devices).aggregate(latest_date=Max('date'))
+        if latest_data['latest_date']:
+            latest_date = latest_data['latest_date']
+            selected_month = str(latest_date.month)
+            selected_year = str(latest_date.year)
+            # Generate week options for the latest date's month/year
+            temp_week_options = get_user_week_options(devices, selected_month, selected_year)
+            # Auto-select latest week to show daily data instead of weekly data
+            if temp_week_options:
+                selected_week = temp_week_options[-1]['value']
+
+    week_options = get_user_week_options(devices, selected_month, selected_year)
+    
+    # Get selected week display name
+    selected_week_name = None
+    if selected_week:
+        for option in week_options:
+            if option['value'] == selected_week:
+                selected_week_name = option['name']
+                break
     def determine_user_filter_level(selected_day, selected_month, selected_year, selected_week, devices):
         from datetime import timedelta
         filter_kwargs = {}
@@ -1203,41 +1222,87 @@ def user_reports(request):
             highest_usage_day = 'N/A'
             best_performing_day = 'N/A'
     elif level == 'month':
-        # Show daily data for the month
+        # Show weekly data for the month
         start_date = date(int(selected_year), int(selected_month), 1)
         end_date = date(int(selected_year), int(selected_month), calendar.monthrange(int(selected_year), int(selected_month))[1])
         
-        daily_data = SensorReading.objects.filter(
+        # Get weekly data for the month
+        chart_labels = []
+        chart_values = []
+        chart_peak_power = []
+        
+        # Calculate weeks in the month
+        current_week_start = start_date
+        week_num = 1
+        
+        while current_week_start <= end_date:
+            current_week_end = min(current_week_start + timedelta(days=6), end_date)
+            
+            # Get data for this week
+            week_data = SensorReading.objects.filter(
+                device__in=devices,
+                date__gte=current_week_start,
+                date__lte=current_week_end
+            ).aggregate(
+                total_energy=Sum('total_energy_kwh'),
+                peak_power=Max('peak_power_w')
+            )
+            
+            chart_labels.append(f"Week {week_num}")
+            chart_values.append(week_data['total_energy'] or 0)
+            chart_peak_power.append(week_data['peak_power'] or 0)
+            
+            current_week_start += timedelta(days=7)
+            week_num += 1
+        
+        # Find highest and best performing weeks
+        if chart_values and any(v > 0 for v in chart_values):
+            max_energy = max(chart_values)
+            max_index = chart_values.index(max_energy)
+            highest_usage_day = f"Week {max_index + 1}"
+            
+            min_energy = min(v for v in chart_values if v > 0) if any(v > 0 for v in chart_values) else 0
+            min_index = next(i for i, v in enumerate(chart_values) if v == min_energy)
+            best_performing_day = f"Week {min_index + 1}"
+        else:
+            highest_usage_day = 'N/A'
+            best_performing_day = 'N/A'
+    elif level == 'year':
+        # Show monthly data for the year
+        monthly_data = SensorReading.objects.filter(
             device__in=devices,
-            date__gte=start_date,
-            date__lte=end_date
-        ).values('date').annotate(
+            date__year=int(selected_year)
+        ).annotate(
+            month=ExtractMonth('date')
+        ).values('month').annotate(
             total_energy=Sum('total_energy_kwh'),
             peak_power=Max('peak_power_w')
-        ).order_by('date')
+        ).order_by('month')
         
-        daily_energy = {record['date']: record['total_energy'] or 0 for record in daily_data}
-        daily_peak = {record['date']: record['peak_power'] or 0 for record in daily_data}
+        month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        
+        monthly_energy = {record['month']: record['total_energy'] or 0 for record in monthly_data}
+        monthly_peak = {record['month']: record['peak_power'] or 0 for record in monthly_data}
         
         chart_labels = []
         chart_values = []
         chart_peak_power = []
-        current = start_date
-        while current <= end_date:
-            chart_labels.append(current.strftime('%d'))
-            chart_values.append(daily_energy.get(current, 0))
-            chart_peak_power.append(daily_peak.get(current, 0))
-            current += timedelta(days=1)
         
-        # Find highest and best performing days
+        for month in range(1, 13):
+            chart_labels.append(month_names[month-1])
+            chart_values.append(monthly_energy.get(month, 0))
+            chart_peak_power.append(monthly_peak.get(month, 0))
+        
+        # Find highest and best performing months
         if chart_values and any(v > 0 for v in chart_values):
             max_energy = max(chart_values)
             max_index = chart_values.index(max_energy)
-            highest_usage_day = (start_date + timedelta(days=max_index)).strftime('%Y-%m-%d')
+            highest_usage_day = f"{selected_year}-{max_index+1:02d}"
             
             min_energy = min(v for v in chart_values if v > 0) if any(v > 0 for v in chart_values) else 0
             min_index = next(i for i, v in enumerate(chart_values) if v == min_energy)
-            best_performing_day = (start_date + timedelta(days=min_index)).strftime('%Y-%m-%d')
+            best_performing_day = f"{selected_year}-{min_index+1:02d}"
         else:
             highest_usage_day = 'N/A'
             best_performing_day = 'N/A'
@@ -1289,8 +1354,10 @@ def user_reports(request):
                 f"Energy usage ({total_energy:.2f} kWh) exceeds the moderate threshold ({energy_moderate_max:.2f} kWh) by {excess:.2f} kWh. ",
             ]
             
-            # Add specific tips based on peak usage
-            if peak_usage > energy_moderate_max:
+            # Add specific tips based on level and peak usage
+            if level == 'year':
+                recommendations.append("Consider implementing long-term energy efficiency measures and reviewing seasonal usage patterns.")
+            elif peak_usage > energy_moderate_max:
                 recommendations.append("Consider reducing consumption during peak hours by turning off unused equipment and optimizing HVAC settings.")
             else:
                 recommendations.append("Spread out energy-intensive activities throughout the day to avoid concentration of usage.")
@@ -1300,14 +1367,20 @@ def user_reports(request):
             recommendations = [
                 f"Energy usage is moderate ({total_energy:.2f} kWh). ",
                 f"You're {((energy_moderate_max - total_energy) / energy_moderate_max * 100):.1f}% away from high usage. ",
-                "Consider implementing energy-saving practices like using natural lighting and scheduling equipment usage during off-peak hours."
             ]
+            if level == 'year':
+                recommendations.append("Consider implementing energy-saving practices consistently throughout the year.")
+            else:
+                recommendations.append("Consider implementing energy-saving practices like using natural lighting and scheduling equipment usage during off-peak hours.")
         else:
             # Efficient usage - provide encouragement
             recommendations = [
                 f"Excellent! Energy usage is within efficient limits ({total_energy:.2f} kWh). ",
-                "Keep up the good work by maintaining current energy-saving practices."
             ]
+            if level == 'year':
+                recommendations.append("Maintain consistent energy-saving practices throughout the year.")
+            else:
+                recommendations.append("Keep up the good work by maintaining current energy-saving practices.")
         
         return "".join(recommendations)
     
@@ -1346,15 +1419,15 @@ def user_reports(request):
         'selected_week': selected_week,
         'level': level,
         'total_energy_usage': f"{total_energy_usage:.2f}",
-        'highest_usage_day': highest_usage_day,
+        'highest_usage_day': highest_usage_day if level != 'year' else f"{month_names[int(highest_usage_day.split('-')[1])-1]} {highest_usage_day.split('-')[0]}" if highest_usage_day != 'N/A' else 'N/A',
         'cost_predicted': f"₱{cost_predicted:.2f}",
         'co2_emission': f"{co2_emission:.2f}",
         'office_status': office_status,
-        'best_performing_day': best_performing_day,
+        'best_performing_day': best_performing_day if level != 'year' else f"{month_names[int(best_performing_day.split('-')[1])-1]} {best_performing_day.split('-')[0]}" if best_performing_day != 'N/A' else 'N/A',
         'chart_labels': json.dumps(chart_labels),
         'chart_values': json.dumps(chart_values),
         'chart_peak_power': json.dumps(chart_peak_power),
-        'chart_colors': json.dumps(["#dc3545" if v > energy_moderate_max else "#ffc107" if v > energy_efficient_max else "#28a745" for v in chart_values]),
+        'chart_colors': json.dumps(["#dc3545" if v > (energy_moderate_max if level != 'year' else energy_moderate_max * 12) else "#ffc107" if v > (energy_efficient_max if level != 'year' else energy_efficient_max * 12) else "#28a745" for v in chart_values]),
         'recommendation': recommendation,
         'calendar_energy': json.dumps(calendar_energy),
         'calendar_year': calendar_year,
@@ -1367,6 +1440,7 @@ def user_reports(request):
         'status_status': status_status,
         'highest_status': highest_status,
         'unread_notifications_count': unread_notifications_count,
+        'selected_week_name': selected_week_name,
     }
     return render(request, 'users/userReports.html', context)
 
